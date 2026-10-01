@@ -48,10 +48,18 @@ public sealed class NativeApp : Application
     {
         bool smoke = args.Contains("--smoke-test");
         bool demo = smoke || args.Contains("--demo");
-        string instanceName = demo ? @"Local\AIUsage.Windows.Demo.Instance" : @"Local\AIUsage.Windows.Instance";
-        string eventName = demo ? @"Local\AIUsage.Windows.Demo.Show" : @"Local\AIUsage.Windows.Show";
+        int languageIndex = Array.IndexOf(args, "--language");
+        string? language = languageIndex >= 0 && languageIndex + 1 < args.Length ? args[languageIndex + 1] : null;
+        L10n.SetLanguage(language);
+        string instanceName = InstancePolicy.InstanceName(demo);
+        string eventName = InstancePolicy.EventName(demo);
         if (!smoke)
         {
+            if (InstancePolicy.LegacyRunning(demo))
+            {
+                MessageBox.Show(T("EarlierVersionRunning"), "AIUsage " + AppVersion.Value, MessageBoxButton.OK, MessageBoxImage.Warning);
+                Shutdown(2); return;
+            }
             instance = new Mutex(true, instanceName, out bool first);
             if (!first)
             {
@@ -62,8 +70,6 @@ public sealed class NativeApp : Application
             showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, eventName);
         }
         Theme.Apply(false);
-        int languageIndex = Array.IndexOf(args, "--language");
-        string? language = languageIndex >= 0 && languageIndex + 1 < args.Length ? args[languageIndex + 1] : null;
         panel = new MainWindow(demo, () => Shutdown(), language);
         MainWindow = panel;
         if (smoke)
@@ -88,9 +94,7 @@ public sealed class NativeApp : Application
                 await panel.VerifyDemoLanguageAsync(code);
                 await panel.VerifyDemoRefreshAsync();
                 using var localizedMenu = CreateTrayMenu();
-                if (localizedMenu.Items[0].Text != (code == "es" ? "Abrir AIUsage" : "Open AIUsage") ||
-                    localizedMenu.Items[3].Text != (code == "es" ? "Salir" : "Exit"))
-                    throw new InvalidOperationException("Tray menu localization failed.");
+                if (localizedMenu.Items[0].Text != (code == "es" ? "Abrir AIUsage" : "Open AIUsage") || localizedMenu.Items[3].Text != (code == "es" ? "Salir" : "Exit")) throw new InvalidOperationException("Tray menu localization failed.");
                 foreach (bool light in new[] { false, true })
                 {
                     panel.ChangeTheme(light);
@@ -170,11 +174,8 @@ public sealed class NativeApp : Application
     private static extern bool DestroyIcon(IntPtr handle);
     protected override void OnExit(ExitEventArgs e)
     {
-        panel?.Stop();
-        wait?.Unregister(null);
-        showEvent?.Dispose();
+        panel?.Stop(); wait?.Unregister(null); showEvent?.Dispose();
         if (tray is not null) { tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
-        icon?.Dispose(); instance?.Dispose();
-        base.OnExit(e);
+        icon?.Dispose(); instance?.Dispose(); base.OnExit(e);
     }
 }

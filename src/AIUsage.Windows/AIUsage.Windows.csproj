@@ -9,9 +9,9 @@
     <AssemblyName>AIUsage</AssemblyName>
     <StartupObject>AIUsage.Windows.NativeApp</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishSingleFile>false</PublishSingleFile>
+    <!-- Inspectable self-contained folder: no native-library extraction into TEMP. -->
+    <StartupHookSupport>false</StartupHookSupport>
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../AIUsage.Core/AIUsage.Core.csproj" /></ItemGroup>

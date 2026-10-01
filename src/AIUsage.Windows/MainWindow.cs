@@ -35,6 +35,8 @@ public sealed partial class MainWindow : Window
     private bool lastBuiltSettings;
     private string error = "", pricingError = "", settingsError = "";
     private bool busy, settingsView, stopped;
+    private bool settingsConfirmed = true;
+    private string activeHome = "", settingsWarningKey = "";
     private int period = 1;
     private TextBlock? status;
     public event Action<string>? UsageChanged;
@@ -46,19 +48,21 @@ public sealed partial class MainWindow : Window
     {
         this.demo = demo; this.exit = exit;
         if (syntheticDataDirectory is not null) dataDir = LocalPaths.Require(syntheticDataDirectory);
-        Title = "AIUsage · Codex"; Width = 560; Height = 820; MinWidth = 460; MinHeight = 380;
+        Title = "AIUsage " + AppVersion.Value + " · Local only"; Width = 560; Height = 820; MinWidth = 460; MinHeight = 380;
         MaxHeight = SystemParameters.WorkArea.Height - 24;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.CanResizeWithGrip; ShowInTaskbar = false;
         FontFamily = new FontFamily("Segoe UI"); FontSize = 13;
         if (!demo)
         {
-            try { settings = AppSettings.Load(SettingsPath); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
-            { settingsError = T("SettingsReadFailed"); }
+            var loaded = SettingsLoadResult.Read(SettingsPath);
+            settings = loaded.Settings;
+            settingsConfirmed = loaded.CanScan;
+            settingsWarningKey = loaded.WarningKey ?? "";
+            settingsView = !settingsConfirmed;
         }
         settings.Language = L10n.NormalizeSetting(languageOverride ?? settings.Language);
         ApplyLanguage();
-        if (settingsError.Length > 0) settingsError = T("SettingsReadFailed");
+        if (settingsWarningKey.Length > 0) settingsError = T(settingsWarningKey);
         scanner = new LogScanner(Path.Combine(dataDir, "cache"));
         Theme.Apply(settings.LightTheme);
         if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
@@ -83,7 +87,7 @@ public sealed partial class MainWindow : Window
     }
     public async Task RefreshAsync()
     {
-        if (busy || settingsView || stopped) return;
+        if (busy || settingsView || stopped || !settingsConfirmed) return;
         if (demo) { Build(); return; }
         busy = true;
         if (status is not null) status.Text = T("ReadingLogs");
@@ -93,6 +97,7 @@ public sealed partial class MainWindow : Window
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             { pricingError = T("CustomPricesFailed"); }
             string home = settings.ResolveHome();
+            activeHome = home;
             scan = await Task.Run(() => scanner.Scan(home, cancellation.Token), cancellation.Token);
             dashboard = await Task.Run(() => DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)), cancellation.Token);
             error = "";
@@ -102,7 +107,7 @@ public sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException) { }
         catch (LocalPathException ex) { error = ex.Message; }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or OverflowException)
         { error = F("ReadFolderFailed", ex.GetType().Name); }
         finally { busy = false; if (!stopped && !settingsView) Build(); }
     }
@@ -151,12 +156,16 @@ public sealed partial class MainWindow : Window
         tools.Children.Add(Button(T("Refresh"), async () => await RefreshAsync()));
         tools.Children.Add(Button(T("ExportCsv"), Export));
         tools.Children.Add(Button(T("Exit"), exit)); footer.Children.Add(tools);
-        status = Text(demo ? T("DemoStatus") :
-            F("LocalStatus", scan.At, scan.Files), 10, false, "Muted");
+        status = Text(demo ? T("DemoStatus") : F("LocalStatus", scan.At, scan.Files), 10, false, "Muted");
         status.Margin = new Thickness(0, 10, 0, 0); footer.Children.Add(status);
+        if (!demo)
+        {
+            var folderStatus = Text(settingsConfirmed && activeHome.Length > 0 ? F("ActiveFolder", activeHome) : T("NoFolderRead"), 10, false, "Muted");
+            folderStatus.ToolTip = activeHome;
+            footer.Children.Add(folderStatus);
+        }
         Grid.SetRow(footer, 3); grid.Children.Add(footer);
         Content = new Border { BorderBrush = Theme.Brush("Line"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Child = grid };
-        // Rebuilding the visual tree must not throw the reader back to the top on every refresh.
         scroll.Loaded += (_, _) =>
         {
             scroll.ScrollToVerticalOffset(offset);
@@ -175,10 +184,8 @@ public sealed partial class MainWindow : Window
         FindButton((DependencyObject)Content, T("Refresh"))!.Focus();
         Build();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        if (Math.Abs(currentScroll!.VerticalOffset - expected) > 1)
-            throw new InvalidOperationException("Refresh lost the scroll position.");
-        if (Keyboard.FocusedElement is not Button b || !Equals(b.Content, T("Refresh")))
-            throw new InvalidOperationException("Refresh lost keyboard focus.");
+        if (Math.Abs(currentScroll!.VerticalOffset - expected) > 1) throw new InvalidOperationException("Refresh lost the scroll position.");
+        if (Keyboard.FocusedElement is not Button b || !Equals(b.Content, T("Refresh"))) throw new InvalidOperationException("Refresh lost keyboard focus.");
         Height = originalHeight; currentScroll.ScrollToTop();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
     }
@@ -192,18 +199,16 @@ public sealed partial class MainWindow : Window
         radio.IsChecked = true;
         FindButton((DependencyObject)Content, T("SaveRefresh"))!.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        if (settings.Language != code || L10n.Code != code || settingsView || scan.Events.Sum(e => e.Tokens.Total) != before)
-            throw new InvalidOperationException("Language selection changed accounting or failed to apply.");
+        if (settings.Language != code || L10n.Code != code || settingsView || scan.Events.Sum(e => e.Tokens.Total) != before) throw new InvalidOperationException("Language selection changed accounting or failed to apply.");
         string expected = code == "es" ? "Ajustes" : "Settings";
-        if (FindButton((DependencyObject)Content, expected) is null)
-            throw new InvalidOperationException("The dashboard was not translated.");
+        if (FindButton((DependencyObject)Content, expected) is null) throw new InvalidOperationException("The dashboard was not translated.");
     }
     internal void ShowDemoSettings(bool show)
     {
         if (!demo) throw new InvalidOperationException("Synthetic mode required.");
         settingsView = show; Build();
     }
-    private static System.Collections.Generic.IEnumerable<DependencyObject> Descendants(DependencyObject parent)
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject parent)
     {
         for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
@@ -224,6 +229,7 @@ public sealed partial class MainWindow : Window
     private StackPanel SettingsPanel()
     {
         var body = new StackPanel();
+        if (settingsError.Length > 0) body.Children.Add(Notice(settingsError));
         body.Children.Add(Text(T("Configuration"), 23, true));
         body.Children.Add(Text(T("PrivacyIntro"), 12, false, "Muted"));
         body.Children.Add(Label(T("Language")));
@@ -241,6 +247,7 @@ public sealed partial class MainWindow : Window
         body.Children.Add(Text(T("LanguageHelp"), 11, false, "Muted"));
         body.Children.Add(Label(T("CodexFolder")));
         var home = new TextBox { Text = settings.CodexHome, ToolTip = T("FolderHelp") };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(home, "CodexFolderInput");
         body.Children.Add(home);
         body.Children.Add(Text(T("DefaultFolder"), 11, false, "Muted"));
         body.Children.Add(Text(T("LocalFolderHelp"), 11, false, "Muted"));
@@ -250,8 +257,7 @@ public sealed partial class MainWindow : Window
         {
             if (demo || busy) return;
             try { scanner.ClearCache(); settingsView = false; await RefreshAsync(); }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            { MessageBox.Show(this, T("RebuildFailed"), "AIUsage"); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { MessageBox.Show(this, T("RebuildFailed"), "AIUsage"); }
         }));
         body.Children.Add(Text(T("RebuildHelp"), 10, false, "Muted"));
         body.Children.Add(Label(T("RefreshInterval")));
@@ -272,11 +278,12 @@ public sealed partial class MainWindow : Window
                 var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string) };
                 if (!demo)
                 {
+                    if (!settingsConfirmed && next.CodexHome.Length == 0) throw new InvalidOperationException(T("ChooseExplicitFolder"));
                     string resolved = next.ResolveHome();
                     if (next.CodexHome.Length > 0 && !Directory.Exists(resolved)) throw new InvalidOperationException(T("MissingFolder"));
                 }
                 if (!demo) AtomicJson.Write(SettingsPath, next);
-                settings = next; settingsError = ""; pricingError = ""; error = "";
+                settings = next; settingsConfirmed = true; settingsWarningKey = ""; activeHome = ""; settingsError = ""; pricingError = ""; error = "";
                 ApplyLanguage();
                 scan = new([], [], 0, 0, DateTimeOffset.Now); dashboard = new(new(), new());
                 if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
@@ -317,11 +324,7 @@ public sealed partial class MainWindow : Window
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
             buttons.Children.Add(Button(T("SavePrices"), () =>
             {
-                try
-                {
-                    LocalStorage.SavePrices(PricesPath, editor.Text);
-                    window.DialogResult = true;
-                }
+                try { LocalStorage.SavePrices(PricesPath, editor.Text); window.DialogResult = true; }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
                 { MessageBox.Show(window, T("PricesNotSaved"), "AIUsage", MessageBoxButton.OK, MessageBoxImage.Warning); }
             }));
@@ -338,22 +341,16 @@ public sealed partial class MainWindow : Window
         if (demo) throw new InvalidOperationException("The local workflow check requires the synthetic normal-mode instance.");
         await RefreshAsync(); await RefreshAsync();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        if (error.Length > 0 || settingsError.Length > 0 || scan.Events.Sum(e => e.Tokens.Total) != 1100)
-            throw new InvalidOperationException("The normal local workflow failed with inaccessible synthetic credentials.");
-        if (Descendants((DependencyObject)Content).OfType<Button>().Any(b => Equals(b.Content, "GitHub")))
-            throw new InvalidOperationException("External navigation must not be available.");
+        if (error.Length > 0 || settingsError.Length > 0 || scan.Events.Sum(e => e.Tokens.Total) != 1100) throw new InvalidOperationException("The normal local workflow failed with inaccessible synthetic credentials.");
+        if (Descendants((DependencyObject)Content).OfType<Button>().Any(b => Equals(b.Content, "GitHub"))) throw new InvalidOperationException("External navigation must not be available.");
         settingsView = true; Build();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 1)
-            throw new InvalidOperationException("Unexpected option in local-only settings.");
+        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 1) throw new InvalidOperationException("Unexpected option in local-only settings.");
     }
     private static TextBlock Text(string text, double size = 13, bool bold = false, string color = "Ink") => new()
     { Text = text, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, Foreground = Theme.Brush(color), TextWrapping = TextWrapping.Wrap };
     private static TextBlock Label(string text) { var t = Text(text, 12, true); t.Margin = new Thickness(0, 18, 0, 8); return t; }
-    private static Button Button(string text, Action action)
-    {
-        var b = new Button { Content = text }; b.Click += (_, _) => action(); return b;
-    }
+    private static Button Button(string text, Action action) { var b = new Button { Content = text }; b.Click += (_, _) => action(); return b; }
     private static Border Card(UIElement child) => new()
     { Child = child, Background = Theme.Brush("Surface"), BorderBrush = Theme.Brush("Line"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Padding = new Thickness(18), Margin = new Thickness(0, 0, 0, 12) };
     private static Border Notice(string message) => new()

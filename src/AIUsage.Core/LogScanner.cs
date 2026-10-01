@@ -13,6 +13,8 @@ public sealed class FileCache
     public string Prefix { get; set; } = "";
     public ParserState State { get; set; } = new();
     public List<UsageEvent> Events { get; set; } = [];
+    public List<string>? EventPages { get; set; }
+    public int StoredEventCount { get; set; }
     public List<QuotaSnapshot> Quotas { get; set; } = [];
     public int Warnings { get; set; }
     // An EOF record is a preview only. Offset/State remain BEFORE it so later appends can retract it.
@@ -27,8 +29,9 @@ public sealed class FileCache
 public sealed class LogScanner(string cacheDirectory)
 {
     // Bump whenever parser, quota or deduplication semantics change.
-    public const int ParserSchemaVersion = 4;
+    public const int ParserSchemaVersion = 5;
     private readonly object sync = new();
+    public int PersistentCacheHits { get; private set; }
     private static FileCache EmptyCache() => new() { Schema = ParserSchemaVersion };
     public const int MaxRecordBytes = 2 * 1024 * 1024;
     private readonly Dictionary<string, FileCache> memory = new(StringComparer.OrdinalIgnoreCase);
@@ -67,10 +70,18 @@ public sealed class LogScanner(string cacheDirectory)
                 var data = ReadFile(path, info, since, ct);
                 if (!data.State.AccountingBlocked && !data.TailBlocked)
                 {
+                    string fallbackScope = Path.GetFullPath(path).ToUpperInvariant();
+                    string? lastSession = null;
+                    string lastScope = fallbackScope;
                     foreach (var e in data.Events.Concat(data.TailEvent is { } tail ? [tail] : []))
                     {
                         // Without a session id, two files cannot be proven to be copies.
-                        string scope = e.SessionId is null ? Path.GetFullPath(path).ToUpperInvariant() : $"{data.State.AccountKey}:{e.SessionId}";
+                        if (lastSession != e.SessionId)
+                        {
+                            lastSession = e.SessionId;
+                            lastScope = e.SessionId is null ? fallbackScope : $"{data.State.AccountKey}:{e.SessionId}";
+                        }
+                        string scope = lastScope;
                         if (e.At >= since) events.TryAdd((scope, e), e);
                     }
                     quotas.AddRange(data.Quotas);
@@ -92,7 +103,12 @@ public sealed class LogScanner(string cacheDirectory)
     {
         string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToUpperInvariant())));
         string cachePath = Path.Combine(cacheDirectory, key + ".json");
-        if (!memory.TryGetValue(path, out var cache)) cache = Load(cachePath) ?? EmptyCache();
+        if (!memory.TryGetValue(path, out var cache))
+        {
+            cache = Load(cachePath);
+            if (cache is not null) PersistentCacheHits++;
+            cache ??= EmptyCache();
+        }
         using var fs = new FileStream(LocalPaths.Require(path), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 65536, FileOptions.SequentialScan);
         long size = fs.Length, modified = info.LastWriteTimeUtc.Ticks;
         byte[] head = new byte[(int)Math.Min(size, 512)];
@@ -158,7 +174,7 @@ public sealed class LogScanner(string cacheDirectory)
         cache.Modified = modified;
         cache.Prefix = prefix;
         memory[path] = cache;
-        try { Directory.CreateDirectory(cacheDirectory); AtomicJson.Write(cachePath, cache); }
+        try { Directory.CreateDirectory(cacheDirectory); CacheStore.Save(cachePath, cache); }
         catch (IOException) { cache.Warnings++; }
         catch (UnauthorizedAccessException) { cache.Warnings++; }
         return cache;
@@ -193,17 +209,7 @@ public sealed class LogScanner(string cacheDirectory)
     }
     private static string QuotaIdentity(QuotaSnapshot q) => q.AccountKey + ":" +
         string.Join('|', q.Windows.Select(w => w.Id.Length > 0 ? w.Id : w.Name).Order(StringComparer.Ordinal));
-    private static FileCache? Load(string path)
-    {
-        try
-        {
-            LocalPaths.Require(path);
-            if (!File.Exists(path) || new FileInfo(path).Length > 32 * 1024 * 1024) return null;
-            var c = JsonSerializer.Deserialize<FileCache>(File.ReadAllText(path));
-            return c is { State: not null, Events: not null, Quotas: not null, Offset: >= 0 } && c.Schema == ParserSchemaVersion ? c : null;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { return null; }
-    }
+    private static FileCache? Load(string path) => CacheStore.Load(path);
     private static List<string> Discover(string home, ref int warnings, CancellationToken ct)
     {
         var result = new List<string>();
@@ -215,7 +221,8 @@ public sealed class LogScanner(string cacheDirectory)
             catch (IOException) { warnings++; }
             catch (UnauthorizedAccessException) { warnings++; }
         }
-        if (roots.Count == 0) roots.Add(home);
+        bool directRolloutFolder = roots.Count == 0;
+        if (directRolloutFolder) roots.Add(home);
         foreach (var root in roots)
         {
             if (!Directory.Exists(root)) continue;
@@ -226,8 +233,9 @@ public sealed class LogScanner(string cacheDirectory)
                 try
                 {
                     LocalPaths.Require(dir);
-                    foreach (var f in Directory.EnumerateFiles(dir, "*.jsonl"))
+                    foreach (var f in Directory.EnumerateFiles(dir, directRolloutFolder ? "rollout-*.jsonl" : "*.jsonl"))
                     {
+                        if (Path.GetFileName(f).Equals("history.jsonl", StringComparison.OrdinalIgnoreCase)) continue;
                         try { LocalPaths.Require(f); }
                         catch (IOException) { warnings++; continue; }
                         catch (UnauthorizedAccessException) { warnings++; continue; }

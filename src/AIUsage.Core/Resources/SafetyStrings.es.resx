@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="EarlierVersionRunning" xml:space="preserve"><value>Sigue ejecutándose una versión anterior de AIUsage. Ciérrala con Salir en su menú de bandeja y abre de nuevo esta versión. El programa anterior podría permitir consultas online de la cuenta. AIUsage no lo ha activado ni detenido.</value></data>
+  <data name="MigrationNotSaved" xml:space="preserve"><value>Se han leído tus ajustes, pero no se ha podido guardar la migración. Se conservan la carpeta seleccionada y las preferencias compatibles. Esta versión no tiene funciones online.</value></data>
+  <data name="ConfirmFolderAfterError" xml:space="preserve"><value>No se han podido leer los ajustes. El análisis está detenido: no se utilizará una carpeta predeterminada. Introduce la carpeta local de registros que autorizas y pulsa Guardar y actualizar.</value></data>
+  <data name="ChooseExplicitFolder" xml:space="preserve"><value>Introduce una carpeta local de registros explícita antes de reanudar el análisis.</value></data>
+  <data name="ActiveFolder" xml:space="preserve"><value>Carpeta de lectura: {0}</value></data>
+  <data name="NoFolderRead" xml:space="preserve"><value>No se ha leído ninguna carpeta de registros en esta sesión.</value></data>
+  <data name="SettingsReadFailed" xml:space="preserve"><value>No se han podido leer los ajustes. El análisis está detenido hasta que confirmes una carpeta explícita.</value></data>
+</root>

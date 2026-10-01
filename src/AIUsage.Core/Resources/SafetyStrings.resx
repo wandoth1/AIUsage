@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+  <data name="EarlierVersionRunning" xml:space="preserve"><value>An earlier version of AIUsage is still running. Close it using Exit in its tray menu, then launch this version again. The older program may support online account queries. AIUsage has not activated or stopped that program.</value></data>
+  <data name="MigrationNotSaved" xml:space="preserve"><value>Your settings were read, but the migration could not be saved. The selected folder and supported preferences are preserved. No online feature exists in this version.</value></data>
+  <data name="ConfirmFolderAfterError" xml:space="preserve"><value>The settings could not be read. Scanning is paused: no default folder will be used. Enter the local log folder you authorize and choose Save and refresh.</value></data>
+  <data name="ChooseExplicitFolder" xml:space="preserve"><value>Enter an explicit local log folder before resuming the scan.</value></data>
+  <data name="ActiveFolder" xml:space="preserve"><value>Reading folder: {0}</value></data>
+  <data name="NoFolderRead" xml:space="preserve"><value>No log folder has been read in this session.</value></data>
+  <data name="SettingsReadFailed" xml:space="preserve"><value>The settings could not be read. Scanning is paused until you explicitly confirm a folder.</value></data>
+</root>

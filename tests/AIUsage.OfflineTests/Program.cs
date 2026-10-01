@@ -11,15 +11,15 @@ using AIUsage.Core;
 internal static class Program
 {
     private static int passed, failed, skipped;
+    private static string repositoryRoot = "";
     private static readonly DateTimeOffset Now = DateTimeOffset.UtcNow.AddMinutes(-1);
     private static int Main(string[] args)
     {
+        repositoryRoot = Option(args, "--repo-root") ?? throw new ArgumentException("--repo-root is required");
         L10n.SetLanguage("en");
         using var network = new NetworkEvents();
-        Test("Authenticated client type is absent from the application assembly", () =>
-            Require(typeof(AppSettings).Assembly.GetType("AIUsage.Core.CodexUsageClient") is null, "Online client remains"));
-        Test("No setting property can enable an online mode", () =>
-            Require(typeof(AppSettings).GetProperty("OnlineQuota") is null, "Online property remains"));
+        Test("Authenticated client type is absent from the application assembly", () => Require(typeof(AppSettings).Assembly.GetType("AIUsage.Core.CodexUsageClient") is null, "Online client remains"));
+        Test("No setting property can enable an online mode", () => Require(typeof(AppSettings).GetProperty("OnlineQuota") is null, "Online property remains"));
         Test("Core compiled metadata has no networking, credential or process-launch APIs", () => CheckAssembly(typeof(AppSettings).Assembly.Location));
         Test("Legacy true setting is removed and harmless preferences survive", () => Temp(root =>
         {
@@ -34,18 +34,15 @@ internal static class Program
             string path = Path.Combine(root, "settings.json");
             foreach (string value in new[] { "true", "false", "null", "\"true\"", "{}" })
             {
-                File.WriteAllText(path, "{\"OnlineQuota\":" + value + ",\"Language\":\"en\"}");
-                Equal("en", AppSettings.Load(path).Language);
+                File.WriteAllText(path, "{\"OnlineQuota\":" + value + ",\"Language\":\"en\"}"); Equal("en", AppSettings.Load(path).Language);
                 Require(!File.ReadAllText(path).Contains("OnlineQuota"), "Obsolete field survived");
             }
         }));
-        Test("Default settings never serialize the removed online field", () =>
-            Require(!JsonSerializer.Serialize(new AppSettings()).Contains("OnlineQuota"), "Obsolete setting serialized"));
+        Test("Default settings never serialize the removed online field", () => Require(!JsonSerializer.Serialize(new AppSettings()).Contains("OnlineQuota"), "Obsolete setting serialized"));
         Test("Repeated settings migration is idempotent", () => Temp(root =>
         {
             string p = Path.Combine(root, "settings.json"); File.WriteAllText(p, "{\"OnlineQuota\":true,\"Language\":\"es\"}");
-            AppSettings.Load(p); byte[] before = File.ReadAllBytes(p); AppSettings.Load(p);
-            Require(before.SequenceEqual(File.ReadAllBytes(p)), "Repeated migration changed settings");
+            AppSettings.Load(p); byte[] before = File.ReadAllBytes(p); AppSettings.Load(p); Require(before.SequenceEqual(File.ReadAllBytes(p)), "Repeated migration changed settings");
         }));
         Test("Scanning succeeds with exclusively locked synthetic authentication and configuration", () => Temp(root =>
         {
@@ -55,10 +52,8 @@ internal static class Program
             using (var al = new FileStream(auth, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             using (var cl = new FileStream(config, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
             {
-                var scanner = new LogScanner(Path.Combine(root, "cache"));
-                var one = scanner.Scan(root); var two = scanner.Scan(root);
-                Equal(0, one.Warnings); Equal(1100L, one.Events.Sum(e => e.Tokens.Total));
-                Equal(1100L, two.Events.Sum(e => e.Tokens.Total));
+                var scanner = new LogScanner(Path.Combine(root, "cache")); var one = scanner.Scan(root); var two = scanner.Scan(root);
+                Equal(0, one.Warnings); Equal(1100L, one.Events.Sum(e => e.Tokens.Total)); Equal(1100L, two.Events.Sum(e => e.Tokens.Total));
             }
             Require(a.SequenceEqual(File.ReadAllBytes(auth)) && c.SequenceEqual(File.ReadAllBytes(config)), "Source credentials/config changed");
         }));
@@ -79,21 +74,17 @@ internal static class Program
             var prices = PriceCatalog.Load(); var rows = UsageSummary.Group(result.Events, prices);
             Equal(1100L, rows.Single().Total); Equal(0.006m, rows.Single().KnownCost);
             var dashboard = DashboardData.Create(result.Events, prices, TimeZoneInfo.Utc, UsageSummary.Day(Now, TimeZoneInfo.Utc));
-            Equal(1100L, dashboard.ForPeriod(1).Single().Total);
-            Require(CsvExport.Build(result.Events, prices, TimeZoneInfo.Utc).Contains("0.006000"), "CSV mismatch");
+            Equal(1100L, dashboard.ForPeriod(1).Single().Total); Require(CsvExport.Build(result.Events, prices, TimeZoneInfo.Utc).Contains("0.006000"), "CSV mismatch");
         }));
         Test("Local quota snapshots retain their original observation time", () => Temp(root =>
         {
             Fixture(root); var scan = new LogScanner(Path.Combine(root, "cache")).Scan(root);
-            var row = QuotaSelection.Select(scan.Quotas).Single(); Equal(Now, row.Snapshot.At); Equal(12d, row.Window.UsedPercent);
-            Equal("Local log", row.Snapshot.Source);
+            var row = QuotaSelection.Select(scan.Quotas).Single(); Equal(Now, row.Snapshot.At); Equal(12d, row.Window.UsedPercent); Equal("Local log", row.Snapshot.Source);
         }));
-        Test("No recorded limits stays empty rather than making a request", () =>
-            Equal(0, QuotaSelection.Select(Array.Empty<QuotaSnapshot>()).Count));
+        Test("No recorded limits stays empty rather than making a request", () => Equal(0, QuotaSelection.Select(Array.Empty<QuotaSnapshot>()).Count));
         Test("UNC, WSL, URL and device paths are rejected before file access", () =>
         {
-            foreach (string path in new[] { @"\\example.invalid\share\logs", @"\\wsl.localhost\Ubuntu\home\user\.codex", "//example.invalid/share", @"\\?\C:\logs", @"\\.\pipe\name", "https://example.invalid/logs", "file://example.invalid/share" })
-                Throws<LocalPathException>(() => LocalPaths.Require(path));
+            foreach (string path in new[] { @"\\example.invalid\share\logs", @"\\wsl.localhost\Ubuntu\home\user\.codex", "//example.invalid/share", @"\\?\C:\logs", @"\\.\pipe\name", "https://example.invalid/logs", "file://example.invalid/share" }) Throws<LocalPathException>(() => LocalPaths.Require(path));
         });
         Test("Mapped network and unknown drives are not accepted as local", () =>
         {
@@ -101,9 +92,7 @@ internal static class Program
             Require(LocalPaths.IsLocalDrive(DriveType.Fixed) && LocalPaths.IsLocalDrive(DriveType.Removable), "Local drive rejected");
         });
         Test("Relative paths cannot invoke an unintended working-directory lookup", () =>
-        {
-            foreach (string path in new[] { "relative", "", "   ", @"C:relative" }) Throws<LocalPathException>(() => LocalPaths.Require(path));
-        });
+        { foreach (string path in new[] { "relative", "", "   ", @"C:relative" }) Throws<LocalPathException>(() => LocalPaths.Require(path)); });
         Test("Remote CODEX_HOME is rejected and the environment is restored", () =>
         {
             string? old = Environment.GetEnvironmentVariable("CODEX_HOME");
@@ -117,15 +106,14 @@ internal static class Program
         }));
         Test("Links, offline files and remote-recall attributes are blocked", () =>
         {
-            foreach (FileAttributes a in new[] { FileAttributes.ReparsePoint, FileAttributes.Offline, (FileAttributes)0x40000, (FileAttributes)0x400000 })
-                Require(!LocalPaths.IsResident(FileAttributes.Archive | a), "Remote/link attribute accepted");
+            foreach (FileAttributes a in new[] { FileAttributes.ReparsePoint, FileAttributes.Offline, (FileAttributes)0x40000, (FileAttributes)0x400000 }) Require(!LocalPaths.IsResident(FileAttributes.Archive | a), "Remote/link attribute accepted");
             Require(LocalPaths.IsResident(FileAttributes.Archive), "Regular local file rejected");
         });
         Test("Directory link ancestors are rejected before opening their contents", () => Temp(root =>
         {
             string target = Path.Combine(root, "real"), link = Path.Combine(root, "link"); Directory.CreateDirectory(target);
             try { Directory.CreateSymbolicLink(link, target); }
-            catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException) { throw new Skip("Host cannot create a synthetic symbolic link: " + e.GetType().Name); }
+            catch (Exception e) when (e is UnauthorizedAccessException or System.Security.SecurityException || (e is IOException && (e.HResult & 0xffff) == 1314)) { throw new Skip("Host cannot create a synthetic symbolic link: " + e.GetType().Name); }
             Throws<LocalPathException>(() => LocalPaths.Require(Path.Combine(link, "data.jsonl")));
         }));
         Test("Remote settings, cache, price and export destinations are rejected", () => Temp(root =>
@@ -134,13 +122,11 @@ internal static class Program
             Throws<LocalPathException>(() => AppSettings.Load(remote + @"\settings.json"));
             Throws<LocalPathException>(() => AtomicJson.Write(remote + @"\settings.json", new AppSettings()));
             Throws<LocalPathException>(() => PriceCatalog.Load(remote + @"\prices.json"));
-            Throws<LocalPathException>(() => LocalStorage.ExportCsv(remote, "test"));
-            Throws<LocalPathException>(() => new LogScanner(remote).Scan(root));
+            Throws<LocalPathException>(() => LocalStorage.ExportCsv(remote, "test")); Throws<LocalPathException>(() => new LogScanner(remote).Scan(root));
         }));
         Test("CSV export creates unique local files without overwriting source files", () => Temp(root =>
         {
-            string one = LocalStorage.ExportCsv(root, "date,model\r\n2026-10-01,test");
-            string two = LocalStorage.ExportCsv(root, "different");
+            string one = LocalStorage.ExportCsv(root, "date,model\r\n2026-10-01,test"), two = LocalStorage.ExportCsv(root, "different");
             Require(one != two && Path.GetDirectoryName(one) == Path.Combine(root, "exports"), "Export escaped its directory");
             Require(File.ReadAllText(one).StartsWith("date,model"), "CSV changed"); Equal("different", File.ReadAllText(two));
         }));
@@ -175,20 +161,24 @@ internal static class Program
         }));
         Test("Local-source guards reject network APIs, credential readers and external launchers", () =>
         {
-            string repo = Option(args, "--repo-root") ?? throw new Exception("--repo-root is required for source guards");
-            foreach (string file in Directory.EnumerateFiles(Path.Combine(repo, "src"), "*.cs", SearchOption.AllDirectories)
-                .Where(p => !p.Split(Path.DirectorySeparatorChar).Any(x => x is "bin" or "obj")))
+            foreach (string file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories).Where(p => !p.Split(Path.DirectorySeparatorChar).Any(x => x is "bin" or "obj")))
             {
                 string text = File.ReadAllText(file);
-                foreach (string forbidden in new[] { "System.Net", "Process.Start", "ProcessStartInfo", "ShellExecute", "WebBrowser", "FolderBrowserDialog", "SaveFileDialog", "OpenFileDialog", "backend-api", "access_token", "refresh_token", "auth.json", "account/rateLimits/read" })
-                    Require(!text.Contains(forbidden, StringComparison.Ordinal), "Forbidden runtime source: " + Path.GetFileName(file) + " / " + forbidden);
+                foreach (string forbidden in new[] { "System.Net", "Process.Start", "ProcessStartInfo", "ShellExecute", "WebBrowser", "FolderBrowserDialog", "SaveFileDialog", "OpenFileDialog", "backend-api", "access_token", "refresh_token", "auth.json", "account/rateLimits/read" }) Require(!text.Contains(forbidden, StringComparison.Ordinal), "Forbidden runtime source: " + Path.GetFileName(file) + " / " + forbidden);
+            }
+        });
+        Test("URI loaders and dynamic activation are excluded from reviewed API allowlists", () =>
+        {
+            foreach (string assembly in new[] { "AIUsage", "AIUsage.Core" })
+            {
+                var policy = File.ReadAllLines(Path.Combine(repositoryRoot, "tests", "AIUsage.OfflineTests", "allowed-api", assembly + ".txt"));
+                foreach (string type in new[] { "System.Windows.Media.Imaging.BitmapImage", "System.Windows.Media.Imaging.BitmapDecoder", "System.Xml.XmlReader", "System.Xml.Linq.XDocument", "System.Windows.Markup.XamlReader", "System.Windows.Controls.Frame", "System.Windows.Navigation.NavigationWindow", "System.Activator", "System.Runtime.Loader.AssemblyLoadContext", "System.Runtime.InteropServices.NativeLibrary", "System.Net.Http.HttpClient" }) Require(!policy.Contains("T " + type), "Dangerous type allowlisted: " + type);
             }
         });
         var assemblies = args.Select((value, index) => (value, index)).Where(x => x.value == "--app-assembly").Select(x => args[x.index + 1]).ToArray();
         if (assemblies.Length == 0) { Console.WriteLine("FAIL No --app-assembly supplied; Windows metadata guard was not executed"); failed++; }
         foreach (string assembly in assemblies) Test("Windows application compiled API boundary: " + Path.GetFileName(Path.GetDirectoryName(assembly)), () => CheckAssembly(assembly));
-        Test("No HTTP, socket or DNS start event observed during synthetic local operations", () =>
-            Require(network.Events.Count == 0, "Network start events: " + string.Join(",", network.Events)));
+        Test("No HTTP, socket or DNS start event observed during synthetic local operations", () => Require(network.Events.Count == 0, "Network start events: " + string.Join(",", network.Events)));
         Console.WriteLine($"RESULT: {passed} passed; {failed} failed; {skipped} skipped.");
         Console.WriteLine("Scope: application-owned assembly/source guards and synthetic operations; not a packet capture or a guarantee about Windows/security/cloud-sync services.");
         return failed == 0 ? 0 : 1;
@@ -197,6 +187,17 @@ internal static class Program
     private static void CheckAssembly(string path)
     {
         using var stream = File.OpenRead(path); using var pe = new PEReader(stream); var m = pe.GetMetadataReader();
+        string assemblyName = m.GetString(m.GetAssemblyDefinition().Name);
+        string policyPath = Path.Combine(repositoryRoot, "tests", "AIUsage.OfflineTests", "allowed-api", assemblyName + ".txt");
+        var allowed = File.ReadAllLines(policyPath).Where(l => !l.StartsWith('#')).ToHashSet(StringComparer.Ordinal);
+        var unreviewed = m.AssemblyReferences.Select(h => "A " + m.GetString(m.GetAssemblyReference(h).Name)).Where(n => !allowed.Contains(n)).ToList();
+        string FullName(TypeReferenceHandle h)
+        {
+            var t = m.GetTypeReference(h);
+            return t.ResolutionScope.Kind == HandleKind.TypeReference ? FullName((TypeReferenceHandle)t.ResolutionScope) + "/" + m.GetString(t.Name) : (m.GetString(t.Namespace).Length > 0 ? m.GetString(t.Namespace) + "." : "") + m.GetString(t.Name);
+        }
+        unreviewed.AddRange(m.TypeReferences.Select(h => "T " + FullName(h)).Where(n => !allowed.Contains(n)));
+        Require(unreviewed.Count == 0, "Unreviewed references in " + assemblyName + ": " + string.Join(" | ", unreviewed));
         foreach (var handle in m.TypeReferences)
         {
             var type = m.GetTypeReference(handle); string ns = m.GetString(type.Namespace), name = m.GetString(type.Name);
@@ -209,26 +210,24 @@ internal static class Program
         {
             var method = m.GetMethodDefinition(handle);
             if ((method.Attributes & MethodAttributes.PinvokeImpl) == 0) continue;
-            var import = method.GetImport();
-            Equal("user32.dll", m.GetString(m.GetModuleReference(import.Module).Name).ToLowerInvariant());
-            Equal("DestroyIcon", m.GetString(import.Name));
+            var import = method.GetImport(); Equal("user32.dll", m.GetString(m.GetModuleReference(import.Module).Name).ToLowerInvariant()); Equal("DestroyIcon", m.GetString(import.Name));
         }
         foreach (var handle in m.MemberReferences)
         {
             var member = m.GetMemberReference(handle); string name = m.GetString(member.Name);
             if (member.Parent.Kind != HandleKind.TypeReference) continue;
             var type = m.GetTypeReference((TypeReferenceHandle)member.Parent);
-            if (m.GetString(type.Namespace) == "System.Reflection" && m.GetString(type.Name) == "Assembly")
-                Require(!name.StartsWith("Load", StringComparison.Ordinal), "Dynamic assembly loading is not permitted");
+            if (m.GetString(type.Namespace) == "System.Reflection" && m.GetString(type.Name) == "Assembly") Require(!name.StartsWith("Load", StringComparison.Ordinal) && name is not ("GetType" or "CreateInstance"), "Dynamic assembly loading/activation is not permitted");
+            string full = FullName((TypeReferenceHandle)member.Parent);
+            Require(!(full == "System.Type" && name is "GetType" or "InvokeMember"), "Dynamic type lookup is not permitted");
+            Require(!(full == "System.Runtime.InteropServices.Marshal" && (name.Contains("DelegateForFunctionPointer") || name.Contains("GetFunctionPointerForDelegate"))), "Dynamic native invocation is not permitted");
         }
     }
     private static string Fixture(string root)
     {
-        string directory = Path.Combine(root, "sessions"); Directory.CreateDirectory(directory);
-        string path = Path.Combine(directory, "rollout.jsonl");
+        string directory = Path.Combine(root, "sessions"); Directory.CreateDirectory(directory); string path = Path.Combine(directory, "rollout.jsonl");
         File.WriteAllText(path, Row("session_meta", new { id = "synthetic-local-session" }) + Row("turn_context", new { model = "gpt-5.6-sol" }) +
-            Row("event_msg", new { type = "token_count", info = new { total_token_usage = new { input_tokens = 1000, output_tokens = 100, total_tokens = 1100 } },
-                rate_limits = new { primary = new { used_percent = 12, window_minutes = 300 } } }));
+            Row("event_msg", new { type = "token_count", info = new { total_token_usage = new { input_tokens = 1000, output_tokens = 100, total_tokens = 1100 } }, rate_limits = new { primary = new { used_percent = 12, window_minutes = 300 } } }));
         return path;
     }
     private static string Row(string type, object payload) => JsonSerializer.Serialize(new { timestamp = Now.ToString("O"), type, payload }) + "\n";
@@ -250,9 +249,7 @@ internal static class Program
     private sealed class NetworkEvents : EventListener
     {
         public ConcurrentQueue<string> Events { get; } = new();
-        protected override void OnEventSourceCreated(EventSource source)
-        { if (source.Name.StartsWith("System.Net", StringComparison.Ordinal)) EnableEvents(source, EventLevel.Verbose); }
-        protected override void OnEventWritten(EventWrittenEventArgs e)
-        { if (e.EventName is "RequestStart" or "ConnectStart" or "ResolutionStart" or "AcceptStart") Events.Enqueue(e.EventSource.Name + "/" + e.EventName); }
+        protected override void OnEventSourceCreated(EventSource source) { if (source.Name.StartsWith("System.Net", StringComparison.Ordinal)) EnableEvents(source, EventLevel.Verbose); }
+        protected override void OnEventWritten(EventWrittenEventArgs e) { if (e.EventName is "RequestStart" or "ConnectStart" or "ResolutionStart" or "AcceptStart") Events.Enqueue(e.EventSource.Name + "/" + e.EventName); }
     }
 }

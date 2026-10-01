@@ -45,10 +45,15 @@ jobs:
         run: |
           dotnet run --project tests/AIUsage.FollowupTests -c Release 2>&1 | Tee-Object artifacts/followup-tests.txt
           if ($LASTEXITCODE -ne 0) { throw 'Follow-up regressions failed.' }
+      - name: Third-audit security and large-cache regressions
+        shell: pwsh
+        run: |
+          dotnet run --project tests/AIUsage.SecurityTests -c Release -- --stress 2>&1 | Tee-Object artifacts/security-tests.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Security regressions failed.' }
       - name: Reject silent dotnet test success
         shell: pwsh
         run: |
-          foreach ($project in @('AIUsage.Tests', 'AIUsage.AuditTests', 'AIUsage.LocalizationTests', 'AIUsage.FollowupTests', 'AIUsage.OfflineTests')) {
+          foreach ($project in @('AIUsage.Tests', 'AIUsage.AuditTests', 'AIUsage.LocalizationTests', 'AIUsage.FollowupTests', 'AIUsage.OfflineTests', 'AIUsage.SecurityTests', 'AIUsage.DesktopTests')) {
             $output = & dotnet test "tests/$project" -c Release 2>&1 | Out-String
             $code = $LASTEXITCODE
             $output | Add-Content artifacts/test-runner-guard.txt
@@ -69,16 +74,24 @@ jobs:
             & ./scripts/collect-notices.ps1 -Runtime $rid -PublishDirectory "artifacts/publish/$rid"
             Copy-Item README.md, LICENSE, THIRD-PARTY-NOTICES.md "artifacts/publish/$rid"
             Copy-Item docs "artifacts/publish/$rid/docs" -Recurse -Force
+            & ./scripts/verify-package.ps1 -PublishDirectory "artifacts/publish/$rid" -Runtime $rid | Tee-Object -Append artifacts/package-tests.txt
           }
       - name: Local-only source, assembly and functional guards
         shell: pwsh
         run: |
-          dotnet run --project tests/AIUsage.OfflineTests -c Release -- --repo-root "$env:GITHUB_WORKSPACE" --app-assembly src/AIUsage.Windows/bin/Release/net10.0-windows/win-x64/AIUsage.dll --app-assembly src/AIUsage.Windows/bin/Release/net10.0-windows/win-arm64/AIUsage.dll 2>&1 | Tee-Object artifacts/offline-tests.txt
+          dotnet run --project tests/AIUsage.OfflineTests -c Release -- --repo-root "$env:GITHUB_WORKSPACE" --app-assembly artifacts/publish/win-x64/AIUsage.dll --app-assembly artifacts/publish/win-arm64/AIUsage.dll --app-assembly artifacts/publish/win-x64/AIUsage.Core.dll --app-assembly artifacts/publish/win-arm64/AIUsage.Core.dll 2>&1 | Tee-Object artifacts/offline-tests.txt
           if ($LASTEXITCODE -ne 0) { throw 'Local-only regression guards failed.' }
       - name: Execute x64 local-only and bilingual WPF smoke tests
         shell: pwsh
         run: |
           & ./scripts/verify-local-runtime.ps1 -Executable artifacts/publish/win-x64/AIUsage.exe -Destination artifacts/screenshots
+      - name: Published x64 actual-entry-point and startup-hook regression tests
+        shell: pwsh
+        run: |
+          dotnet build tests/AIUsage.StartupHook -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Hook fixture build failed.' }
+          dotnet run --project tests/AIUsage.DesktopTests -c Release -- artifacts/publish/win-x64/AIUsage.exe tests/AIUsage.StartupHook/bin/Release/net10.0/AIUsage.StartupHook.dll tests/AIUsage.SecurityTests/bin/Release/net10.0/AIUsage.SecurityTests.dll 2>&1 | Tee-Object artifacts/desktop-tests.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Published desktop regressions failed.' }
       - name: Package and hash
         shell: pwsh
         run: |
@@ -101,6 +114,7 @@ jobs:
           git archive --format=zip --output="artifacts/release/AIUsage-$packageVersion-source.zip" HEAD
           if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
           Copy-Item artifacts/screenshots/*.png artifacts/release
+          Copy-Item artifacts/security-tests.txt, artifacts/desktop-tests.txt, artifacts/package-tests.txt artifacts/release
           Copy-Item artifacts/regression-tests.txt, artifacts/audit-tests.txt, artifacts/localization-tests.txt, artifacts/followup-tests.txt, artifacts/offline-tests.txt, artifacts/test-runner-guard.txt, artifacts/screenshots/local-runtime-test.txt artifacts/release
           @{
             repository = $env:GITHUB_REPOSITORY
@@ -110,7 +124,7 @@ jobs:
             release_tag = $tag
             dotnet_sdk = (& dotnet --version)
             runner_os = $env:RUNNER_OS
-            runtime_validation = 'x64 local-only normal workflow with locked synthetic credentials; English/Spanish dark/light demo; ARM64 compiled/metadata-checked, not executed'
+            runtime_validation = 'Published x64 actual entry point, mutex/tray/timers, settings recovery, disabled startup hook; bilingual smoke. Published x64/ARM64 API allowlists; ARM64 not executed.'
             connectivity = 'Local-only runtime; authenticated client removed. Build/release tooling uses the internet.'
           } | ConvertTo-Json | Set-Content artifacts/release/BUILD-INFO.json -Encoding utf8NoBOM
           Get-ChildItem artifacts/release -File | Sort-Object Name | ForEach-Object {
@@ -130,6 +144,9 @@ jobs:
         with:
           name: test-diagnostics
           path: |
+            artifacts/security-tests.txt
+            artifacts/desktop-tests.txt
+            artifacts/package-tests.txt
             artifacts/regression-tests.txt
             artifacts/audit-tests.txt
             artifacts/localization-tests.txt
@@ -139,7 +156,6 @@ jobs:
             artifacts/screenshots/*
           if-no-files-found: ignore
           retention-days: 14
-
   release:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]'))
     needs: build

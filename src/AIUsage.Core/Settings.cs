@@ -2,11 +2,13 @@ using static AIUsage.Core.L10n;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AIUsage.Core;
 
 public sealed class AppSettings
 {
+    [JsonIgnore] public bool MigrationSaveFailed { get; private set; }
     public string CodexHome { get; set; } = "";
     public int RefreshSeconds { get; set; } = 60;
     public bool LightTheme { get; set; }
@@ -32,8 +34,27 @@ public sealed class AppSettings
         settings.RefreshSeconds = Math.Clamp(settings.RefreshSeconds, 15, 3600);
         // Drop the obsolete property on disk; no runtime property can enable networking.
         if (document.RootElement.EnumerateObject().Any(p => p.Name.Equals("OnlineQuota", StringComparison.OrdinalIgnoreCase)))
-            AtomicJson.Write(path, settings);
+        {
+            try { AtomicJson.Write(path, settings); }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            { settings.MigrationSaveFailed = true; } // Reading succeeded: NEVER discard the selected folder.
+        }
         return settings;
+    }
+}
+
+public sealed record SettingsLoadResult(AppSettings Settings, bool CanScan, string? WarningKey)
+{
+    public static SettingsLoadResult Read(string path)
+    {
+        try
+        {
+            var settings = AppSettings.Load(path);
+            return new(settings, true, settings.MigrationSaveFailed ? "MigrationNotSaved" : null);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or
+            InvalidOperationException or ArgumentException)
+        { return new(new AppSettings(), false, "ConfirmFolderAfterError"); }
     }
 }
 
@@ -44,6 +65,23 @@ public static class AtomicJson
     private static readonly object WriteGate = new();
     public static void Write<T>(string path, T value) =>
         WriteText(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+    public static void WriteStream(string path, Action<Stream> write, long maximumBytes)
+    {
+        lock (WriteGate)
+        {
+            path = LocalPaths.Require(path);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var file = new FileStream(LocalPaths.Require(temp), FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                using (var bounded = new SizeLimitedWriteStream(file, maximumBytes)) write(bounded);
+                LocalPaths.Require(path);
+                File.Move(temp, path, true);
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
+    }
     public static void WriteText(string path, string text)
     {
         lock (WriteGate)
