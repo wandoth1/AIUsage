@@ -8,6 +8,15 @@ AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robin
 
 [Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Security](SECURITY.md)
 
+## What's new in 1.3.0
+
+- **Claude Code usage (optional, off by default).** Turn it on in **Settings → Claude Code → Include Claude Code usage**. AIUsage then reads the token counters from the transcripts Claude Code already keeps on this PC, including subagents.
+- **All / Codex / Claude Code selector** on the dashboard. The tray total covers both sources.
+- **Official Claude API prices** for every current Claude model, including 5-minute and 1-hour cache writes, cache reads, fast mode and US-only inference.
+- **No Claude credentials, ever.** Claude plan limits are not shown, because reading them would require your Claude account credentials and Anthropic does not allow third-party apps to use them. See [Claude Code](#claude-code-optional).
+
+Release notes: [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md). Previous: 1.2.0 added automatic Codex folder detection.
+
 ## Download and upgrade
 
 | Package | Platform |
@@ -29,7 +38,7 @@ Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the 
 
 ## Local operation
 
-The app opens selected JSONL rollouts with **read-only access**, interprets accounting/session metadata and discards conversation messages. It does not open authentication, browser cookies or credential stores. It does not modify Codex's files, installation, configuration or credentials, call a model, spend resets or alter subscriptions. No provider connection, analytics, crash uploads, updater or live price download is implemented.
+The app opens selected JSONL rollouts (and, when enabled, Claude Code transcripts) with **read-only access**, interprets accounting/session metadata and discards conversation messages. It does not open authentication, browser cookies or credential stores. It does not modify Codex's files, installation, configuration or credentials, call a model, spend resets or alter subscriptions. No provider connection, analytics, crash uploads, updater or live price download is implemented.
 
 AIUsage's settings, prices and accounting cache live under `%LOCALAPPDATA%\AIUsage`. A user-triggered CSV export creates a unique file in its `exports` subfolder, displays the path and does not open or upload it. Custom prices use a built-in editor. There are no browser/file-shell buttons or shell-based file dialogs. Metadata and user notes remain private even without conversations: local does not mean anonymous.
 
@@ -37,9 +46,25 @@ Only **resident local-disk paths** are supported. UNC paths (including WSL share
 
 This is an application boundary, not a network sandbox for Windows. Operating-system services, security tools, storage drivers or cloud-sync agents may communicate independently. Keep app data outside synchronized/network-backed storage. Attribute checks cannot defeat malicious filesystem races or every third-party filesystem. Build/restore/release tooling uses the internet and is not executed by the installed app.
 
-## Select a source and interpret the results
+## Codex folder
 
 On first use with no settings file, AIUsage uses `CODEX_HOME`, otherwise `%USERPROFILE%\.codex`. **Leave Settings → Codex folder empty for automatic detection**; enter a folder only when your logs live elsewhere. Settings shows the detected folder and how many recent sessions it holds, with **Use detected folder** to apply it. If a selected folder contains no Codex logs, saving it offers the detected folder instead, and the dashboard shows the same one-click suggestion; AIUsage never switches folders silently. A folder where the Codex *application* is installed (for example under `C:\Program Files\WindowsApps`) never contains logs: it is rejected when saved, and an existing setting pointing there is cleared on startup so automatic detection applies, with a notice. Detection only lists rollout file names and modification dates; it never opens log contents, and it does not run while scanning is paused after a settings error unless you request it. The footer identifies the current reading folder. It reads `sessions/**/*.jsonl` and `archived_sessions/**/*.jsonl`; `history.jsonl` is always excluded. For a directly selected folder without those session directories, only `rollout-*.jsonl` candidates are considered. Arbitrary JSONL/history files are not a fallback input.
+
+## Claude Code (optional)
+
+Claude Code support is **off by default**. Enable **Settings → Claude Code → Include Claude Code usage** and press **Save and refresh** (Spanish: **Ajustes → Claude Code → Incluir el uso de Claude Code → Guardar y actualizar**). A row of buttons then switches the dashboard between **All**, **Codex** and **Claude Code**, and the footer shows the Claude folder being read.
+
+**What is read.** Only `*.jsonl` transcripts under `projects\` of `CLAUDE_CONFIG_DIR`, otherwise `%USERPROFILE%\.claude` (subagent transcripts included). Lines without a usage block, such as prompts and tool output, are skipped before parsing. From assistant records AIUsage keeps only the timestamp, model, token counters, `speed` and `inference_geo`; message and request ids are kept only as SHA-256 digests to avoid double counting. The cache lives in `%LOCALAPPDATA%\AIUsage\cache-claude`.
+
+**What is never done.** AIUsage does not open `.credentials.json`, `history.jsonl`, settings or any other file outside `projects\`. It does not sign in to Claude, use Claude credentials or OAuth, call Anthropic services, or launch or automate Claude Code. Claude Code's own files are never modified.
+
+**Counting.** Requests that Claude Code logs more than once (resumed sessions, subagent sidechains) are counted once, following the same rules as ccusage and OpenUsage. Advisor iterations are priced under their own model. Records generated locally by Claude Code (`<synthetic>`) are not API requests and are ignored.
+
+**Prices.** Estimates use Anthropic's published API list prices (platform.claude.com, checked 2026-10-01): uncached input, 5-minute and 1-hour cache writes, cache reads and output, fast mode on Opus 5.5 / 5 / 4.8, and the 1.1x US-only inference multiplier. **With a Pro or Max subscription this is not what you pay**; it shows what the same usage would cost on the API. Web-search charges and private discounts are not included.
+
+**Limits.** Claude plan limits are not shown: they are only available through your Claude account credentials, which Anthropic does not allow third-party applications to use. Check them inside Claude Code with `/usage`. Claude Code deletes old transcripts after its retention period (30 days by default), so older usage also disappears from AIUsage.
+
+## Dashboard and Codex limits
 
 Today, yesterday, last 7/30 days, model breakdowns, input/cache/output details, estimated costs, a seven-day activity chart, local CSV, tray integration, dark/light themes and periodic disk refresh are retained.
 
@@ -73,7 +98,7 @@ Startup hooks are disabled in the shipped runtime configuration. Folder deployme
 
 .NET's standard **local diagnostics IPC remains available** subject to OS permissions. It is documented, not misrepresented as disabled or as an Internet connection. Windows/security software may create independent caches. These controls are not protection against same-user binary/configuration replacement or a compromised OS.
 
-To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex data must not be deleted. See [privacy](docs/PRIVACY.md).
+To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex (`.codex`) and Claude Code (`.claude`) data must not be deleted. See [privacy](docs/PRIVACY.md).
 
 ## Build and evidence
 
@@ -83,4 +108,4 @@ CI validates accounting, local audit, localization, follow-up, security/stress a
 
 [First audit response](docs/AUDIT-REMEDIATION.md) · [Second audit](docs/AUDIT-FOLLOWUP.md) · [Local-security remediation](docs/AUDIT-SECURITY-REMEDIATION.md)
 
-Codex remains the only implemented provider. No installer, updater, publisher signature, comprehensive multimonitor/RDP/accessibility validation or legal certification is included. Only process logs you are authorized to use.
+Codex and Claude Code (local transcripts only) are the implemented sources. No installer, updater, publisher signature, comprehensive multimonitor/RDP/accessibility validation or legal certification is included. Only process logs you are authorized to use.
