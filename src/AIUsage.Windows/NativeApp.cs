@@ -35,7 +35,7 @@ public sealed class NativeApp : Application
             else
             {
                 int index = Array.IndexOf(args, "--smoke-test");
-                string folder = index + 1 < args.Length ? args[index + 1] : "artifacts";
+                string folder = LocalPaths.Require(Path.GetFullPath(index + 1 < args.Length ? args[index + 1] : "artifacts"));
                 try { Directory.CreateDirectory(folder); File.WriteAllText(Path.Combine(folder, "ui-smoke-error.txt"), e.Exception.ToString()); }
                 catch (IOException) { }
                 catch (UnauthorizedAccessException) { }
@@ -69,8 +69,17 @@ public sealed class NativeApp : Application
         if (smoke)
         {
             int index = Array.IndexOf(args, "--smoke-test");
-            string folder = index + 1 < args.Length ? args[index + 1] : "artifacts";
+            string folder = LocalPaths.Require(Path.GetFullPath(index + 1 < args.Length ? args[index + 1] : "artifacts"));
             Directory.CreateDirectory(folder);
+            int fixtureIndex = Array.IndexOf(args, "--local-fixture");
+            if (fixtureIndex >= 0)
+            {
+                if (fixtureIndex + 1 >= args.Length) throw new ArgumentException("Missing synthetic fixture path.");
+                var local = new MainWindow(false, () => { }, "en", args[fixtureIndex + 1]);
+                try { local.Show(); await local.VerifyLocalOnlyAsync(); }
+                finally { local.Stop(); local.Close(); }
+                File.WriteAllText(LocalPaths.Require(Path.Combine(folder, "local-smoke-ok.txt")), "Normal-mode local totals and settings migration passed with inaccessible synthetic credentials.\n".Replace("\n", Environment.NewLine));
+            }
             panel.Width = 560; panel.Height = 940; panel.MaxHeight = double.PositiveInfinity;
             panel.Show();
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
@@ -142,7 +151,7 @@ public sealed class NativeApp : Application
         var bitmap = new RenderTargetBitmap((int)window.ActualWidth, (int)window.ActualHeight, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(window);
         var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var file = File.Create(path); encoder.Save(file);
+        using var file = File.Create(LocalPaths.Require(path)); encoder.Save(file);
     }
     private static Icon MakeIcon()
     {

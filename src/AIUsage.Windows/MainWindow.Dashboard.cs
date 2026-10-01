@@ -1,7 +1,6 @@
 using static AIUsage.Core.L10n;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,7 +15,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AIUsage.Core;
-using Forms = System.Windows.Forms;
 
 namespace AIUsage.Windows;
 
@@ -77,11 +75,9 @@ public sealed partial class MainWindow
     private Border QuotaCard()
     {
         var content = new StackPanel();
-        content.Children.Add(Heading(T("LimitsTitle"), live?.Plan ?? (settings.OnlineQuota ? T("AccountNotUpdated") : T("LocalLogs"))));
-        var windows = QuotaSelection.Select(scan.Quotas, live);
-        if (live is null && scan.Quotas.Count > 0) content.Children.Add(Text(T("HistoricalLimits"), 10, false, "Muted"));
-        if (settings.OnlineQuota && DateTimeOffset.UtcNow < client.NextAllowedAt)
-            content.Children.Add(Text(F("OnlineNotBefore", client.NextAllowedAt.ToLocalTime()), 10, false, "Muted"));
+        content.Children.Add(Heading(T("LimitsTitle"), T("LocalLogs")));
+        var windows = QuotaSelection.Select(scan.Quotas);
+        content.Children.Add(Text(T("HistoricalLimits"), 10, false, "Muted"));
         if (windows.Count == 0)
         {
             content.Children.Add(Text(T("NoLimits"), 13, false, "Muted"));
@@ -91,7 +87,7 @@ public sealed partial class MainWindow
         {
             var w = item.Window; var q = item.Snapshot;
             var row = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
-            row.Children.Add(Heading((live is null ? AccountIdentity.Label(q.AccountKey) + " · " : "") + L10n.WindowName(w), F("PercentUsed", w.UsedPercent)));
+            row.Children.Add(Heading((AccountIdentity.Label(q.AccountKey) + " · ") + L10n.WindowName(w), F("PercentUsed", w.UsedPercent)));
             row.Children.Add(Progress(w.UsedPercent, w.UsedPercent >= 85 ? "Warning" : "Accent"));
             string reset;
             if (w.ResetAt is null) reset = T("ResetUnknown");
@@ -105,8 +101,6 @@ public sealed partial class MainWindow
             stamp.ToolTip = w.ResetAt?.ToLocalTime().ToString("F", L10n.Culture); stamp.Margin = new Thickness(0, 5, 0, 0); row.Children.Add(stamp);
             content.Children.Add(row);
         }
-        if (live?.Credits is not null) content.Children.Add(Text(T("CreditsReported") + L10n.CreditValue(live.Credits), 11, false, "Muted"));
-        if (live?.ResetCredits is not null) content.Children.Add(Text(T("ResetsAvailable") + live.ResetCredits.Value.ToString("N0", L10n.Culture), 11, false, "Muted"));
         return Card(content);
     }
     private Border Trend()

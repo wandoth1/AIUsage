@@ -1,38 +1,29 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using AIUsage.Core;
 
 internal static partial class Program
 {
-    private static async Task Extended()
+    private static Task Extended()
     {
         Check("H01 provider ids, not matching display names, identify windows", () =>
         {
             var one = Q("{\"limit_id\":\"a\",\"limit_name\":\"Same\",\"primary\":{\"used_percent\":5,\"window_minutes\":300}}");
             var two = Q("{\"limit_id\":\"b\",\"limit_name\":\"Same\",\"primary\":{\"used_percent\":80,\"window_minutes\":300}}");
-            Equal(2, QuotaSelection.Select([one, two], null).Count);
+            Equal(2, QuotaSelection.Select([one, two]).Count);
         });
         Check("H01 same weekly window moved between slots has one identity", () =>
         {
             var one = Q("{\"primary\":{\"used_percent\":5,\"window_minutes\":10080}}");
             var two = Q("{\"secondary\":{\"used_percent\":10,\"window_minutes\":10080}}") with { At = At.AddSeconds(1) };
-            Equal(1, QuotaSelection.Select([one, two], null).Count);
-            Equal(10d, QuotaSelection.Select([one, two], null)[0].Window.UsedPercent);
+            Equal(1, QuotaSelection.Select([one, two]).Count);
+            Equal(10d, QuotaSelection.Select([one, two])[0].Window.UsedPercent);
         });
         Check("H16 distinct local account identities remain separate", () =>
         {
             var q = Q("{\"primary\":{\"used_percent\":5}}");
-            Equal(2, QuotaSelection.Select([q with { AccountKey = "a" }, q with { AccountKey = "b" }], null).Count);
-        });
-        Check("H16 online response never imports local missing windows", () =>
-        {
-            var local = Q("{\"secondary\":{\"used_percent\":99}}");
-            var online = Q("{\"primary\":{\"used_percent\":5}}") with { Source = "online" };
-            var selected = QuotaSelection.Select([local], online);
-            Equal(1, selected.Count); Equal("online", selected[0].Snapshot.Source);
+            Equal(2, QuotaSelection.Select([q with { AccountKey = "a" }, q with { AccountKey = "b" }]).Count);
         });
         Check("H02 null tier resets, partial context omission does not", () =>
         {
@@ -163,80 +154,7 @@ internal static partial class Program
             s.Scan(t.Root); s.ClearCache(); Equal(0, Directory.GetFiles(t.Cache, "*.json").Length);
             Equal(1, s.Scan(t.Root).Events.Count); Assert(File.Exists(t.Rollout), "Source rollout was removed");
         });
-        await CheckAsync("H15 malformed auth never reaches HTTP or prints credentials", async () =>
-        {
-            using var t = new Home(); var h = new ReplyHandler((_, _) => new(HttpStatusCode.OK));
-            using var c = new CodexUsageClient(h);
-            foreach (string value in new[] { "SECRET\nVALUE", "SECRET\0VALUE", "SECRET VALUE" })
-            {
-                Auth(t, value); var error = await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None));
-                Assert(!error.Message.Contains("SECRET"), "Secret in exception");
-            }
-            Equal(0, h.Calls);
-        });
-        await CheckAsync("H16 authenticated requests have correct headers and don't modify auth", async () =>
-        {
-            using var t = new Home(); Auth(t); byte[] before = File.ReadAllBytes(Path.Combine(t.Root, "auth.json"));
-            var h = new ReplyHandler((r, _) => { Equal(CodexUsageClient.UsageEndpoint, r.RequestUri!.ToString()); Equal("Bearer", r.Headers.Authorization!.Scheme); Equal("SYNTHETIC", r.Headers.Authorization.Parameter); Equal("account-a", r.Headers.GetValues("ChatGPT-Account-Id").Single()); return JsonResponse(); });
-            using var c = new CodexUsageClient(h); var q = await c.ReadAsync(t.Root, CancellationToken.None);
-            Equal(AccountIdentity.Key("account-a"), q.AccountKey); Assert(before.SequenceEqual(File.ReadAllBytes(Path.Combine(t.Root, "auth.json"))), "Auth modified");
-        });
-        await CheckAsync("H16 account switch during response invalidates online result", async () =>
-        {
-            using var t = new Home(); Auth(t);
-            var h = new ReplyHandler((_, _) => { Auth(t, account: "account-b"); return JsonResponse(); });
-            using var c = new CodexUsageClient(h); await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None));
-        });
-        await CheckAsync("H17 429 respects Retry-After and prevents another HTTP call", async () =>
-        {
-            using var t = new Home(); Auth(t); var clock = new Clock();
-            var h = new ReplyHandler((_, n) => { if (n > 1) return JsonResponse(); var r = new HttpResponseMessage(HttpStatusCode.TooManyRequests); r.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromMinutes(15)); return r; });
-            using var c = new CodexUsageClient(h, clock); await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None));
-            Equal(clock.Now.AddMinutes(15), c.NextAllowedAt); clock.Now += TimeSpan.FromMinutes(10);
-            await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None)); Equal(1, h.Calls);
-            clock.Now += TimeSpan.FromMinutes(5); await c.ReadAsync(t.Root, CancellationToken.None); Equal(2, h.Calls);
-        });
-        await CheckAsync("H17 repeated 5xx errors increase backoff", async () =>
-        {
-            using var t = new Home(); Auth(t); var clock = new Clock(); var h = new ReplyHandler((_, _) => new(HttpStatusCode.ServiceUnavailable));
-            using var c = new CodexUsageClient(h, clock);
-            await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None)); Equal(clock.Now.AddMinutes(2), c.NextAllowedAt);
-            clock.Now = c.NextAllowedAt; await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None)); Equal(clock.Now.AddMinutes(4), c.NextAllowedAt);
-        });
-        await CheckAsync("Concurrent quota requests issue only one network request", async () =>
-        {
-            using var t = new Home(); Auth(t); var h = new ReplyHandler((_, _) => JsonResponse()); using var c = new CodexUsageClient(h);
-            async Task Attempt() { try { await c.ReadAsync(t.Root, CancellationToken.None); } catch (InvalidOperationException) { } }
-            await Task.WhenAll(Attempt(), Attempt(), Attempt()); Equal(1, h.Calls);
-        });
-        await CheckAsync("401 403 and redirects are errors, not successful or followed", async () =>
-        {
-            using var t = new Home(); Auth(t);
-            foreach (var code in new[] { HttpStatusCode.Unauthorized, HttpStatusCode.Forbidden, HttpStatusCode.Redirect })
-            {
-                var h = new ReplyHandler((_, _) => { var r = new HttpResponseMessage(code); r.Headers.Location = new Uri("https://example.invalid/"); return r; });
-                using var c = new CodexUsageClient(h); await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None)); Equal(1, h.Calls);
-            }
-        });
-        await CheckAsync("Malformed JSON response is recoverable and backed off", async () =>
-        {
-            using var t = new Home(); Auth(t); var clock = new Clock(); var h = new ReplyHandler((_, _) => new(HttpStatusCode.OK) { Content = new StringContent("{") });
-            using var c = new CodexUsageClient(h, clock); await Fails<JsonException>(() => c.ReadAsync(t.Root, CancellationToken.None)); Equal(clock.Now.AddMinutes(2), c.NextAllowedAt);
-        });
-        await CheckAsync("Oversized auth is rejected before any request", async () =>
-        {
-            using var t = new Home(); File.WriteAllText(Path.Combine(t.Root, "auth.json"), new string('x', 1_048_577));
-            var h = new ReplyHandler((_, _) => JsonResponse()); using var c = new CodexUsageClient(h); await Fails<InvalidOperationException>(() => c.ReadAsync(t.Root, CancellationToken.None)); Equal(0, h.Calls);
-        });
+        return Task.CompletedTask;
     }
     private static QuotaSnapshot Q(string json) { using var d = JsonDocument.Parse(json); return QuotaParser.Parse(d.RootElement, At, "test"); }
-    private static void Auth(Home home, string token = "SYNTHETIC", string account = "account-a") => File.WriteAllText(Path.Combine(home.Root, "auth.json"), JsonSerializer.Serialize(new { tokens = new { access_token = token, account_id = account } }));
-    private static HttpResponseMessage JsonResponse() => new(HttpStatusCode.OK) { Content = new StringContent("{\"rate_limit\":{\"primary_window\":{\"used_percent\":12,\"limit_window_seconds\":18000}}}", Encoding.UTF8, "application/json") };
-    private static async Task<T> Fails<T>(Func<Task> action) where T : Exception { try { await action(); } catch (T error) { return error; } throw new Exception("Expected " + typeof(T).Name); }
-    private sealed class Clock : TimeProvider { public DateTimeOffset Now = At; public override DateTimeOffset GetUtcNow() => Now; }
-    private sealed class ReplyHandler(Func<HttpRequestMessage, int, HttpResponseMessage> reply) : HttpMessageHandler
-    {
-        public int Calls { get; private set; }
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage r, CancellationToken ct) { ct.ThrowIfCancellationRequested(); return Task.FromResult(reply(r, ++Calls)); }
-    }
 }

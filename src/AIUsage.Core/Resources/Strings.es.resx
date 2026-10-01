@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -13,10 +13,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
   </resheader>
   <data name="About" xml:space="preserve">
-    <value>AIUsage {0} · Port independiente de OpenUsage para Windows (MIT), con versiones y evolución propias. Solo Codex; no incluye otros proveedores, pi ni OpenCode. Lee la carpeta local seleccionada, no todo el uso cloud ni de otros equipos. No se inicia automáticamente con Windows.</value>
-  </data>
-  <data name="AccountNotUpdated" xml:space="preserve">
-    <value>Registros · cuenta no actualizada</value>
+    <value>AIUsage {0} · Port independiente y exclusivamente local de OpenUsage para Windows (MIT), con versiones y desarrollo propios. Sin afiliación ni aval de OpenAI. Lee registros de uso de Codex; nunca se conecta a un servicio de IA. No se inicia automáticamente con Windows.</value>
   </data>
   <data name="Activity7" xml:space="preserve">
     <value>ACTIVIDAD · 7 DÍAS</value>
@@ -28,19 +25,10 @@
     <value>AIUsage ya está abierto. Busca su icono junto al reloj.</value>
   </data>
   <data name="AppData" xml:space="preserve">
-    <value>Datos de AIUsage</value>
+    <value>Carpeta local de datos de AIUsage</value>
   </data>
   <data name="AppFailed" xml:space="preserve">
     <value>AIUsage no pudo continuar ({0}).</value>
-  </data>
-  <data name="AuthInvalidCharacters" xml:space="preserve">
-    <value>La autenticación de Codex contiene caracteres no válidos. Vuelve a iniciar sesión desde Codex.</value>
-  </data>
-  <data name="AuthInvalidFormat" xml:space="preserve">
-    <value>La autenticación de Codex contiene un formato no válido. Vuelve a iniciar sesión desde Codex.</value>
-  </data>
-  <data name="AuthTooLarge" xml:space="preserve">
-    <value>auth.json supera 1 MB; no se ha procesado.</value>
   </data>
   <data name="BackToUsage" xml:space="preserve">
     <value>← Volver al consumo</value>
@@ -51,20 +39,11 @@
   <data name="CacheReuse" xml:space="preserve">
     <value>{0:0.#}% de la entrada reutilizada desde caché</value>
   </data>
-  <data name="ChooseFolder" xml:space="preserve">
-    <value>Elegir carpeta…</value>
-  </data>
-  <data name="ChooseFolderTitle" xml:space="preserve">
-    <value>Selecciona .codex (o una carpeta de sesiones)</value>
-  </data>
   <data name="CodexFolder" xml:space="preserve">
     <value>Carpeta de Codex</value>
   </data>
   <data name="Configuration" xml:space="preserve">
     <value>Configuración</value>
-  </data>
-  <data name="CreditsReported" xml:space="preserve">
-    <value>Créditos informados: </value>
   </data>
   <data name="CustomPricesFailed" xml:space="preserve">
     <value>No se han aplicado los precios personalizados: revisa price-overrides.json. Se mantiene el último catálogo válido.</value>
@@ -118,16 +97,16 @@
     <value>Cada tarifa debe ser un objeto.</value>
   </data>
   <data name="ExportCsv" xml:space="preserve">
-    <value>Exportar CSV</value>
+    <value>Guardar CSV local</value>
   </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>No se pudo exportar ({0}).</value>
   </data>
   <data name="FolderHelp" xml:space="preserve">
-    <value>Carpeta .codex que contiene sessions y archived_sessions. También admite una ruta WSL accesible desde Windows.</value>
+    <value>Una carpeta .codex local con sessions y archived_sessions, o una carpeta local de registros JSONL.</value>
   </data>
   <data name="HistoricalLimits" xml:space="preserve">
-    <value>Límites históricos de los registros, no de una cuenta online verificada. Las identidades desconocidas no pueden separarse con certeza.</value>
+    <value>Datos históricos de los registros locales, no límites de la cuenta en vivo. Solo cambian cuando Codex escribe nuevos datos. Las identidades desconocidas no se pueden separar con certeza.</value>
   </data>
   <data name="InvalidInterval" xml:space="preserve">
     <value>El intervalo debe estar entre 15 y 3600 segundos.</value>
@@ -148,7 +127,7 @@
     <value>Tema claro</value>
   </data>
   <data name="LimitsTitle" xml:space="preserve">
-    <value>LÍMITES DE CODEX</value>
+    <value>LÍMITES REGISTRADOS POR CODEX</value>
   </data>
   <data name="LocalAccount" xml:space="preserve">
     <value>Cuenta local {0}</value>
@@ -171,17 +150,11 @@
   <data name="MissingFolder" xml:space="preserve">
     <value>La carpeta indicada no existe o no es accesible.</value>
   </data>
-  <data name="NeedChatGPTSession" xml:space="preserve">
-    <value>Se necesita la sesión de ChatGPT en Codex; una clave API no permite consultar estos límites.</value>
-  </data>
   <data name="NewPrices" xml:space="preserve">
     <value>Tarifas y modelos nuevos</value>
   </data>
   <data name="NewPricesHelp" xml:space="preserve">
     <value>Los modelos desconocidos mantienen sus tokens visibles. Puedes añadir o corregir tarifas locales en USD por millón, sin recompilar.</value>
-  </data>
-  <data name="NoAuth" xml:space="preserve">
-    <value>No hay auth.json. Inicia sesión en Codex. El almacén de credenciales de Windows no se lee en esta versión.</value>
   </data>
   <data name="NoData" xml:space="preserve">
     <value>Sin datos</value>
@@ -193,7 +166,7 @@
     <value>Sin información de límites todavía.</value>
   </data>
   <data name="NoLimitsHelp" xml:space="preserve">
-    <value>Los logs pueden incluirlos. La consulta online se activa por separado en Ajustes.</value>
+    <value>AIUsage no puede consultar tu cuenta. Los límites solo aparecen cuando los registros locales seleccionados los incluyen.</value>
   </data>
   <data name="NoPeriodRecords" xml:space="preserve">
     <value>Todavía no hay registros en este periodo.</value>
@@ -207,35 +180,8 @@
   <data name="NullPrice" xml:space="preserve">
     <value>Tarifa nula.</value>
   </data>
-  <data name="OnlineAccount" xml:space="preserve">
-    <value>Cuenta · consulta online</value>
-  </data>
-  <data name="OnlineConsent" xml:space="preserve">
-    <value>AIUsage leerá el access_token de auth.json y lo enviará únicamente a chatgpt.com para consultar tus límites. No copiará ni renovará las credenciales, y no enviará conversaciones. Es un endpoint interno que puede cambiar. ¿Activar?</value>
-  </data>
-  <data name="OnlineFailed" xml:space="preserve">
-    <value>No se pudieron consultar los límites de la cuenta ({0}). No se reutilizan cuotas online anteriores; los registros locales conservan su origen y fecha.</value>
-  </data>
-  <data name="OnlineHelp" xml:space="preserve">
-    <value>Como máximo una consulta por minuto. No modifica auth.json, no reclama reinicios y no realiza peticiones al modelo. Si tu sesión caduca, renuévala desde Codex. El almacén de credenciales de Windows no se lee en esta versión.</value>
-  </data>
-  <data name="OnlineNotBefore" xml:space="preserve">
-    <value>Consulta online no antes de {0:HH:mm:ss}.</value>
-  </data>
-  <data name="OnlineOption" xml:space="preserve">
-    <value>Consultar los límites de mi cuenta online</value>
-  </data>
-  <data name="OnlineTimeout" xml:space="preserve">
-    <value>La consulta online ha agotado el tiempo de espera. Los datos locales siguen disponibles.</value>
-  </data>
-  <data name="OnlineTitle" xml:space="preserve">
-    <value>Consulta online opcional</value>
-  </data>
   <data name="OpenApp" xml:space="preserve">
     <value>Abrir AIUsage</value>
-  </data>
-  <data name="OpenFailed" xml:space="preserve">
-    <value>No se pudo abrir el destino ({0}).</value>
   </data>
   <data name="PartialCost" xml:space="preserve">
     <value>coste parcial</value>
@@ -274,28 +220,13 @@
     <value>Tarifas: {0}{1}. Costes teóricos con ese catálogo; no reconstruyen promociones, cargos por herramientas ni recargos regionales. Días en {2}.</value>
   </data>
   <data name="PrivacyIntro" xml:space="preserve">
-    <value>Privado por defecto. Sin telemetría ni subida de conversaciones.</value>
+    <value>Solo local. Sin acceso a cuentas, credenciales, cliente de red, telemetría ni envíos.</value>
   </data>
   <data name="PromoReviewNote" xml:space="preserve">
     <value>Tarifa promocional pendiente de revisión; no se ha supuesto una fecha de caducidad ni un nuevo precio.</value>
   </data>
   <data name="QualifiedNotice" xml:space="preserve">
     <value>Algunas estimaciones tienen condiciones, equivalencias o tarifas personalizadas. Consulta la nota bajo cada modelo y el CSV.</value>
-  </data>
-  <data name="QuotaHttpError" xml:space="preserve">
-    <value>No se pudieron leer los límites (HTTP {0}).</value>
-  </data>
-  <data name="QuotaInvalid" xml:space="preserve">
-    <value>Respuesta de límites no válida.</value>
-  </data>
-  <data name="QuotaRejected" xml:space="preserve">
-    <value>Consulta rechazada (HTTP {0}). Próximo intento a partir de {1:HH:mm:ss}.</value>
-  </data>
-  <data name="QuotaTooLarge" xml:space="preserve">
-    <value>La respuesta de límites supera 1 MB.</value>
-  </data>
-  <data name="QuotaWaiting" xml:space="preserve">
-    <value>Consulta online en espera hasta {0:HH:mm:ss}. No se ha enviado otra solicitud.</value>
   </data>
   <data name="ReadFolderFailed" xml:space="preserve">
     <value>No se pudo leer la carpeta de Codex. Comprueba la ruta y sus permisos en Ajustes ({0}).</value>
@@ -318,23 +249,17 @@
   <data name="RefreshInterval" xml:space="preserve">
     <value>Actualizar cada N segundos (15–3600)</value>
   </data>
-  <data name="RenewSession" xml:space="preserve">
-    <value>Codex debe renovar su sesión. Abre Codex y vuelve a actualizar. AIUsage no modifica ni renueva tus credenciales.</value>
-  </data>
   <data name="ResetDays" xml:space="preserve">
     <value>Reinicio en {0} d {1} h</value>
   </data>
   <data name="ResetExpired" xml:space="preserve">
-    <value>Reinicio vencido · pendiente de actualizar</value>
+    <value>Reinicio registrado vencido · esperando nuevos datos locales</value>
   </data>
   <data name="ResetHours" xml:space="preserve">
     <value>Reinicio en {0} h {1} min</value>
   </data>
   <data name="ResetUnknown" xml:space="preserve">
     <value>Reinicio no informado</value>
-  </data>
-  <data name="ResetsAvailable" xml:space="preserve">
-    <value>Reinicios disponibles: </value>
   </data>
   <data name="SaveRefresh" xml:space="preserve">
     <value>Guardar y actualizar</value>
@@ -344,9 +269,6 @@
   </data>
   <data name="Session" xml:space="preserve">
     <value>Sesión</value>
-  </data>
-  <data name="SessionChanged" xml:space="preserve">
-    <value>La sesión de Codex cambió durante la consulta. Se ha descartado la respuesta anterior.</value>
   </data>
   <data name="Settings" xml:space="preserve">
     <value>Ajustes</value>
@@ -358,7 +280,7 @@
     <value>No se han aplicado los ajustes</value>
   </data>
   <data name="SettingsReadFailed" xml:space="preserve">
-    <value>No se pudieron leer los ajustes. Se usan los valores por defecto; el archivo original no se ha sobrescrito.</value>
+    <value>No se pudieron leer o migrar los ajustes. Se usan valores seguros exclusivamente locales. No se ha accedido a credenciales.</value>
   </data>
   <data name="SettingsTooLarge" xml:space="preserve">
     <value>El fichero de ajustes supera 64 KB.</value>
@@ -413,5 +335,38 @@ Registros: {3:N0}</value>
   </data>
   <data name="Yesterday" xml:space="preserve">
     <value>Ayer</value>
+  </data>
+  <data name="LocalOnlyBadge" xml:space="preserve">
+    <value>CODEX · SOLO LOCAL</value>
+  </data>
+  <data name="LocalOnlyHelp" xml:space="preserve">
+    <value>Se ha eliminado la conexión a red. AIUsage nunca lee auth.json, cookies ni almacenes de credenciales. Los límites mostrados son únicamente datos ya presentes en tus registros.</value>
+  </data>
+  <data name="LocalFolderHelp" xml:space="preserve">
+    <value>Introduce una ruta de disco local. No se admiten rutas UNC/WSL, unidades de red, enlaces/junctions ni archivos pendientes de descarga. Para registros de WSL, utiliza una copia local de los registros, no de las credenciales.</value>
+  </data>
+  <data name="LocalPathBlocked" xml:space="preserve">
+    <value>Solo se permiten rutas de disco local con datos residentes. Se bloquean rutas de red/UNC/WSL, unidades de red, rutas de dispositivo, enlaces y archivos de nube no residentes.</value>
+  </data>
+  <data name="LocalFileTooLarge" xml:space="preserve">
+    <value>El archivo local supera el tamaño permitido.</value>
+  </data>
+  <data name="ExportSaved" xml:space="preserve">
+    <value>CSV guardado localmente:
+{0}
+
+No se ha abierto ni enviado ningún archivo. Abre esta ruta manualmente para gestionar la exportación.</value>
+  </data>
+  <data name="SavePrices" xml:space="preserve">
+    <value>Guardar precios</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="PricesNotSaved" xml:space="preserve">
+    <value>No se han guardado los precios. Revisa los campos JSON, los valores obligatorios Input/Cached/Output y los permisos de escritura local.</value>
+  </data>
+  <data name="PriceEditorHelp" xml:space="preserve">
+    <value>Editor local; no se abre ningún programa externo. Valores en USD por millón de tokens. Al guardar se valida el JSON antes de reemplazar tu price-overrides.json.</value>
   </data>
 </root>

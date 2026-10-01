@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -13,10 +13,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
   </resheader>
   <data name="About" xml:space="preserve">
-    <value>AIUsage {0} · Independent Windows port of OpenUsage (MIT), with its own versions and roadmap. Codex only; other providers, pi and OpenCode are not included. Reads the selected local folder, not all cloud usage or other devices. Does not start with Windows automatically.</value>
-  </data>
-  <data name="AccountNotUpdated" xml:space="preserve">
-    <value>Logs · account not updated</value>
+    <value>AIUsage {0} · Local-only, independent Windows port of OpenUsage (MIT), with its own versions and roadmap. Not affiliated with or endorsed by OpenAI. Reads Codex usage logs; never connects to an AI service. Does not start with Windows automatically.</value>
   </data>
   <data name="Activity7" xml:space="preserve">
     <value>ACTIVITY · 7 DAYS</value>
@@ -28,19 +25,10 @@
     <value>AIUsage is already running. Look for its icon near the clock.</value>
   </data>
   <data name="AppData" xml:space="preserve">
-    <value>AIUsage data</value>
+    <value>Local AIUsage data folder</value>
   </data>
   <data name="AppFailed" xml:space="preserve">
     <value>AIUsage could not continue ({0}).</value>
-  </data>
-  <data name="AuthInvalidCharacters" xml:space="preserve">
-    <value>Codex authentication contains invalid characters. Sign in again using Codex.</value>
-  </data>
-  <data name="AuthInvalidFormat" xml:space="preserve">
-    <value>Codex authentication has an invalid format. Sign in again using Codex.</value>
-  </data>
-  <data name="AuthTooLarge" xml:space="preserve">
-    <value>auth.json exceeds 1 MB and has not been processed.</value>
   </data>
   <data name="BackToUsage" xml:space="preserve">
     <value>← Back to usage</value>
@@ -51,20 +39,11 @@
   <data name="CacheReuse" xml:space="preserve">
     <value>{0:0.#}% of input reused from cache</value>
   </data>
-  <data name="ChooseFolder" xml:space="preserve">
-    <value>Choose folder…</value>
-  </data>
-  <data name="ChooseFolderTitle" xml:space="preserve">
-    <value>Select .codex (or a sessions folder)</value>
-  </data>
   <data name="CodexFolder" xml:space="preserve">
     <value>Codex folder</value>
   </data>
   <data name="Configuration" xml:space="preserve">
     <value>Configuration</value>
-  </data>
-  <data name="CreditsReported" xml:space="preserve">
-    <value>Reported credits: </value>
   </data>
   <data name="CustomPricesFailed" xml:space="preserve">
     <value>Custom prices were not applied: check price-overrides.json. The last valid catalog is still in use.</value>
@@ -118,16 +97,16 @@
     <value>Each price must be an object.</value>
   </data>
   <data name="ExportCsv" xml:space="preserve">
-    <value>Export CSV</value>
+    <value>Save local CSV</value>
   </data>
   <data name="ExportFailed" xml:space="preserve">
     <value>Could not export ({0}).</value>
   </data>
   <data name="FolderHelp" xml:space="preserve">
-    <value>The .codex folder containing sessions and archived_sessions. A WSL path accessible from Windows is also supported.</value>
+    <value>A local .codex folder containing sessions and archived_sessions, or a local folder of JSONL rollouts.</value>
   </data>
   <data name="HistoricalLimits" xml:space="preserve">
-    <value>Historical limits from logs, not a verified online account. Unknown identities cannot be reliably separated.</value>
+    <value>Snapshots from local logs, not live account limits. They update only when Codex writes new data. Unknown identities cannot be reliably separated.</value>
   </data>
   <data name="InvalidInterval" xml:space="preserve">
     <value>The interval must be between 15 and 3600 seconds.</value>
@@ -148,7 +127,7 @@
     <value>Light theme</value>
   </data>
   <data name="LimitsTitle" xml:space="preserve">
-    <value>CODEX LIMITS</value>
+    <value>LIMITS RECORDED BY CODEX</value>
   </data>
   <data name="LocalAccount" xml:space="preserve">
     <value>Local account {0}</value>
@@ -171,17 +150,11 @@
   <data name="MissingFolder" xml:space="preserve">
     <value>The selected folder does not exist or is not accessible.</value>
   </data>
-  <data name="NeedChatGPTSession" xml:space="preserve">
-    <value>A ChatGPT session in Codex is required; an API key cannot query these limits.</value>
-  </data>
   <data name="NewPrices" xml:space="preserve">
     <value>Prices and new models</value>
   </data>
   <data name="NewPricesHelp" xml:space="preserve">
     <value>Unknown models keep their tokens visible. Add or correct local prices in USD per million without rebuilding.</value>
-  </data>
-  <data name="NoAuth" xml:space="preserve">
-    <value>No auth.json found. Sign in using Codex. Windows Credential Manager is not read in this version.</value>
   </data>
   <data name="NoData" xml:space="preserve">
     <value>No data</value>
@@ -193,7 +166,7 @@
     <value>No limit information yet.</value>
   </data>
   <data name="NoLimitsHelp" xml:space="preserve">
-    <value>Logs may include limits. Enable online queries separately in Settings.</value>
+    <value>AIUsage cannot query your account. Limits appear only when the selected local logs contain them.</value>
   </data>
   <data name="NoPeriodRecords" xml:space="preserve">
     <value>No records in this period yet.</value>
@@ -207,35 +180,8 @@
   <data name="NullPrice" xml:space="preserve">
     <value>Null price.</value>
   </data>
-  <data name="OnlineAccount" xml:space="preserve">
-    <value>Online account</value>
-  </data>
-  <data name="OnlineConsent" xml:space="preserve">
-    <value>AIUsage will read the access_token in auth.json and send it only to chatgpt.com to query your limits. It will not copy or refresh credentials, or send conversations. This is an internal endpoint that may change. Enable?</value>
-  </data>
-  <data name="OnlineFailed" xml:space="preserve">
-    <value>Account limits could not be queried ({0}). Previous online quotas are not reused; local logs retain their source and timestamp.</value>
-  </data>
-  <data name="OnlineHelp" xml:space="preserve">
-    <value>At most one request per minute. Does not modify auth.json, claim resets or call a model. Renew expired sessions in Codex. Windows Credential Manager is not read in this version.</value>
-  </data>
-  <data name="OnlineNotBefore" xml:space="preserve">
-    <value>Online query no earlier than {0:HH:mm:ss}.</value>
-  </data>
-  <data name="OnlineOption" xml:space="preserve">
-    <value>Query my account limits online</value>
-  </data>
-  <data name="OnlineTimeout" xml:space="preserve">
-    <value>The online request timed out. Local data is still available.</value>
-  </data>
-  <data name="OnlineTitle" xml:space="preserve">
-    <value>Optional online query</value>
-  </data>
   <data name="OpenApp" xml:space="preserve">
     <value>Open AIUsage</value>
-  </data>
-  <data name="OpenFailed" xml:space="preserve">
-    <value>Could not open the destination ({0}).</value>
   </data>
   <data name="PartialCost" xml:space="preserve">
     <value>partial cost</value>
@@ -274,28 +220,13 @@
     <value>Prices: {0}{1}. Theoretical costs using this catalog, not historical promotions, tool charges or regional surcharges. Days in {2}.</value>
   </data>
   <data name="PrivacyIntro" xml:space="preserve">
-    <value>Private by default. No telemetry or conversation uploads.</value>
+    <value>Local only. No account access, credentials, network client, telemetry or uploads.</value>
   </data>
   <data name="PromoReviewNote" xml:space="preserve">
     <value>Promotional price needs review; no expiry date or new price has been assumed.</value>
   </data>
   <data name="QualifiedNotice" xml:space="preserve">
     <value>Some estimates use qualified rules, model aliases or custom prices. Check the note under each model and in the CSV.</value>
-  </data>
-  <data name="QuotaHttpError" xml:space="preserve">
-    <value>Could not read limits (HTTP {0}).</value>
-  </data>
-  <data name="QuotaInvalid" xml:space="preserve">
-    <value>Invalid limits response.</value>
-  </data>
-  <data name="QuotaRejected" xml:space="preserve">
-    <value>Request rejected (HTTP {0}). Next attempt no earlier than {1:HH:mm:ss}.</value>
-  </data>
-  <data name="QuotaTooLarge" xml:space="preserve">
-    <value>The limits response exceeds 1 MB.</value>
-  </data>
-  <data name="QuotaWaiting" xml:space="preserve">
-    <value>Online query waiting until {0:HH:mm:ss}. No further request was sent.</value>
   </data>
   <data name="ReadFolderFailed" xml:space="preserve">
     <value>Could not read the Codex folder. Check the path and permissions in Settings ({0}).</value>
@@ -318,23 +249,17 @@
   <data name="RefreshInterval" xml:space="preserve">
     <value>Refresh every N seconds (15–3600)</value>
   </data>
-  <data name="RenewSession" xml:space="preserve">
-    <value>Codex needs to renew its session. Open Codex and refresh again. AIUsage does not modify or refresh credentials.</value>
-  </data>
   <data name="ResetDays" xml:space="preserve">
     <value>Resets in {0} d {1} h</value>
   </data>
   <data name="ResetExpired" xml:space="preserve">
-    <value>Reset expired · refresh pending</value>
+    <value>Recorded reset expired · awaiting new log data</value>
   </data>
   <data name="ResetHours" xml:space="preserve">
     <value>Resets in {0} h {1} min</value>
   </data>
   <data name="ResetUnknown" xml:space="preserve">
     <value>Reset time not reported</value>
-  </data>
-  <data name="ResetsAvailable" xml:space="preserve">
-    <value>Available resets: </value>
   </data>
   <data name="SaveRefresh" xml:space="preserve">
     <value>Save and refresh</value>
@@ -344,9 +269,6 @@
   </data>
   <data name="Session" xml:space="preserve">
     <value>Session</value>
-  </data>
-  <data name="SessionChanged" xml:space="preserve">
-    <value>The Codex session changed during the query. The previous response was discarded.</value>
   </data>
   <data name="Settings" xml:space="preserve">
     <value>Settings</value>
@@ -358,7 +280,7 @@
     <value>Settings were not applied</value>
   </data>
   <data name="SettingsReadFailed" xml:space="preserve">
-    <value>Settings could not be read. Defaults are in use; the original file has not been overwritten.</value>
+    <value>Settings could not be read or migrated. Safe local-only defaults are in use. No credentials have been accessed.</value>
   </data>
   <data name="SettingsTooLarge" xml:space="preserve">
     <value>The settings file exceeds 64 KB.</value>
@@ -413,5 +335,38 @@ Records: {3:N0}</value>
   </data>
   <data name="Yesterday" xml:space="preserve">
     <value>Yesterday</value>
+  </data>
+  <data name="LocalOnlyBadge" xml:space="preserve">
+    <value>CODEX · LOCAL ONLY</value>
+  </data>
+  <data name="LocalOnlyHelp" xml:space="preserve">
+    <value>Networking has been removed. AIUsage never reads auth.json, browser cookies or credential stores. Limits shown here are only snapshots already present in your logs.</value>
+  </data>
+  <data name="LocalFolderHelp" xml:space="preserve">
+    <value>Enter a local disk path. UNC/WSL shares, mapped network drives, links/junctions and remote-storage placeholders are not supported. For WSL logs, use a separate local copy of the rollouts, not credentials.</value>
+  </data>
+  <data name="LocalPathBlocked" xml:space="preserve">
+    <value>Only resident local-disk paths are allowed. Network/UNC/WSL paths, mapped network drives, device paths, links and cloud placeholders are blocked.</value>
+  </data>
+  <data name="LocalFileTooLarge" xml:space="preserve">
+    <value>The local file exceeds the allowed size.</value>
+  </data>
+  <data name="ExportSaved" xml:space="preserve">
+    <value>CSV saved locally:
+{0}
+
+No file has been opened or uploaded. Open this path manually to manage the export.</value>
+  </data>
+  <data name="SavePrices" xml:space="preserve">
+    <value>Save prices</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="PricesNotSaved" xml:space="preserve">
+    <value>Prices were not saved. Check the JSON fields, required Input/Cached/Output values and local write permissions.</value>
+  </data>
+  <data name="PriceEditorHelp" xml:space="preserve">
+    <value>Local editor; no external program is launched. Values are USD per million tokens. Save validates the JSON before replacing your own price-overrides.json.</value>
   </data>
 </root>

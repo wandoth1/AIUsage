@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text;
 using System.Text.Json;
 using AIUsage.Core;
@@ -99,16 +98,6 @@ internal static partial class Program
             using var doc = JsonDocument.Parse("{\"primary\":{\"used_percent\":10,\"resets_in_seconds\":120}}");
             Equal(At.AddSeconds(120), QuotaParser.Parse(doc.RootElement, At, "test").Windows.Single().ResetAt);
         });
-        await CheckAsync("H15 invalid authentication header is a recoverable validation error", async () =>
-        {
-            using var t = new Home();
-            File.WriteAllText(Path.Combine(t.Root, "auth.json"), JsonSerializer.Serialize(new { tokens = new { access_token = "SYNTHETIC", account_id = "account\r\nINJECTED" } }));
-            using var client = new CodexUsageClient(new NeverSend());
-            bool rejected = false;
-            try { await client.ReadAsync(t.Root, CancellationToken.None); }
-            catch (InvalidOperationException) { rejected = true; }
-            Assert(rejected, "Header corruption was not rejected safely");
-        });
         await Extended();
         Console.WriteLine($"RESULT: {passed} passed; {failed} failed.");
         return failed == 0 ? 0 : 1;
@@ -140,9 +129,5 @@ internal static partial class Program
         public Home() => Directory.CreateDirectory(Sessions);
         public void Write(string content) => File.WriteAllText(Rollout, content, new UTF8Encoding(false));
         public void Dispose() { Directory.Delete(Root, true); }
-    }
-    private sealed class NeverSend : HttpMessageHandler
-    {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => throw new Exception("No request should be sent");
     }
 }

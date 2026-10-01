@@ -13,7 +13,7 @@ internal static class Program
         Test("English and Spanish resource sets have identical keys", () =>
         {
             var en = L10n.ResourceStrings("en"); var es = L10n.ResourceStrings("es");
-            Require(en.Count >= 130 && en.Keys.Order().SequenceEqual(es.Keys.Order()), "Missing translation keys");
+            Require(en.Count >= 100 && en.Keys.Order().SequenceEqual(es.Keys.Order()), "Missing translation keys");
             Require(en.Values.Concat(es.Values).All(s => !string.IsNullOrWhiteSpace(s)), "Empty translation");
         });
         Test("All localized format placeholders match", () =>
@@ -52,7 +52,7 @@ internal static class Program
         Test("Old settings migrate without discarding existing options", () => WithTemp(path =>
         {
             File.WriteAllText(path, "{\"RefreshSeconds\":120,\"OnlineQuota\":true,\"LightTheme\":true,\"CodexHome\":\"synthetic\"}");
-            var s = AppSettings.Load(path); Equal("auto", s.Language); Equal(120, s.RefreshSeconds); Require(s.OnlineQuota && s.LightTheme && s.CodexHome == "synthetic", "Settings lost");
+            var s = AppSettings.Load(path); Equal("auto", s.Language); Equal(120, s.RefreshSeconds); Require(s.LightTheme && s.CodexHome == "synthetic", "Settings lost"); Require(!File.ReadAllText(path).Contains("OnlineQuota"), "Obsolete online option not removed");
         }));
         Test("Language persists across settings reload", () => WithTemp(path =>
         {
@@ -98,7 +98,7 @@ internal static class Program
         {
             L10n.SetLanguage("en"); var window = new LimitWindow("Custom provider · Semanal", 32, null, 604800, "provider:604800");
             Equal("Custom provider · Weekly", L10n.WindowName(window)); Equal("provider:604800", window.Id);
-            Equal("Local log", L10n.SourceName("Registro local")); Equal("Online account", L10n.SourceName("Cuenta · consulta online"));
+            Equal("Local log", L10n.SourceName("Registro local"));
         });
         Test("External names and values remain untouched", () =>
         {
@@ -127,19 +127,19 @@ internal static class Program
             var c = PriceCatalog.Load(path); var e = new UsageEvent(Stamp, "custom", new(1000, 0, 100, 0, 1100));
             foreach (var code in new[] { "en", "es" }) { L10n.SetLanguage(code); var quote = c.Quote(e); Equal<decimal?>(0.003m, quote.Cost); Require(quote.Note.Contains("My private pricing note"), "User note changed"); }
         }));
-        Test("Pricing and authentication errors are localized", () =>
+        Test("Pricing errors and local-only notices are localized", () =>
         {
             foreach (var code in new[] { "en", "es" })
             {
                 L10n.SetLanguage(code); var q = PriceCatalog.Load().Quote(new(Stamp, "no-known-price", new(1000, 0, 100, 0, 1100)));
                 Equal(L10n.T("UnverifiedPrice"), q.Note); Equal<decimal?>(null, q.Cost);
-                Require(L10n.T("NoAuth").Contains("auth.json") && L10n.T("OnlineConsent").Contains("chatgpt.com"), "Required warning missing");
+                Require(L10n.T("LocalOnlyHelp").Contains("auth.json") && L10n.T("LocalPathBlocked").Contains("WSL"), "Required local-only notice missing");
             }
         });
         Test("Independent application version is used in About", () =>
         {
-            Equal("1.0.0", AppVersion.Value);
-            foreach (var code in new[] { "en", "es" }) { L10n.SetLanguage(code); var about = L10n.F("About", AppVersion.Value); Require(about.Contains("AIUsage 1.0.0") && about.Contains("OpenUsage") && !about.Contains("v0.7.12"), "About conflates versions"); }
+            Equal("1.1.0", AppVersion.Value);
+            foreach (var code in new[] { "en", "es" }) { L10n.SetLanguage(code); var about = L10n.F("About", AppVersion.Value); Require(about.Contains("AIUsage 1.1.0") && about.Contains("OpenUsage") && !about.Contains("v0.7.12"), "About conflates versions"); }
         });
         Test("Concurrent localized reads return complete strings", () =>
         {

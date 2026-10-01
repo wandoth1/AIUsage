@@ -17,6 +17,9 @@ try {
     $out = Join-Path $root "artifacts/publish/$Runtime"
     dotnet publish src/AIUsage.Windows/AIUsage.Windows.csproj -c Release -r $Runtime --self-contained true -o $out -p:ContinuousIntegrationBuild=true
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }
+    $app = Join-Path $root "src/AIUsage.Windows/bin/Release/net10.0-windows/$Runtime/AIUsage.dll"
+    dotnet run --project tests/AIUsage.OfflineTests -c Release -- --repo-root $root --app-assembly $app
+    if ($LASTEXITCODE -ne 0) { throw 'Local-only regression guards failed.' }
     & (Join-Path $PSScriptRoot 'collect-notices.ps1') -Runtime $Runtime -PublishDirectory $out
     Copy-Item README.md, LICENSE, THIRD-PARTY-NOTICES.md $out
     Copy-Item docs (Join-Path $out 'docs') -Recurse -Force
