@@ -1,9 +1,73 @@
 {
-  "gpt-6.1-sol": { "input": 2, "cached": 0.1, "output": 10, "cacheWriteMultiplier": 1.25, "longThreshold": 272000, "fastMultiplier": 2, "source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol (2026-10-01)" },
-  "gpt-6-astra": { "input": 10, "cached": 1, "output": 50, "cacheWriteMultiplier": 1.25, "longThreshold": 272000, "fastMultiplier": 2, "source": "https://developers.openai.com/api/docs/models/gpt-6-astra (2026-10-01)" },
-  "gpt-6-sol": { "input": 2, "cached": 0.2, "output": 10, "cacheWriteMultiplier": 1.25, "longThreshold": 272000, "fastMultiplier": 2, "source": "https://developers.openai.com/api/docs/models/gpt-6-sol (2026-10-01)" },
-  "gpt-6-luna": { "input": 0.1, "cached": 0.01, "output": 0.5, "cacheWriteMultiplier": 1.25, "longThreshold": 272000, "fastMultiplier": 2, "source": "https://developers.openai.com/api/docs/models/gpt-6-luna (2026-10-01)" },
-  "gpt-5.6-sol": { "input": 5, "cached": 0.5, "output": 30, "cacheWriteMultiplier": 1.25, "longThreshold": 272000, "fastMultiplier": 2, "source": "OpenUsage v0.7.12 pricing_supplement.json / CodexUsagePricing.swift" },
-  "gpt-5.6-terra": { "input": 2, "cached": 0.2, "output": 12, "cacheWriteMultiplier": 1.25, "longThreshold": 272000, "fastMultiplier": 2, "source": "OpenUsage v0.7.12 pricing_supplement.json / CodexUsagePricing.swift" },
-  "gpt-5.6-luna": { "input": 0.2, "cached": 0.02, "output": 1.2, "cacheWriteMultiplier": 1.25, "longThreshold": 272000, "fastMultiplier": 2, "source": "OpenUsage v0.7.12 pricing_supplement.json / CodexUsagePricing.swift" }
+  "gpt-6.1-sol": {
+    "Input": 2,
+    "Cached": 0.1,
+    "Output": 10,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol ; verified 2026-10-01"
+  },
+  "gpt-6-astra": {
+    "Input": 10,
+    "Cached": 1,
+    "Output": 50,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-6-astra ; verified 2026-10-01"
+  },
+  "gpt-6-sol": {
+    "Input": 2,
+    "Cached": 0.2,
+    "Output": 10,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-6-sol ; verified 2026-10-01"
+  },
+  "gpt-6-luna": {
+    "Input": 0.1,
+    "Cached": 0.01,
+    "Output": 0.5,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-6-luna ; verified 2026-10-01"
+  },
+  "gpt-5.6-sol": {
+    "Input": 4,
+    "Cached": 0.4,
+    "Output": 20,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-5.6-sol ; verified 2026-10-01",
+    "Note": "Promoción API observada el 2026-10-01, anunciada al menos hasta el 2026-11-21. El historial se reestima con este catálogo, no con precios históricos.",
+    "TierRulesVerified": false,
+    "LongCacheVerified": true,
+    "ReviewAfter": "2026-11-22"
+  },
+  "gpt-5.6-terra": {
+    "Input": 2,
+    "Cached": 0.2,
+    "Output": 12,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-5.6-terra ; verified 2026-10-01",
+    "TierRulesVerified": false,
+    "LongCacheVerified": false
+  },
+  "gpt-5.6-luna": {
+    "Input": 0.2,
+    "Cached": 0.02,
+    "Output": 1.2,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-5.6-luna ; verified 2026-10-01",
+    "TierRulesVerified": false,
+    "LongCacheVerified": false
+  }
 }

@@ -1,65 +1,125 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 namespace AIUsage.Core;
 
 public sealed record ModelRate(decimal Input, decimal Cached, decimal Output,
-    decimal CacheWriteMultiplier = 1, long LongThreshold = 0, decimal FastMultiplier = 2, string Source = "");
+    decimal CacheWriteMultiplier = 1, long LongThreshold = 0, decimal FastMultiplier = 2, string Source = "",
+    string Note = "", bool TierRulesVerified = true, bool LongCacheVerified = true, DateOnly? ReviewAfter = null);
+public sealed record PriceQuote(decimal? Cost, string PricingModel, string Note = "");
 
 public sealed class PriceCatalog
 {
     private readonly Dictionary<string, ModelRate> rates;
+    private readonly HashSet<string> customKeys = new(StringComparer.OrdinalIgnoreCase);
     public const string SnapshotDate = "2026-10-01";
-    public bool HasOverrides { get; private set; }
-    public PriceCatalog(Dictionary<string, ModelRate> rates) => this.rates = rates;
+    public bool HasOverrides => customKeys.Count > 0;
+    public PriceCatalog(Dictionary<string, ModelRate> rates) => this.rates = Normalize(rates);
     public static PriceCatalog Load(string? overridesPath = null)
     {
         using var stream = typeof(PriceCatalog).Assembly.GetManifestResourceStream("AIUsage.Core.pricing.json") ?? throw new InvalidOperationException("Falta el catálogo de precios.");
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var entries = JsonSerializer.Deserialize<Dictionary<string, ModelRate>>(stream, options) ?? new();
-        var catalog = new PriceCatalog(entries);
+        var catalog = new PriceCatalog(ReadEntries(stream));
         if (overridesPath is not null && File.Exists(overridesPath))
         {
-            if (new FileInfo(overridesPath).Length > 256 * 1024) throw new InvalidOperationException("El fichero de precios supera 256 KB.");
-            var custom = JsonSerializer.Deserialize<Dictionary<string, ModelRate>>(File.ReadAllText(overridesPath), options) ?? throw new InvalidOperationException("Precios personalizados no válidos.");
-            foreach (var (key, r) in custom)
+            using var customFile = new FileStream(overridesPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            // A bounded snapshot also protects against a file growing after the initial length check.
+            using var buffer = new MemoryStream();
+            byte[] bytes = new byte[256 * 1024 + 1];
+            int count = customFile.ReadAtLeast(bytes, bytes.Length, throwOnEndOfStream: false);
+            if (count > 256 * 1024) throw new InvalidOperationException("El fichero de precios supera 256 KB.");
+            buffer.Write(bytes, 0, count); buffer.Position = 0;
+            foreach (var (key, rate) in ReadEntries(buffer))
             {
-                if (r is null || string.IsNullOrWhiteSpace(key) || r.Input < 0 || r.Cached < 0 || r.Output < 0 ||
-                    r.Input > 1_000_000 || r.Cached > 1_000_000 || r.Output > 1_000_000 || r.FastMultiplier is < 0 or > 100 ||
-                    r.CacheWriteMultiplier is < 0 or > 100 || r.LongThreshold < 0)
-                    throw new InvalidOperationException("Hay una tarifa personalizada no válida.");
-                entries[key] = r;
+                catalog.rates[key] = rate;
+                catalog.customKeys.Add(key);
             }
-            catalog.HasOverrides = custom.Count > 0;
         }
         return catalog;
     }
-    public decimal? Cost(UsageEvent e)
+    private static Dictionary<string, ModelRate> ReadEntries(Stream stream)
     {
-        string model = e.Model.ToLowerInvariant();
+        using var doc = JsonDocument.Parse(stream);
+        if (doc.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException("Se espera un objeto de tarifas.");
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            RespectRequiredConstructorParameters = true,
+            UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
+        };
+        var entries = new Dictionary<string, ModelRate>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in doc.RootElement.EnumerateObject())
+        {
+            if (entry.Value.ValueKind != JsonValueKind.Object) throw new JsonException("Cada tarifa debe ser un objeto.");
+            var fields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var p in entry.Value.EnumerateObject())
+                if (!fields.Add(p.Name)) throw new JsonException("La tarifa contiene campos duplicados.");
+            var rate = entry.Value.Deserialize<ModelRate>(options) ?? throw new JsonException("Tarifa nula.");
+            string key = entry.Name.Trim();
+            Validate(key, rate);
+            if (!entries.TryAdd(key, rate)) throw new JsonException("Hay modelos duplicados tras normalizar mayúsculas y espacios.");
+        }
+        return entries;
+    }
+    private static Dictionary<string, ModelRate> Normalize(Dictionary<string, ModelRate> entries)
+    {
+        var result = new Dictionary<string, ModelRate>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, rate) in entries)
+        {
+            Validate(key, rate);
+            if (!result.TryAdd(key.Trim(), rate)) throw new InvalidOperationException("Modelos duplicados.");
+        }
+        return result;
+    }
+    private static void Validate(string key, ModelRate r)
+    {
+        if (r is null || string.IsNullOrWhiteSpace(key) || key.Length > 200 || key.Any(char.IsControl) ||
+            r.Input is < 0 or > 1_000_000 || r.Cached is < 0 or > 1_000_000 || r.Output is < 0 or > 1_000_000 ||
+            r.FastMultiplier is <= 0 or > 100 || r.CacheWriteMultiplier is <= 0 or > 100 || r.LongThreshold < 0 ||
+            r.Source is null || r.Note is null || r.Source.Length > 2000 || r.Note.Length > 2000)
+            throw new InvalidOperationException("Hay una tarifa no válida. Input, Cached y Output son obligatorios.");
+    }
+    public decimal? Cost(UsageEvent e) => Quote(e).Cost;
+    public PriceQuote Quote(UsageEvent e)
+    {
+        string model = e.Model.Trim().ToLowerInvariant();
         if (model.StartsWith("openai/", StringComparison.Ordinal)) model = model[7..];
         model = Regex.Replace(model, @"-\d{4}-?\d{2}-?\d{2}$", "", RegexOptions.CultureInvariant);
         bool fastAlias = model.EndsWith("-fast", StringComparison.Ordinal);
         if (fastAlias) model = model[..^5];
         model = Regex.Replace(model, @"-\d{4}-?\d{2}-?\d{2}$", "", RegexOptions.CultureInvariant);
-        // Compatibility aliases from the pinned upstream. Visible names are never rewritten.
-        if (model == "gpt-reserve" || (model == "codex-auto-review" && e.At >= new DateTimeOffset(2026, 7, 9, 0, 0, 0, TimeSpan.Zero))) model = "gpt-5.6-luna";
-        if (!rates.TryGetValue(model, out var rate)) return null;
-        decimal tier = e.Tier switch
+        var notes = new List<string>();
+        // Explicit user tariffs take precedence over an inferred upstream alias.
+        if (!rates.ContainsKey(model) && (model == "gpt-reserve" ||
+            (model == "codex-auto-review" && e.At >= new DateTimeOffset(2026, 7, 9, 0, 0, 0, TimeSpan.Zero))))
+        {
+            notes.Add($"Equivalencia heredada de OpenUsage: {model} → gpt-5.6-luna; no confirmada para todos los registros.");
+            model = "gpt-5.6-luna";
+        }
+        if (!rates.TryGetValue(model, out var rate)) return new(null, model, "No hay tarifa verificada para este modelo.");
+        string serviceTier = e.Tier.Trim().ToLowerInvariant();
+        decimal tier = serviceTier switch
         {
             "standard" or "default" or "auto" or "" => 1,
             "fast" or "priority" => rate.FastMultiplier,
             "flex" or "batch" => 0.5m,
             _ => -1
         };
-        if (tier < 0) return null;
+        if (tier < 0) return new(null, model, "Nivel de servicio desconocido; no se supone una tarifa.");
         if (fastAlias) tier = rate.FastMultiplier; // Apply once, not twice.
         bool large = rate.LongThreshold > 0 && e.Tokens.Input > rate.LongThreshold;
+        if (customKeys.Contains(model)) notes.Add("Tarifa personalizada por el usuario.");
+        if (rate.Note.Length > 0) notes.Add(rate.Note);
+        if (!rate.TierRulesVerified && tier != 1) notes.Add("Multiplicador de nivel de servicio heredado, sin confirmar para este modelo.");
+        if (!rate.LongCacheVerified && large && e.Tokens.Cached > 0) notes.Add("Recargo de caché en contexto largo heredado, sin confirmar.");
+        if (rate.ReviewAfter is { } review && DateOnly.FromDateTime(DateTime.UtcNow) >= review)
+            notes.Add("Tarifa promocional pendiente de revisión; no se ha supuesto una fecha de caducidad ni un nuevo precio.");
         decimal inputFactor = large ? 2 : 1, outputFactor = large ? 1.5m : 1;
         var t = e.Tokens;
         long cached = Math.Clamp(t.Cached, 0, t.Input);
         long write = Math.Clamp(t.CacheWrite, 0, t.Input - cached);
-        return ((t.Input - cached - write) * rate.Input * inputFactor + cached * rate.Cached * inputFactor +
+        decimal cost = ((t.Input - cached - write) * rate.Input * inputFactor + cached * rate.Cached * inputFactor +
             write * rate.Input * rate.CacheWriteMultiplier * inputFactor + t.Output * rate.Output * outputFactor) * tier / 1_000_000m;
+        return new(cost, model, string.Join(" ", notes));
     }
 }

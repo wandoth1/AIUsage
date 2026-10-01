@@ -223,7 +223,7 @@ internal static class Program
         Test("Identical events copied into separate files count once", () =>
         {
             using var t = new TemporaryHome();
-            File.WriteAllText(t.Rollout, Context("gpt-6.1-sol") + "\n" + Count(Raw(100, 80, 10)) + "\n");
+            File.WriteAllText(t.Rollout, Row("session_meta", new { id = "same-logical-session" }) + "\n" + Context("gpt-6.1-sol") + "\n" + Count(Raw(100, 80, 10)) + "\n");
             File.Copy(t.Rollout, Path.Combine(Path.GetDirectoryName(t.Rollout)!, "copy.jsonl"));
             Eq(1, new LogScanner(t.Cache).Scan(t.Home).Events.Count);
         });
@@ -235,11 +235,11 @@ internal static class Program
             foreach (var f in Directory.GetFiles(t.Cache)) File.WriteAllText(f, "not json");
             Eq(1, new LogScanner(t.Cache).Scan(t.Home).Events.Count);
         });
-        Test("Oversized record is bounded and subsequent usage survives", () =>
+        Test("Oversized unknown accounting record is bounded and quarantined", () =>
         {
             using var t = new TemporaryHome();
             File.WriteAllText(t.Rollout, new string('x', LogScanner.MaxRecordBytes + 8) + "\n" + Context("gpt-6.1-sol") + "\n" + Count(Raw(100, 80, 10)) + "\n");
-            var r = new LogScanner(t.Cache).Scan(t.Home); Eq(1, r.Events.Count); True(r.Warnings >= 1);
+            var r = new LogScanner(t.Cache).Scan(t.Home); Eq(0, r.Events.Count); True(r.Warnings >= 1);
         });
         Test("Conversation text is not persisted in metadata cache", () =>
         {

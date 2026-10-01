@@ -1,4 +1,5 @@
 // Duration-based window mapping adapted from OpenUsage v0.7.12 (MIT).
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -7,30 +8,33 @@ namespace AIUsage.Core;
 
 public static class QuotaParser
 {
-    public static QuotaSnapshot Parse(JsonElement body, DateTimeOffset at, string source)
+    public static QuotaSnapshot Parse(JsonElement body, DateTimeOffset at, string source, string? accountKey = null)
     {
         var windows = new List<LimitWindow>();
-        var rates = body.Get("rate_limit");
-        string id = body.Text("rate_limit_id") ?? "codex";
-        string prefix = id.Contains("spark", StringComparison.OrdinalIgnoreCase) ? "Spark" : id == "codex" ? "Codex" : id;
-        Add(rates.ValueKind == JsonValueKind.Object ? rates : body, prefix, windows, at);
+        AddProvider(body, windows, at, "codex");
         var additional = body.Get("additional_rate_limits");
         if (additional.ValueKind == JsonValueKind.Array)
-            foreach (var item in additional.EnumerateArray())
-            {
-                var name = item.Text("limit_name") ?? item.Text("rate_limit_name") ?? item.Text("rate_limit_id") ?? "Adicional";
-                if (name.Contains("spark", StringComparison.OrdinalIgnoreCase)) name = "Spark";
-                var rate = item.Get("rate_limit");
-                Add(rate.ValueKind == JsonValueKind.Object ? rate : item, name, windows, at);
-            }
+            foreach (var item in additional.EnumerateArray().Take(100)) AddProvider(item, windows, at, "additional");
         var credits = body.Get("credits");
         var balance = credits.Get("balance");
-        string? creditText = balance.ValueKind == JsonValueKind.String ? balance.GetString() : balance.Number()?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        string? creditText = balance.ValueKind == JsonValueKind.String ? balance.GetString() : balance.Number()?.ToString(CultureInfo.InvariantCulture);
         if (credits.Get("unlimited").ValueKind == JsonValueKind.True) creditText = "Sin límite";
         var resets = body.Get("rate_limit_reset_credits").Get("available_count").Number();
-        return new(at, source, body.Text("plan_type"), windows, creditText, resets.HasValue ? (long)Math.Max(0, resets.Value) : null);
+        return new(at, source, body.Text("plan_type"), windows, creditText,
+            resets.HasValue ? (long)Math.Clamp(resets.Value, 0, 1_000_000_000_000_000d) : null, accountKey);
     }
-    private static void Add(JsonElement limits, string prefix, List<LimitWindow> result, DateTimeOffset at)
+    private static void AddProvider(JsonElement body, List<LimitWindow> result, DateTimeOffset at, string fallback)
+    {
+        string? suppliedId = body.Text("limit_id") ?? body.Text("rate_limit_id");
+        string? suppliedName = body.Text("limit_name") ?? body.Text("rate_limit_name");
+        string id = (suppliedId ?? suppliedName ?? fallback).Trim().ToLowerInvariant();
+        if (id.Length == 0) id = fallback;
+        string prefix = (suppliedName ?? id).Contains("spark", StringComparison.OrdinalIgnoreCase) || id == "codex_bengalfox"
+            ? "Spark" : id == "codex" ? "Codex" : suppliedName ?? id;
+        var rates = body.Get("rate_limit");
+        Add(rates.ValueKind == JsonValueKind.Object ? rates : body, id, prefix, result, at);
+    }
+    private static void Add(JsonElement limits, string id, string prefix, List<LimitWindow> result, DateTimeOffset at)
     {
         foreach (var (key, fallback) in new[] { ("primary", "Sesión"), ("secondary", "Semanal") })
         {
@@ -41,43 +45,123 @@ public static class QuotaParser
             var seconds = window.Get("limit_window_seconds").Number();
             var minutes = window.Get("window_minutes").Number();
             seconds ??= minutes.HasValue ? minutes * 60 : null;
+            if (seconds is not (> 0 and <= 315360000)) seconds = null;
             string name = seconds switch { >= 518400 and <= 691200 => "Semanal", >= 14400 and <= 21600 => "Sesión", > 0 => $"{seconds / 3600:0.#} h", _ => fallback };
             var reset = window.Get("reset_at").Date() ?? window.Get("resets_at").Date();
-            var after = window.Get("reset_after_seconds").Number();
-            if (reset is null && after is >= 0 and < 315360000) reset = at.AddSeconds(after.Value);
-            result.Add(new($"{prefix} · {name}", used.Value, reset, seconds.HasValue ? (long)seconds.Value : null));
+            var after = window.Get("reset_after_seconds").Number() ?? window.Get("resets_in_seconds").Number();
+            if (reset is null && after is >= 0 and < 315360000 && (DateTimeOffset.MaxValue - at).TotalSeconds >= after.Value)
+                reset = at.AddSeconds(after.Value);
+            // Duration, not the primary/secondary slot or translated label, identifies a window.
+            string identity = id + ":" + (seconds?.ToString("R", CultureInfo.InvariantCulture) ?? key);
+            result.Add(new($"{prefix} · {name}", used.Value, reset, seconds.HasValue ? (long)seconds.Value : null, identity));
         }
+    }
+}
+
+public static class QuotaSelection
+{
+    public static List<(QuotaSnapshot Snapshot, LimitWindow Window)> Select(IEnumerable<QuotaSnapshot> local, QuotaSnapshot? online)
+    {
+        // Never fill missing online windows with unrelated, older local account limits.
+        IEnumerable<QuotaSnapshot> snapshots = online is null ? local : [online];
+        return snapshots.SelectMany(q => q.Windows.Select(w => (Snapshot: q, Window: w)))
+            .GroupBy(x => (x.Snapshot.AccountKey, Id: string.IsNullOrEmpty(x.Window.Id) ? x.Window.Name : x.Window.Id))
+            .Select(g => g.OrderByDescending(x => x.Snapshot.At).First())
+            .OrderBy(x => x.Snapshot.AccountKey).ThenBy(x => x.Window.Name).ToList();
     }
 }
 
 public sealed class CodexUsageClient : IDisposable
 {
-    // Read-only internal endpoint used by OpenUsage. It is not a guaranteed public API.
-    private readonly HttpClient http = new(new HttpClientHandler { AllowAutoRedirect = false }) { Timeout = TimeSpan.FromSeconds(12), MaxResponseContentBufferSize = 1_048_576 };
+    public const string UsageEndpoint = "https://chatgpt.com/backend-api/wham/usage";
+    private const int MaxBytes = 1_048_576;
+    private readonly HttpClient http;
+    private readonly TimeProvider clock;
+    private readonly SemaphoreSlim gate = new(1, 1);
+    private int transientFailures;
+    public DateTimeOffset NextAllowedAt { get; private set; } = DateTimeOffset.MinValue;
+    public CodexUsageClient() : this(new HttpClientHandler { AllowAutoRedirect = false }, TimeProvider.System) { }
+    // Injection is for deterministic, offline regression tests; the app always uses the default handler.
+    public CodexUsageClient(HttpMessageHandler handler, TimeProvider? clock = null)
+    {
+        http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(12), MaxResponseContentBufferSize = MaxBytes };
+        this.clock = clock ?? TimeProvider.System;
+    }
     public async Task<QuotaSnapshot> ReadAsync(string home, CancellationToken ct)
     {
-        string path = Path.Combine(home, "auth.json");
-        if (!File.Exists(path)) throw new InvalidOperationException("No hay auth.json en esta carpeta. Inicia sesión en Codex. Las credenciales del almacén de Windows no se leen en v0.1.");
-        if (new FileInfo(path).Length > 1_048_576) throw new InvalidOperationException("auth.json es demasiado grande; no se ha leído.");
+        await gate.WaitAsync(ct);
+        try
+        {
+            if (clock.GetUtcNow() < NextAllowedAt)
+                throw new InvalidOperationException($"Consulta online en espera hasta {NextAllowedAt.ToLocalTime():HH:mm:ss}. No se ha enviado otra solicitud.");
+            string path = Path.Combine(home, "auth.json");
+            var credentials = await ReadCredentials(path, ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, UsageEndpoint);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credentials.Access);
+            request.Headers.UserAgent.ParseAdd("AIUsage-Windows/0.1.1");
+            if (credentials.Account is not null) request.Headers.Add("ChatGPT-Account-Id", credentials.Account);
+            NextAllowedAt = clock.GetUtcNow().AddMinutes(1);
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            deadline.CancelAfter(TimeSpan.FromSeconds(12));
+            try
+            {
+                using var response = await http.SendAsync(request, HttpCompletionOption.ResponseContentRead, deadline.Token);
+                if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                    throw new InvalidOperationException("Codex debe renovar su sesión. Abre Codex y vuelve a actualizar. AIUsage no modifica ni renueva tus credenciales.");
+                if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)
+                {
+                    BackOff(response.Headers.RetryAfter);
+                    throw new InvalidOperationException($"Consulta rechazada (HTTP {(int)response.StatusCode}). Próximo intento a partir de {NextAllowedAt.ToLocalTime():HH:mm:ss}.");
+                }
+                if (!response.IsSuccessStatusCode)
+                    throw new InvalidOperationException($"No se pudieron leer los límites (HTTP {(int)response.StatusCode}).");
+                // Never follow a redirect manually. The default handler also disables redirects.
+                var bytes = await response.Content.ReadAsByteArrayAsync(deadline.Token);
+                if (bytes.Length > MaxBytes) throw new InvalidOperationException("La respuesta de límites supera 1 MB.");
+                using var doc = JsonDocument.Parse(bytes);
+                if (doc.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException("Respuesta de límites no válida.");
+                var latestCredentials = await ReadCredentials(path, deadline.Token);
+                if (latestCredentials != credentials)
+                    throw new InvalidOperationException("La sesión de Codex cambió durante la consulta. Se ha descartado la respuesta anterior.");
+                transientFailures = 0;
+                return QuotaParser.Parse(doc.RootElement, clock.GetUtcNow(), "Cuenta · consulta online", AccountIdentity.Key(credentials.Account));
+            }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException || (ex is OperationCanceledException && !ct.IsCancellationRequested))
+            {
+                BackOff(null);
+                throw;
+            }
+        }
+        catch (FormatException) { throw new InvalidOperationException("La autenticación de Codex contiene un formato no válido. Vuelve a iniciar sesión desde Codex."); }
+        finally { gate.Release(); }
+    }
+    private void BackOff(RetryConditionHeaderValue? retry)
+    {
+        transientFailures = Math.Min(transientFailures + 1, 6);
+        var now = clock.GetUtcNow();
+        var next = now.AddSeconds(Math.Min(3600, 60 * Math.Pow(2, transientFailures)));
+        if (retry?.Date is { } date && date > next) next = date;
+        if (retry?.Delta is { } delta && delta > TimeSpan.Zero && delta <= DateTimeOffset.MaxValue - now && now + delta > next) next = now + delta;
+        NextAllowedAt = next;
+    }
+    private sealed record Credentials(string Access, string? Account);
+    private static async Task<Credentials> ReadCredentials(string path, CancellationToken ct)
+    {
+        if (!File.Exists(path)) throw new InvalidOperationException("No hay auth.json. Inicia sesión en Codex. El almacén de credenciales de Windows no se lee en esta versión.");
         using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        using var auth = await JsonDocument.ParseAsync(file, cancellationToken: ct);
+        byte[] bytes = new byte[MaxBytes + 1];
+        int count = await file.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false, cancellationToken: ct);
+        if (count > MaxBytes) throw new InvalidOperationException("auth.json supera 1 MB; no se ha procesado.");
+        using var auth = JsonDocument.Parse(bytes.AsMemory(0, count));
         var tokens = auth.RootElement.Get("tokens");
-        var access = tokens.Text("access_token");
+        string? access = tokens.Text("access_token");
+        string? account = tokens.Text("account_id");
+        // Validate before assigning headers; error messages never contain either value.
         if (string.IsNullOrWhiteSpace(access)) throw new InvalidOperationException("Se necesita la sesión de ChatGPT en Codex; una clave API no permite consultar estos límites.");
-        using var req = new HttpRequestMessage(HttpMethod.Get, "https://chatgpt.com/backend-api/wham/usage");
-        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", access);
-        req.Headers.UserAgent.ParseAdd("AIUsage-Windows/0.1.0");
-        var account = tokens.Text("account_id");
-        if (!string.IsNullOrWhiteSpace(account)) req.Headers.Add("ChatGPT-Account-Id", account);
-        using var response = await http.SendAsync(req, HttpCompletionOption.ResponseContentRead, ct);
-        if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-            throw new InvalidOperationException("Codex debe renovar su sesión. Abre Codex y vuelve a actualizar. AIUsage no modifica ni renueva tus credenciales.");
-        if (response.StatusCode == HttpStatusCode.TooManyRequests)
-            throw new InvalidOperationException("OpenAI ha limitado las consultas. Espera unos minutos.");
-        if (!response.IsSuccessStatusCode)
-            throw new InvalidOperationException($"No se pudieron leer los límites (HTTP {(int)response.StatusCode}).");
-        using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(ct));
-        return QuotaParser.Parse(doc.RootElement, DateTimeOffset.Now, "Cuenta · consulta online");
+        if (access.Length > 65536 || access.Any(c => c <= 32 || c >= 127) ||
+            (account is not null && (account.Length > 4096 || account.Any(c => c <= 32 || c >= 127))))
+            throw new InvalidOperationException("La autenticación de Codex contiene caracteres no válidos. Vuelve a iniciar sesión desde Codex.");
+        return new(access, string.IsNullOrEmpty(account) ? null : account);
     }
     public void Dispose() => http.Dispose();
 }

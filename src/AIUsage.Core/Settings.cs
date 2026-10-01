@@ -14,6 +14,8 @@ public sealed class AppSettings
     {
         string path = string.IsNullOrWhiteSpace(CodexHome) ? Environment.GetEnvironmentVariable("CODEX_HOME") ?? "" : CodexHome;
         if (string.IsNullOrWhiteSpace(path)) path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
+        path = path.Trim().Trim('"');
+        if (path == "~") path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (path.StartsWith("~/", StringComparison.Ordinal) || path.StartsWith("~\\", StringComparison.Ordinal))
             path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
         return Path.GetFullPath(Environment.ExpandEnvironmentVariables(path.Trim().Trim('"')));
@@ -32,8 +34,9 @@ public static class AtomicJson
 {
     public static void Write<T>(string path, T value)
     {
+        path = Path.GetFullPath(path);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string temp = path + ".tmp";
+        string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
             File.WriteAllText(temp, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
@@ -53,13 +56,14 @@ public static class CsvExport
     }
     public static string Build(IEnumerable<UsageEvent> events, PriceCatalog catalog, TimeZoneInfo zone)
     {
-        var b = new StringBuilder("date,model,input_tokens,cached_input_tokens,output_tokens,total_tokens,estimated_usd,unpriced_events\r\n");
+        var b = new StringBuilder("date,model,input_tokens,cached_input_tokens,output_tokens,total_tokens,estimated_usd,unpriced_events,qualified_events,pricing_notes\r\n");
         foreach (var day in events.GroupBy(e => UsageSummary.Day(e.At, zone)).OrderBy(g => g.Key))
             foreach (var row in UsageSummary.Group(day, catalog))
                 b.AppendLine(string.Join(',', day.Key.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), Escape(row.Model),
                     row.Input.ToString(CultureInfo.InvariantCulture), row.Cached.ToString(CultureInfo.InvariantCulture),
                     row.Output.ToString(CultureInfo.InvariantCulture), row.Total.ToString(CultureInfo.InvariantCulture),
-                    row.KnownCost.ToString("0.000000", CultureInfo.InvariantCulture), row.Unpriced.ToString(CultureInfo.InvariantCulture)));
+                    row.KnownCost.ToString("0.000000", CultureInfo.InvariantCulture), row.Unpriced.ToString(CultureInfo.InvariantCulture),
+                    row.Qualified.ToString(CultureInfo.InvariantCulture), Escape(row.PricingNotes)));
         return b.ToString();
     }
 }

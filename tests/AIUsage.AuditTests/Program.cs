@@ -1,5 +1,4 @@
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using AIUsage.Core;
@@ -103,16 +102,13 @@ internal static partial class Program
         {
             using var t = new Home();
             File.WriteAllText(Path.Combine(t.Root, "auth.json"), JsonSerializer.Serialize(new { tokens = new { access_token = "SYNTHETIC", account_id = "account\r\nINJECTED" } }));
-            using var client = new CodexUsageClient();
-            using var mock = new HttpClient(new NeverSend());
-            // Baseline-only injection: no connection is possible even if validation regresses.
-            var field = typeof(CodexUsageClient).GetField("http", BindingFlags.NonPublic | BindingFlags.Instance)!;
-            ((HttpClient)field.GetValue(client)!).Dispose(); field.SetValue(client, mock);
+            using var client = new CodexUsageClient(new NeverSend());
             bool rejected = false;
             try { await client.ReadAsync(t.Root, CancellationToken.None); }
             catch (InvalidOperationException) { rejected = true; }
             Assert(rejected, "Header corruption was not rejected safely");
         });
+        await Extended();
         Console.WriteLine($"RESULT: {passed} passed; {failed} failed.");
         return failed == 0 ? 0 : 1;
     }
