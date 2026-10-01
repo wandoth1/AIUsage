@@ -173,5 +173,6 @@ T System.TimeZoneInfo
 T System.Type
 T System.UnauthorizedAccessException
 T System.ValueTuple`2
+T System.ValueTuple`3
 T System.ValueType
 T System.Version

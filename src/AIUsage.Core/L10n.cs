@@ -51,6 +51,7 @@ public static class L10n
         {
             "Session" or "Sesión" => T("Session"),
             "Weekly" or "Semanal" => T("Weekly"),
+            "Spend limit" => T("SpendLimit"),
             _ => window.Seconds is > 0 ? (window.Seconds.Value / 3600d).ToString("0.#", Culture) + " h" : suffix
         };
         return window.Name[..(separator + 3)] + translated;
@@ -58,6 +59,7 @@ public static class L10n
     public static string SourceName(string source) => source switch
     {
         "Local log" or "Registro local" => T("LocalLog"),
+        ClaudeStatusLine.Source => T("ClaudeStatusSource"),
         _ => source // External provider names and user content are never translated.
     };
     public static string CreditValue(string value) => value is "Unlimited" or "Sin límite" ? T("Unlimited") : value;

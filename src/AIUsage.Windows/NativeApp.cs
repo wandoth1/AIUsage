@@ -26,6 +26,7 @@ public sealed class NativeApp : Application
     [STAThread]
     public static int Main(string[] args)
     {
+        if (args.Length == 1 && args[0] == ClaudeStatusLine.Argument) return ClaudeStatusLineMode();
         var app = new NativeApp { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Startup += async (_, _) => await app.Start(args);
         app.DispatcherUnhandledException += (_, e) =>
@@ -43,6 +44,21 @@ public sealed class NativeApp : Application
             app.Shutdown(1);
         };
         return app.Run();
+    }
+    /// Run by Claude Code as the user's configured status line. No window, tray, mutex or network:
+    /// read the session JSON from stdin, keep only rate limits, print one line and exit.
+    private static int ClaudeStatusLineMode()
+    {
+        try
+        {
+            string data = LocalPaths.Require(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AIUsage"));
+            using var input = Console.OpenStandardInput();
+            byte[] line = System.Text.Encoding.UTF8.GetBytes(ClaudeStatusLine.Run(input, data, DateTimeOffset.Now) + "\n");
+            using var output = Console.OpenStandardOutput();
+            output.Write(line);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { }
+        return 0;
     }
     private async Task Start(string[] args)
     {

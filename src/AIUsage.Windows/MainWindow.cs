@@ -35,6 +35,8 @@ public sealed partial class MainWindow : Window
     private ScanResult claudeScan = new([], [], 0, 0, DateTimeOffset.Now);
     private string source = AllSources, lastBuiltSource = AllSources, claudeHome = "", claudeError = "";
     private Dictionary<string, DashboardData> dashboards = new();
+    // Written by "AIUsage.exe --claude-statusline" when the user makes it Claude Code's status line.
+    private QuotaSnapshot? claudeLimits;
     private DashboardData dashboard = new(new(), new());
     private ScrollViewer? currentScroll;
     private int lastBuiltPeriod;
@@ -140,7 +142,8 @@ public sealed partial class MainWindow : Window
     private async Task ScanClaudeAsync()
     {
         claudeError = "";
-        if (!settings.ClaudeCode) { claudeScan = new([], [], 0, 0, DateTimeOffset.Now); claudeHome = ""; return; }
+        if (!settings.ClaudeCode) { claudeScan = new([], [], 0, 0, DateTimeOffset.Now); claudeHome = ""; claudeLimits = null; return; }
+        claudeLimits = demo ? null : await Task.Run(() => ClaudeStatusLine.Load(dataDir), cancellation.Token);
         try
         {
             string home = ClaudeLogScanner.ResolveHome();
@@ -350,6 +353,13 @@ public sealed partial class MainWindow : Window
         try { claudeFolder = ClaudeLogScanner.ResolveHome(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { claudeFolder = @"%USERPROFILE%\.claude"; }
         body.Children.Add(Text(F("ClaudeCodeHelp", claudeFolder), 11, false, "Muted"));
+        body.Children.Add(Label(T("ClaudeStatusTitle")));
+        body.Children.Add(Text(T("ClaudeStatusHelp"), 11, false, "Muted"));
+        var snippet = new TextBox { Text = ClaudeStatusLine.SettingsSnippet(Environment.ProcessPath ?? "AIUsage.exe"), IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 8, 0, 6) };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(snippet, "ClaudeStatusSnippet");
+        body.Children.Add(snippet);
+        body.Children.Add(Text(T("ClaudeStatusNote"), 11, false, "Muted"));
         body.Children.Add(Label(T("AppData")));
         body.Children.Add(new TextBox { Text = dataDir, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
         body.Children.Add(Button(T("RebuildCache"), async () =>

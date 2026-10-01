@@ -60,7 +60,8 @@ public sealed partial class MainWindow
         if (settingsError.Length > 0) body.Children.Add(Notice(settingsError));
         if (codex && error.Length > 0) body.Children.Add(Notice(error));
         if (pricingError.Length > 0) body.Children.Add(Notice(pricingError));
-        body.Children.Add(QuotaCard());
+        if (codex) body.Children.Add(QuotaCard());
+        if (claude) body.Children.Add(ClaudeLimitsCard());
         var models = new StackPanel();
         bool byCost = unpriced == 0 && cost > 0;
         models.Children.Add(Heading(T("ByModel"), byCost ? T("ShareCost") : T("ShareTokens")));
@@ -86,16 +87,24 @@ public sealed partial class MainWindow
         body.Children.Add(Text(F("PricingFooter", PriceCatalog.SnapshotDate, prices.HasOverrides ? T("CustomSuffix") : "", TimeZoneInfo.Local.Id), 10, false, "Muted"));
         return body;
     }
-    private Border QuotaCard()
+    // Never from Claude credentials (third-party apps must not use them): only what Claude Code itself passes
+    // to the user's configured status line on this PC.
+    private Border ClaudeLimitsCard()
     {
         var content = new StackPanel();
-        // Claude plan limits are only available through the user's Claude credentials, which third-party apps must not use.
-        if (ActiveSource == ClaudeSource)
+        content.Children.Add(Heading(T("ClaudeLimitsTitle"), "Claude Code"));
+        if (claudeLimits is not { Windows.Count: > 0 } limits)
         {
-            content.Children.Add(Heading(T("ClaudeLimitsTitle"), "Claude Code"));
             content.Children.Add(Text(T("ClaudeLimits"), 12, false, "Muted"));
             return Card(content);
         }
+        content.Children.Add(Text(T("ClaudeLimitsSource"), 10, false, "Muted"));
+        foreach (var w in limits.Windows) content.Children.Add(LimitRow(limits, w, false));
+        return Card(content);
+    }
+    private Border QuotaCard()
+    {
+        var content = new StackPanel();
         content.Children.Add(Heading(T("LimitsTitle"), T("LocalLogs")));
         var windows = QuotaSelection.Select(scan.Quotas);
         content.Children.Add(Text(T("HistoricalLimits"), 10, false, "Muted"));
@@ -104,30 +113,25 @@ public sealed partial class MainWindow
             content.Children.Add(Text(T("NoLimits"), 13, false, "Muted"));
             content.Children.Add(Text(T("NoLimitsHelp"), 11, false, "Muted"));
         }
-        foreach (var item in windows.Take(8))
-        {
-            var w = item.Window; var q = item.Snapshot;
-            var row = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
-            row.Children.Add(Heading((AccountIdentity.Label(q.AccountKey) + " · ") + L10n.WindowName(w), F("PercentUsed", w.UsedPercent)));
-            row.Children.Add(Progress(w.UsedPercent, w.UsedPercent >= 85 ? "Warning" : "Accent"));
-            string reset;
-            if (w.ResetAt is null) reset = T("ResetUnknown");
-            else if (w.ResetAt <= DateTimeOffset.Now) reset = T("ResetExpired");
-            else
-            {
-                var remaining = w.ResetAt.Value - DateTimeOffset.Now;
-                reset = remaining.TotalDays >= 1 ? F("ResetDays", (int)remaining.TotalDays, remaining.Hours) : F("ResetHours", (int)remaining.TotalHours, remaining.Minutes);
-            }
-            var stamp = Text(reset + "  ·  " + L10n.SourceName(q.Source) + ", " + q.At.ToLocalTime().ToString("g", L10n.Culture), 10, false, "Muted");
-            stamp.ToolTip = w.ResetAt?.ToLocalTime().ToString("F", L10n.Culture); stamp.Margin = new Thickness(0, 5, 0, 0); row.Children.Add(stamp);
-            content.Children.Add(row);
-        }
-        if (ActiveSource == AllSources)
-        {
-            var claudeLimits = Text(T("ClaudeLimits"), 11, false, "Muted"); claudeLimits.Margin = new Thickness(0, 12, 0, 0);
-            content.Children.Add(claudeLimits);
-        }
+        foreach (var item in windows.Take(8)) content.Children.Add(LimitRow(item.Snapshot, item.Window, true));
         return Card(content);
+    }
+    private StackPanel LimitRow(QuotaSnapshot q, LimitWindow w, bool account)
+    {
+        var row = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
+        row.Children.Add(Heading((account ? AccountIdentity.Label(q.AccountKey) + " · " : "") + L10n.WindowName(w), F("PercentUsed", w.UsedPercent)));
+        row.Children.Add(Progress(w.UsedPercent, w.UsedPercent >= 85 ? "Warning" : "Accent"));
+        string reset;
+        if (w.ResetAt is null) reset = T("ResetUnknown");
+        else if (w.ResetAt <= DateTimeOffset.Now) reset = T("ResetExpired");
+        else
+        {
+            var remaining = w.ResetAt.Value - DateTimeOffset.Now;
+            reset = remaining.TotalDays >= 1 ? F("ResetDays", (int)remaining.TotalDays, remaining.Hours) : F("ResetHours", (int)remaining.TotalHours, remaining.Minutes);
+        }
+        var stamp = Text(reset + "  ·  " + L10n.SourceName(q.Source) + ", " + q.At.ToLocalTime().ToString("g", L10n.Culture), 10, false, "Muted");
+        stamp.ToolTip = w.ResetAt?.ToLocalTime().ToString("F", L10n.Culture); stamp.Margin = new Thickness(0, 5, 0, 0); row.Children.Add(stamp);
+        return row;
     }
     private Border Trend()
     {
