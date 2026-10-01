@@ -5,8 +5,8 @@ $Executable = [IO.Path]::GetFullPath($Executable)
 New-Item -ItemType Directory -Force $Destination | Out-Null
 $fixture = Join-Path $Destination 'local-fixture'
 $data = Join-Path $fixture 'app-data'
-$home = Join-Path $fixture 'codex-synthetic'
-$sessions = Join-Path $home 'sessions'
+$codexRoot = Join-Path $fixture 'codex-synthetic'
+$sessions = Join-Path $codexRoot 'sessions'
 New-Item -ItemType Directory -Force $data, $sessions | Out-Null
 $at = [DateTimeOffset]::UtcNow.AddMinutes(-1).ToString('O')
 $rows = @(
@@ -16,9 +16,9 @@ $rows = @(
 )
 $log = Join-Path $sessions 'rollout.jsonl'
 ($rows | ForEach-Object { $_ | ConvertTo-Json -Depth 8 -Compress }) | Set-Content $log -Encoding utf8NoBOM
-@{CodexHome=$home; OnlineQuota=$true; Language='es'; RefreshSeconds=60; LightTheme=$false} | ConvertTo-Json | Set-Content (Join-Path $data 'settings.json') -Encoding utf8NoBOM
-$auth = Join-Path $home 'auth.json'
-$config = Join-Path $home 'config.toml'
+@{CodexHome=$codexRoot; OnlineQuota=$true; Language='es'; RefreshSeconds=60; LightTheme=$false} | ConvertTo-Json | Set-Content (Join-Path $data 'settings.json') -Encoding utf8NoBOM
+$auth = Join-Path $codexRoot 'auth.json'
+$config = Join-Path $codexRoot 'config.toml'
 [IO.File]::WriteAllText($auth, 'INACCESSIBLE-SYNTHETIC-CREDENTIAL-FIXTURE')
 [IO.File]::WriteAllText($config, 'UNCHANGED-SYNTHETIC-CONFIGURATION')
 $hashes = @{}

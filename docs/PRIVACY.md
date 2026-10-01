@@ -1,27 +1,31 @@
-# Privacy and data
+# Privacy and local data — 1.1.0
 
-## Local mode (default)
+AIUsage is local-only. The authenticated client from older versions was removed from source; it is not hidden behind a default-off checkbox. There is no API, OAuth, app-server, cookie or credential-store integration, no analytics, no uploads and no automatic update check. It does not read `auth.json`, launch Codex or call another AI. It never changes the original Codex files or configuration.
 
-AIUsage reads JSONL files in the selected Codex folder. It interprets context/usage metadata and limits, discards conversation messages, and does not store them in its cache. It does not read `auth.json`, contact OpenAI, use analytics, store content on a server or create an AIUsage account.
+## Inputs and storage
 
-Settings and cache live in `%LOCALAPPDATA%\AIUsage`. Settings include the chosen language. Cached activity contains timestamps, models, tokens, service tiers, counters, parser state, session identifiers and reported limits. Known local account identifiers are hashed with SHA-256 to separate quotas; raw account IDs are not stored. The hash is a correlatable pseudonym, **not guaranteed anonymity**. Cached activity remains private and should not be published without review. Cache filenames hash the original path instead of including it. Daily grouping uses the Windows time zone.
+Only user-accessible, resident local JSONL logs are read. Content is transiently processed to identify accounting/session metadata; conversation, image and tool-result content is not persisted. Keep logs from other people out of the selected folder unless you have the necessary authority to process them.
 
-CSV is created only after an explicit export and destination choice. It contains day/model aggregates and pricing qualifications, not conversations, credentials or original paths. Potential spreadsheet formulas in text cells are escaped. Column names/numbers remain invariant; explanatory notes follow the selected language. Custom notes are preserved verbatim.
+AIUsage stores its own settings, optional price overrides and metadata cache in `%LOCALAPPDATA%\AIUsage`. Cache data includes timestamps, model names, tokens, service tiers, counters, parser/session state and recorded limits. Recognized account identifiers from log metadata are hashed to separate local quotas; these are correlatable pseudonyms, **not anonymity**. Activity history is private even without conversation text. Users control local files and should protect them with appropriate OS access controls.
 
-Large conversation records are classified from a bounded JSON header and skipped; image contents and pasted text are not cached. Accounting/session metadata that cannot be safely interpreted may exclude the file's accounting with a warning. This exclusion never edits or deletes the original rollout.
+There is no application account or collection server. This does not make every use of local data exempt from privacy law. Workplace deployment, shared logs, redistribution or commercialization may require additional analysis of the actual processing and jurisdiction.
 
-## Optional online queries
+The working history is bounded by the scanner's current time window; cache maintenance does not promise an exact legal retention deadline. A user can clear the reading cache in Settings. To remove all AIUsage activity/settings/exports, exit the app and delete `%LOCALAPPDATA%\AIUsage`. To uninstall, also delete the extracted app folder. No original Codex file needs to be deleted.
 
-Only after enabling the checkbox and confirming consent does AIUsage read the existing OAuth token from `auth.json`. The token and account identifier, if available, go to the fixed `chatgpt.com` host in a GET request to `/backend-api/wham/usage`. Redirects are disabled. Credential format is validated before headers are assigned, and credentials are reread after the response; a detected change invalidates it. Frequency is limited and throttling/transient failures are backed off. Files and conversations are not uploaded.
+## User actions
 
-Credentials are not refreshed or copied into settings/cache. The token temporarily resides in managed memory during a query; no cryptographic memory-erasure guarantee is made. Browser cookies and Windows Credential Manager are not read. API keys do not replace OAuth.
+CSV exports are created only on command, under AIUsage's local `exports` subfolder with a unique filename. They contain day/model aggregates and pricing qualifications, not conversations or credentials. Text cells are escaped against spreadsheet formulas. Notes supplied by the user are preserved and may themselves contain personal data: review before sharing an export. No file is opened or uploaded automatically.
 
-Error messages from the quota client do not include response bodies, tokens or `auth.json` content. The app does not call models, spend resets or change subscriptions. Changing language does not broaden online consent or enable it automatically.
+The built-in price editor validates JSON before replacing the local overrides file. There are no browser links, external editor/file-manager launchers or shell file pickers in the application. URLs in bundled pricing, license and documentation files are source references only; opening them separately is the user's action.
 
-GitHub/local-data buttons open a browser/file manager only when clicked. Demo and UI smoke modes do not read real settings, rollouts or credentials. HTTP tests use fake credentials in their own temporary directories and do not query real accounts. Windows-owned dialogs may use the system language rather than the app's selection.
+Migration discards the former OnlineQuota setting, including true values, and preserves supported preferences. If settings cannot be read or rewritten, safe local-only defaults are used. The removed client cannot be restored by any old setting. Exit the old executable before starting the new one; an already-running older version is not changed by downloading this release.
 
-## Remove data or uninstall
+## Filesystem and operating-system boundary
 
-Choose **Exit**, delete the extracted app folder and, to remove its settings/cached history, delete `%LOCALAPPDATA%\AIUsage`. Original Codex files are not removed or modified. The app does not register for Windows startup, install services or require administrator privileges.
+Network/UNC/WSL paths, mapped network drives, device paths, reparse points (including links/junctions) and nonresident remote-storage files are rejected or skipped. Source files are opened with FileAccess.Read; AIUsage writes only its own settings/cache/prices/exports and explicit synthetic-test output. Do not place these locations inside cloud-sync or network-backed storage for an offline workflow.
 
-Manual cache rebuilding removes only JSON files in AIUsage's cache directory. Schema migrations rebuild metadata from original logs; they do not alter conversations or credentials.
+These checks are not an OS firewall or hostile-filesystem sandbox. Storage drivers, Windows, antivirus, SmartScreen, backups or cloud-sync software may communicate independently. Attribute checks cannot defeat all filesystem races or detect every third-party virtualization scheme. No zero-network guarantee is made for the entire computer.
+
+## Verification limits
+
+Source and application-owned assembly guards reject network APIs, credential readers, subprocesses, dynamic assembly loading and non-allowlisted native imports. Tests use only synthetic fixtures, including inaccessible credentials/configuration. The offline test runner observes .NET HTTP/socket/DNS start events during its own synthetic operations; it is not an external packet capture. Bundled .NET/WPF libraries contain framework functionality that the app does not invoke. Build/restore/license/release scripts use the internet but are not run by the installed application.

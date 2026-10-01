@@ -1,5 +1,7 @@
 # First-audit remediation — historical record
 
+> Historical audit record. AIUsage 1.1.0 removes the optional authenticated client and all online controls described below. These notes are retained for provenance, not instructions for the current app. See [local-only design](LOCAL-ONLY.md).
+
 Reviewed on 2026-10-01 against AIUsage `v0.1.0-r1`, commit `db62c5a548452e2eb5fbb2d1ed7be95a0028d29c`. Corrections were implemented in [PR #1](https://github.com/wandoth1/AIUsage/pull/1) and released in **0.1.1**. **AIUsage 1.0.0 retains those corrections**, with the large-message fix described in [AUDIT-FOLLOWUP.md](AUDIT-FOLLOWUP.md), localization and independent versioning.
 
 The private report was checked against source, Codex's format and official pricing references. The original report, private paths and credentials are not published. This English document preserves the historical disposition; it does not claim a new independent full audit of 1.0.

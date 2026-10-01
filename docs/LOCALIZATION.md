@@ -1,8 +1,8 @@
 # English and Spanish localization
 
-AIUsage embeds `Strings.resx` (English neutral resources) and `Strings.es.resx` (Spanish satellite resources) in `AIUsage.Core/Resources`. `L10n` resolves explicit `en`/`es` choices or `auto`; automatic selection uses Spanish for Spanish system UI cultures and English otherwise. Old settings without a Language property migrate to auto without changing other options.
+AIUsage embeds `Strings.resx` (English neutral resources) and `Strings.es.resx` (Spanish satellite resources) in `AIUsage.Core/Resources`. `L10n` resolves explicit `en`/`es` choices or `auto`; automatic selection uses Spanish for Spanish system UI cultures and English otherwise. Old settings without a Language property migrate to auto while preserving supported options; 1.1.0 deliberately removes the obsolete online toggle.
 
-Select a language in Settings, then choose **Save and refresh**. This saves the choice, rebuilds the dashboard and replaces the tray menu without restarting. The selector does not discard other unsaved settings immediately. Save is blocked during an active refresh, preventing a language change from racing an earlier dashboard calculation. Demo/smoke selection does not write real settings.
+Select a language in Settings, then choose **Save and refresh**. This saves the choice, rebuilds the dashboard and replaces the tray menu without restarting. The selector does not discard other unsaved settings immediately. Save is blocked during an active refresh, preventing a language change from racing an earlier dashboard calculation. Demo/smoke selection does not write real settings. The optional normal-workflow smoke fixture uses its own explicitly supplied synthetic directory.
 
 `T(key)` retrieves text and `F(key, args)` formats a complete template. The latter captures one immutable locale before resource lookup and formatting. Presentation uses en-US/es-ES explicitly; global parsing culture, JSON and invariant CSV numbers are not changed. Windows still determines the time zone and day boundaries.
 
