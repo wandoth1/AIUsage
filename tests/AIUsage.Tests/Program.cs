@@ -10,6 +10,7 @@ internal static class Program
     private static int passed, failed;
     public static int Main()
     {
+        L10n.SetLanguage("en");
         Test("Reasoning and cached input are subsets, not extra tokens", () =>
         {
             var t = ReadTokens("{\"input_tokens\":100,\"cached_input_tokens\":80,\"output_tokens\":20,\"reasoning_output_tokens\":10}");
@@ -143,14 +144,14 @@ internal static class Program
         Test("Weekly primary window never invents a session window", () =>
         {
             var q = Quota("{\"rate_limit\":{\"primary_window\":{\"used_percent\":24,\"limit_window_seconds\":604800}}}");
-            Eq(1, q.Windows.Count); Eq("Codex · Semanal", q.Windows[0].Name);
+            Eq(1, q.Windows.Count); Eq("Codex · Weekly", q.Windows[0].Name);
         });
         Test("Missing used_percent is unknown, not zero", () => Eq(0, Quota("{\"rate_limit\":{\"primary_window\":{\"limit_window_seconds\":18000}}}").Windows.Count));
         Test("Raw over-limit percentage is preserved", () => Eq(102d, Quota("{\"primary\":{\"used_percent\":102,\"window_minutes\":300}}").Windows[0].UsedPercent));
         Test("Additional Spark weekly limit is discovered", () =>
         {
             var q = Quota("{\"additional_rate_limits\":[{\"limit_name\":\"GPT-5.3-Codex-Spark\",\"rate_limit\":{\"primary_window\":{\"used_percent\":15,\"limit_window_seconds\":604800}}}]}");
-            Eq("Spark · Semanal", q.Windows[0].Name);
+            Eq("Spark · Weekly", q.Windows[0].Name);
         });
         Test("Relative reset duration uses observation timestamp", () =>
         {

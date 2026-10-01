@@ -85,7 +85,7 @@ public sealed class CodexParser(ParserState? state = null)
             if (State.ReplayGate) { if (total is not null) State.Previous = total; return null; }
             var rateLimits = p.Get("rate_limits");
             if (rateLimits.ValueKind == JsonValueKind.Object)
-                quota = QuotaParser.Parse(rateLimits, at.Value, "Registro local") with { AccountKey = State.AccountKey };
+                quota = QuotaParser.Parse(rateLimits, at.Value, "Local log") with { AccountKey = State.AccountKey };
             if (total is not null && total == State.Previous) return null;
             var last = info.Get("last_token_usage");
             Tokens? usage = last.ValueKind == JsonValueKind.Object ? Tokens.Read(last) : total?.Delta(State.Previous);
@@ -103,7 +103,9 @@ public sealed class CodexParser(ParserState? state = null)
     }
     public void SkipOversized(ReadOnlySpan<byte> prefix)
     {
-        if (RecordType(prefix) is "response_item" or "compacted") return;
+        var (type, eventType) = RecordTypes(prefix);
+        if (type is "response_item" or "compacted" ||
+            (type == "event_msg" && IsNonAccountingEvent(eventType))) return;
         Warnings++;
         // Unknown/partial accounting or session metadata cannot safely seed subsequent deltas.
         State.AccountingBlocked = true;
@@ -114,18 +116,52 @@ public sealed class CodexParser(ParserState? state = null)
         if (!State.SawMeta && (RecordType(line) == "session_meta" || line.IndexOf("\"session_meta\""u8) >= 0))
             State.AccountingBlocked = true;
     }
-    private static string? RecordType(ReadOnlySpan<byte> bytes)
+    // Known message/tool payloads are ignored by Parse even when small. Unknown event
+    // types remain conservative; a future accounting event must not bypass quarantine.
+    private static bool IsNonAccountingEvent(string? type) => type is
+        "user_message" or "item_completed" or "agent_message" or
+        "agent_reasoning" or "agent_reasoning_raw_content" or
+        "entered_review_mode" or "exited_review_mode" or "patch_apply_end" or
+        "context_compacted" or "mcp_tool_call_end" or "web_search_end" or
+        "image_generation_end" or "sub_agent_activity";
+
+    private static string? RecordType(ReadOnlySpan<byte> bytes) => RecordTypes(bytes).Type;
+    private static (string? Type, string? EventType) RecordTypes(ReadOnlySpan<byte> bytes)
     {
         if (bytes.StartsWith("\uFEFF"u8)) bytes = bytes[3..];
+        string? type = null, eventType = null;
+        bool inPayload = false;
         try
         {
+            // isFinalBlock=false lets us read only the bounded prefix of a large line.
+            // Inspect JSON structure, never a substring inside a pasted message/image.
             var reader = new Utf8JsonReader(bytes, false, new JsonReaderState(new JsonReaderOptions { MaxDepth = 64 }));
             while (reader.Read())
-                if (reader.TokenType == JsonTokenType.PropertyName && reader.CurrentDepth == 1 && reader.ValueTextEquals("type"))
-                    return reader.Read() && reader.TokenType == JsonTokenType.String ? reader.GetString() : null;
+            {
+                if (reader.TokenType == JsonTokenType.EndObject && reader.CurrentDepth == 1) inPayload = false;
+                if (reader.TokenType != JsonTokenType.PropertyName) continue;
+                if (reader.CurrentDepth == 1 && reader.ValueTextEquals("type"))
+                {
+                    if (!reader.Read() || reader.TokenType != JsonTokenType.String) return (null, null);
+                    type = reader.GetString();
+                    if (type != "event_msg") return (type, null);
+                    if (eventType is not null) return (type, eventType);
+                }
+                else if (reader.CurrentDepth == 1 && reader.ValueTextEquals("payload"))
+                {
+                    if (!reader.Read()) return (type, null);
+                    inPayload = reader.TokenType == JsonTokenType.StartObject;
+                }
+                else if (inPayload && reader.CurrentDepth == 2 && reader.ValueTextEquals("type"))
+                {
+                    if (!reader.Read() || reader.TokenType != JsonTokenType.String) return (type, null);
+                    eventType = reader.GetString();
+                    if (type is not null) return (type, eventType);
+                }
+            }
         }
-        catch (JsonException) { }
-        return null;
+        catch (JsonException) { return (null, null); }
+        return (type, eventType);
     }
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     private static string? Model(JsonElement p) => Clean(p.Text("model") ?? p.Text("model_name") ?? p.Get("metadata").Text("model"));

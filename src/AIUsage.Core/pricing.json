@@ -43,9 +43,9 @@
     "LongThreshold": 272000,
     "FastMultiplier": 2,
     "Source": "https://developers.openai.com/api/docs/models/gpt-5.6-sol ; verified 2026-10-01",
-    "Note": "Promoción API observada el 2026-10-01, anunciada al menos hasta el 2026-11-21. El historial se reestima con este catálogo, no con precios históricos.",
+    "Note": "API promotion observed on 2026-10-01, announced until at least 2026-11-21. History is re-estimated with this catalog, not historical prices.",
     "TierRulesVerified": false,
-    "LongCacheVerified": true,
+    "LongCacheVerified": false,
     "ReviewAfter": "2026-11-22"
   },
   "gpt-5.6-terra": {

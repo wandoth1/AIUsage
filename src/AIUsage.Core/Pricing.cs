@@ -1,3 +1,4 @@
+using static AIUsage.Core.L10n;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -18,7 +19,7 @@ public sealed class PriceCatalog
     public PriceCatalog(Dictionary<string, ModelRate> rates) => this.rates = Normalize(rates);
     public static PriceCatalog Load(string? overridesPath = null)
     {
-        using var stream = typeof(PriceCatalog).Assembly.GetManifestResourceStream("AIUsage.Core.pricing.json") ?? throw new InvalidOperationException("Falta el catálogo de precios.");
+        using var stream = typeof(PriceCatalog).Assembly.GetManifestResourceStream("AIUsage.Core.pricing.json") ?? throw new InvalidOperationException(T("MissingCatalog"));
         var catalog = new PriceCatalog(ReadEntries(stream));
         if (overridesPath is not null && File.Exists(overridesPath))
         {
@@ -27,7 +28,7 @@ public sealed class PriceCatalog
             using var buffer = new MemoryStream();
             byte[] bytes = new byte[256 * 1024 + 1];
             int count = customFile.ReadAtLeast(bytes, bytes.Length, throwOnEndOfStream: false);
-            if (count > 256 * 1024) throw new InvalidOperationException("El fichero de precios supera 256 KB.");
+            if (count > 256 * 1024) throw new InvalidOperationException(T("PricesTooLarge"));
             buffer.Write(bytes, 0, count); buffer.Position = 0;
             foreach (var (key, rate) in ReadEntries(buffer))
             {
@@ -40,7 +41,7 @@ public sealed class PriceCatalog
     private static Dictionary<string, ModelRate> ReadEntries(Stream stream)
     {
         using var doc = JsonDocument.Parse(stream);
-        if (doc.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException("Se espera un objeto de tarifas.");
+        if (doc.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException(T("ExpectedPricesObject"));
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -50,14 +51,14 @@ public sealed class PriceCatalog
         var entries = new Dictionary<string, ModelRate>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in doc.RootElement.EnumerateObject())
         {
-            if (entry.Value.ValueKind != JsonValueKind.Object) throw new JsonException("Cada tarifa debe ser un objeto.");
+            if (entry.Value.ValueKind != JsonValueKind.Object) throw new JsonException(T("ExpectedRateObject"));
             var fields = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var p in entry.Value.EnumerateObject())
-                if (!fields.Add(p.Name)) throw new JsonException("La tarifa contiene campos duplicados.");
-            var rate = entry.Value.Deserialize<ModelRate>(options) ?? throw new JsonException("Tarifa nula.");
+                if (!fields.Add(p.Name)) throw new JsonException(T("DuplicatePriceFields"));
+            var rate = entry.Value.Deserialize<ModelRate>(options) ?? throw new JsonException(T("NullPrice"));
             string key = entry.Name.Trim();
             Validate(key, rate);
-            if (!entries.TryAdd(key, rate)) throw new JsonException("Hay modelos duplicados tras normalizar mayúsculas y espacios.");
+            if (!entries.TryAdd(key, rate)) throw new JsonException(T("DuplicateNormalizedModels"));
         }
         return entries;
     }
@@ -67,7 +68,7 @@ public sealed class PriceCatalog
         foreach (var (key, rate) in entries)
         {
             Validate(key, rate);
-            if (!result.TryAdd(key.Trim(), rate)) throw new InvalidOperationException("Modelos duplicados.");
+            if (!result.TryAdd(key.Trim(), rate)) throw new InvalidOperationException(T("DuplicateModels"));
         }
         return result;
     }
@@ -77,7 +78,7 @@ public sealed class PriceCatalog
             r.Input is < 0 or > 1_000_000 || r.Cached is < 0 or > 1_000_000 || r.Output is < 0 or > 1_000_000 ||
             r.FastMultiplier is <= 0 or > 100 || r.CacheWriteMultiplier is <= 0 or > 100 || r.LongThreshold < 0 ||
             r.Source is null || r.Note is null || r.Source.Length > 2000 || r.Note.Length > 2000)
-            throw new InvalidOperationException("Hay una tarifa no válida. Input, Cached y Output son obligatorios.");
+            throw new InvalidOperationException(T("InvalidPrice"));
     }
     public decimal? Cost(UsageEvent e) => Quote(e).Cost;
     public PriceQuote Quote(UsageEvent e)
@@ -93,10 +94,10 @@ public sealed class PriceCatalog
         if (!rates.ContainsKey(model) && (model == "gpt-reserve" ||
             (model == "codex-auto-review" && e.At >= new DateTimeOffset(2026, 7, 9, 0, 0, 0, TimeSpan.Zero))))
         {
-            notes.Add($"Equivalencia heredada de OpenUsage: {model} → gpt-5.6-luna; no confirmada para todos los registros.");
+            notes.Add(F("AliasNote", model));
             model = "gpt-5.6-luna";
         }
-        if (!rates.TryGetValue(model, out var rate)) return new(null, model, "No hay tarifa verificada para este modelo.");
+        if (!rates.TryGetValue(model, out var rate)) return new(null, model, T("UnverifiedPrice"));
         string serviceTier = e.Tier.Trim().ToLowerInvariant();
         decimal tier = serviceTier switch
         {
@@ -105,15 +106,15 @@ public sealed class PriceCatalog
             "flex" or "batch" => 0.5m,
             _ => -1
         };
-        if (tier < 0) return new(null, model, "Nivel de servicio desconocido; no se supone una tarifa.");
+        if (tier < 0) return new(null, model, T("UnknownTier"));
         if (fastAlias) tier = rate.FastMultiplier; // Apply once, not twice.
         bool large = rate.LongThreshold > 0 && e.Tokens.Input > rate.LongThreshold;
-        if (customKeys.Contains(model)) notes.Add("Tarifa personalizada por el usuario.");
-        if (rate.Note.Length > 0) notes.Add(rate.Note);
-        if (!rate.TierRulesVerified && tier != 1) notes.Add("Multiplicador de nivel de servicio heredado, sin confirmar para este modelo.");
-        if (!rate.LongCacheVerified && large && e.Tokens.Cached > 0) notes.Add("Recargo de caché en contexto largo heredado, sin confirmar.");
+        if (customKeys.Contains(model)) notes.Add(T("CustomRateNote"));
+        if (rate.Note.Length > 0) notes.Add(customKeys.Contains(model) ? rate.Note : L10n.BundledPriceNote(rate.Note));
+        if (!rate.TierRulesVerified && tier != 1) notes.Add(T("TierNote"));
+        if (!rate.LongCacheVerified && large && e.Tokens.Cached > 0) notes.Add(T("LongCacheNote"));
         if (rate.ReviewAfter is { } review && DateOnly.FromDateTime(DateTime.UtcNow) >= review)
-            notes.Add("Tarifa promocional pendiente de revisión; no se ha supuesto una fecha de caducidad ni un nuevo precio.");
+            notes.Add(T("PromoReviewNote"));
         decimal inputFactor = large ? 2 : 1, outputFactor = large ? 1.5m : 1;
         var t = e.Tokens;
         long cached = Math.Clamp(t.Cached, 0, t.Input);

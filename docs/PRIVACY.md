@@ -1,25 +1,27 @@
-# Privacidad y datos
+# Privacy and data
 
-## Modo local (por defecto)
+## Local mode (default)
 
-AIUsage lee los archivos `.jsonl` de la carpeta de Codex seleccionada. Solo interpreta metadatos de contexto/consumo y límites; descarta mensajes de conversación y no los guarda en su caché. No lee `auth.json`, no llama a OpenAI, no usa analítica, no registra contenido en un servidor y no crea una cuenta de AIUsage.
+AIUsage reads JSONL files in the selected Codex folder. It interprets context/usage metadata and limits, discards conversation messages, and does not store them in its cache. It does not read `auth.json`, contact OpenAI, use analytics, store content on a server or create an AIUsage account.
 
-Los archivos de configuración y caché se guardan en `%LOCALAPPDATA%\AIUsage`. La caché contiene fechas, modelos, tokens, nivel de servicio, contadores, estado del analizador, identificador de sesión y límites informados. Cuando hay un identificador de cuenta local, se guarda su hash SHA-256 para separar cuotas; no se guarda el identificador de cuenta en claro. Ese hash es un seudónimo correlacionable, no una garantía de anonimato. Es información de actividad del usuario y sigue siendo privada: no debe publicarse sin revisión. Los nombres de los archivos de caché se obtienen mediante SHA-256 de la ruta; no contienen la ruta original. La app utiliza la zona horaria de Windows.
+Settings and cache live in `%LOCALAPPDATA%\AIUsage`. Settings include the chosen language. Cached activity contains timestamps, models, tokens, service tiers, counters, parser state, session identifiers and reported limits. Known local account identifiers are hashed with SHA-256 to separate quotas; raw account IDs are not stored. The hash is a correlatable pseudonym, **not guaranteed anonymity**. Cached activity remains private and should not be published without review. Cache filenames hash the original path instead of including it. Daily grouping uses the Windows time zone.
 
-El CSV se genera únicamente al solicitarlo y elegir un destino. Contiene agregados por día/modelo y notas sobre tarifas personalizadas, equivalencias o reglas no confirmadas; no incluye conversaciones, credenciales ni rutas. Las celdas de texto potencialmente interpretables como fórmulas se escapan.
+CSV is created only after an explicit export and destination choice. It contains day/model aggregates and pricing qualifications, not conversations, credentials or original paths. Potential spreadsheet formulas in text cells are escaped. Column names/numbers remain invariant; explanatory notes follow the selected language. Custom notes are preserved verbatim.
 
-## Consulta online opcional
+Large conversation records are classified from a bounded JSON header and skipped; image contents and pasted text are not cached. Accounting/session metadata that cannot be safely interpreted may exclude the file's accounting with a warning. This exclusion never edits or deletes the original rollout.
 
-Solo después de activar la casilla y confirmar, AIUsage lee el token OAuth ya existente en `auth.json`. Ese token y el identificador de cuenta, si existe, se envían al host fijo `chatgpt.com` en una petición GET al endpoint interno `/backend-api/wham/usage`. No se siguen redirecciones. Se valida la forma de las credenciales antes de formar cabeceras y se comprueba de nuevo su identidad al recibir la respuesta; un cambio invalida el resultado. Se limita la frecuencia y se respetan las esperas por saturación o errores transitorios. No se envían archivos ni conversaciones.
+## Optional online queries
 
-No se renuevan credenciales ni se persisten copias en los ajustes/caché. El token permanece temporalmente en memoria administrada durante la consulta; no se afirma un borrado criptográfico de esa memoria. No se leen cookies del navegador ni se extraen credenciales del almacén de Windows. No se usan claves API como sustituto de OAuth.
+Only after enabling the checkbox and confirming consent does AIUsage read the existing OAuth token from `auth.json`. The token and account identifier, if available, go to the fixed `chatgpt.com` host in a GET request to `/backend-api/wham/usage`. Redirects are disabled. Credential format is validated before headers are assigned, and credentials are reread after the response; a detected change invalidates it. Frequency is limited and throttling/transient failures are backed off. Files and conversations are not uploaded.
 
-Los errores mostrados por el cliente no incluyen el cuerpo HTTP, el token ni el contenido de `auth.json`. La app no realiza peticiones al modelo, no consume reinicios y no ofrece cambiar la suscripción.
+Credentials are not refreshed or copied into settings/cache. The token temporarily resides in managed memory during a query; no cryptographic memory-erasure guarantee is made. Browser cookies and Windows Credential Manager are not read. API keys do not replace OAuth.
 
-Los botones de GitHub y datos locales solo abren el navegador o el explorador cuando se pulsan. El modo demo y la prueba de interfaz no leen los ajustes, rollouts ni credenciales reales.
+Error messages from the quota client do not include response bodies, tokens or `auth.json` content. The app does not call models, spend resets or change subscriptions. Changing language does not broaden online consent or enable it automatically.
 
-## Eliminar datos y desinstalar
+GitHub/local-data buttons open a browser/file manager only when clicked. Demo and UI smoke modes do not read real settings, rollouts or credentials. HTTP tests use fake credentials in their own temporary directories and do not query real accounts. Windows-owned dialogs may use the system language rather than the app's selection.
 
-Pulsa **Salir**, elimina la carpeta donde extrajiste la aplicación y, si deseas borrar sus ajustes/historial cacheado, elimina `%LOCALAPPDATA%\AIUsage`. Los originales de Codex no se eliminan ni modifican. La aplicación no se registra para iniciar con Windows, no instala servicios y no requiere privilegios administrativos.
+## Remove data or uninstall
 
-La reconstrucción manual de caché elimina solo los archivos JSON dentro de la carpeta de caché de AIUsage. La exclusión conservadora de un rollout ambiguo no elimina ni cambia el original. Las pruebas HTTP utilizan credenciales ficticias en carpetas temporales propias; no consultan cuentas reales.
+Choose **Exit**, delete the extracted app folder and, to remove its settings/cached history, delete `%LOCALAPPDATA%\AIUsage`. Original Codex files are not removed or modified. The app does not register for Windows startup, install services or require administrator privileges.
+
+Manual cache rebuilding removes only JSON files in AIUsage's cache directory. Schema migrations rebuild metadata from original logs; they do not alter conversations or credentials.

@@ -1,124 +1,136 @@
-# AIUsage · Windows
+# AIUsage for Windows
 
-**Tu consumo de Codex, desde la bandeja de Windows.** Tokens medidos en los registros locales, costes API estimados por modelo y límites de la cuenta cuando están disponibles.
+**Your Codex usage, in the Windows system tray.** Track local tokens, estimated API-equivalent costs by model, and account limits when available. Native C# / WPF / .NET 10, with **English and Spanish** interfaces, dark and light themes, and no telemetry.
 
-Aplicación nativa **C# / WPF / .NET 10**, sin Electron, sin telemetría y sin necesidad de instalar Python o Node. Implementación independiente y port funcional **parcial** de [OpenUsage v0.7.12](https://github.com/robinebers/openusage/releases/tag/v0.7.12), con atribución MIT. La primera versión se centra en Codex; no replica todos los proveedores de OpenUsage.
+AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robinebers/openusage)**, distributed under MIT. **AIUsage 1.0.0 is our own version**, not an OpenUsage version or a claim of complete feature parity. We maintain our own roadmap and may selectively port future upstream changes after review and testing. The initial source reference is recorded in [UPSTREAM.md](docs/UPSTREAM.md); see our [versioning policy](docs/VERSIONING.md).
 
-[Descargas y versiones](https://github.com/wandoth1/AIUsage/releases) · [Compilaciones y pruebas](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Privacidad](docs/PRIVACY.md) · [Origen del código](docs/UPSTREAM.md)
+[Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Privacy](docs/PRIVACY.md) · [Security](SECURITY.md)
 
-## Correcciones de la auditoría: v0.1.1
+## Download and run
 
-Esta entrega corrige cuotas de Spark que podían sustituir las de Codex, el modo priority arrastrado, tokens de ocupación de contexto contados como consumo, deduplicación entre sesiones independientes y validación de precios/autenticación. La caché anterior se reconstruye automáticamente con el nuevo esquema. Consulta la [respuesta a los hallazgos](docs/AUDIT-REMEDIATION.md) para distinguir correcciones, mitigaciones conservadoras y comprobaciones pendientes.
+| Package | Platform |
+|---|---|
+| `AIUsage-1.0.0-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.0.0-win-arm64.zip` | Windows on ARM |
 
-Para actualizar, termina la versión anterior con **Salir**, extrae el ZIP nuevo en otra carpeta y abre su `AIUsage.exe`. No borres tu carpeta `.codex`. Los ajustes se conservan; la primera lectura puede tardar más por la reconstrucción de caché.
+Download from [Releases](https://github.com/wandoth1/AIUsage/releases/latest), extract **the entire ZIP** into a folder you can write to, and open **`AIUsage.exe`**. The .NET runtime is included. No administrator permissions, installer, Python or Node installation are required.
 
-## Descargar y abrir
+The window opens near the clock. Its icon stays in the system tray, possibly in the hidden-icons area. `×` and `Esc` hide the window; **Exit** closes the application. AIUsage does not add itself to Windows startup or install services.
 
-1. Abre **Releases** y descarga `AIUsage-0.1.1-win-x64.zip` para un PC Intel/AMD, o `AIUsage-0.1.1-win-arm64.zip` para Windows en ARM.
-2. Extrae **todo** el ZIP en una carpeta de tu usuario y ejecuta `AIUsage.exe`. El runtime de .NET va incluido. No necesita permisos de administrador ni un instalador.
-3. La ventana se abre junto al reloj. Su icono permanece en la bandeja; puede estar dentro de los iconos ocultos. `×` y `Esc` ocultan la ventana; **Salir** termina la aplicación.
+To upgrade from 0.1.x, choose **Exit** in the old app, extract the new ZIP into another folder and open the new executable. Settings are preserved. Older reading caches are rebuilt automatically, including sessions incorrectly excluded by the large-message bug in 0.1.1. The first scan may take longer. **Do not delete your `.codex` folder.**
 
-**Versión preliminar, sin firma de código.** Windows puede mostrar una advertencia de editor desconocido. No desactives el antivirus ni protecciones globales. Comprueba que el archivo procede de este repositorio y verifica su SHA-256 contra `SHA256SUMS.txt`; también puedes compilarlo desde el código. El hash comprueba integridad, no sustituye una firma de editor.
+**Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus, SmartScreen or other system-wide protections. Check the repository of origin and compare the ZIP's SHA-256 with `SHA256SUMS.txt`; alternatively, build from source. A hash verifies integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-0.1.1-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.0.0-win-x64.zip -Algorithm SHA256
 ```
 
-Objetivo: Windows 10/11 de 64 bits, x64 o ARM64, en una versión compatible con .NET 10. No hay paquete de 32 bits. El pipeline ejecuta pruebas de lógica y una prueba de arranque/renderizado WPF en Windows x64; ARM64 se compila de forma cruzada y necesita validación en hardware ARM. Los paquetes no se presentan como probados con una cuenta real de Codex.
+Target: 64-bit Windows 10/11 on a version supported by .NET 10. There is no 32-bit package. CI runs the published x64 executable on Windows; ARM64 is cross-compiled and still needs hardware validation. This does not establish compatibility with every Windows version, DPI configuration or real Codex account.
 
-## Qué muestra
+## Language
 
-- **Hoy, ayer, últimos 7 y 30 días**: coste estimado, tokens y registros de uso; los días siguen la zona horaria de Windows.
-- **Desglose por modelo** con barras, porcentaje del coste —o de tokens si falta alguna tarifa— y detalle de entrada, caché y salida al pasar el ratón.
-- **Límites de sesión, semanales y Spark** si Codex los informa. Cada dato conserva su origen y hora; un reinicio vencido no se convierte artificialmente en un límite nuevo.
-- **Tema oscuro/claro**, ventana fijable, actualización periódica, historial visual de 7 días y exportación CSV agregada.
-- **Lectura incremental** de archivos abiertos por Codex, con caché local de metadatos. Evita volver a sumar contadores repetidos, copias y el historial heredado de subagentes.
+Open **Settings → Language / Idioma**, select **English**, **Español**, or **System default**, and choose **Save and refresh**. In Spanish, use **Ajustes → Idioma / Language → Guardar y actualizar**. The choice is saved; no restart is needed.
 
-No hay datos inventados cuando una carpeta está vacía: aparece **Sin datos**. Los modelos desconocidos conservan sus tokens y muestran **Sin tarifa**. Un coste incompleto lleva `≥` y un aviso. El programa no añade una entrada al inicio de Windows ni instala servicios.
+The initial system choice uses Spanish for Spanish-language Windows and English for other system languages. English uses `en-US` formatting and Spanish uses `es-ES` formatting inside AIUsage; amounts remain **USD**. The Windows time zone determines daily boundaries. Switching language does not change calculations, credentials or session files.
 
-## Conectar tus registros
+Model/provider names, user-supplied notes and external data remain unchanged. CSV column names, delimiters and numbers stay language-independent; explanatory pricing notes use the selected language. Repository documentation and release notes are maintained in English. System-owned dialogs may follow Windows' own language.
 
-Por defecto se usa `CODEX_HOME` si está definido; en caso contrario, `%USERPROFILE%\.codex`. En **Ajustes → Carpeta de Codex** puedes seleccionar otra carpeta. Se leen `sessions/**/*.jsonl` y `archived_sessions/**/*.jsonl`; también se admite seleccionar directamente una carpeta de rollouts.
+## Features
 
-Para Codex dentro de WSL, indica una ruta a `.codex` accesible desde Windows, por ejemplo `\\wsl.localhost\Ubuntu\home\TU_USUARIO\.codex`. La distribución debe estar disponible. La primera versión no descubre automáticamente distribuciones WSL ni combina varias carpetas. Por seguridad, omite enlaces/junctions anidados y avisa de una lectura incompleta.
+- **Today, yesterday, last 7 and 30 days:** estimated costs, measured tokens and usage records, plus model breakdowns with input/cache/output tooltips.
+- **Session, weekly and Spark limits**, when reported, with source and observation times. Missing or expired values are not invented.
+- **Tray integration, dark/light themes, pinning and periodic refresh**, a seven-day activity chart and aggregated CSV export.
+- **Incremental local reading**, including open files, archived rollouts, repeated counters and inherited subagent history. Unknown models retain their tokens and show **No price**; incomplete costs show `≥` and a warning.
 
-Los datos representan los **registros accesibles del equipo/carpeta seleccionada**, no todo tu consumo de ChatGPT, el uso cloud ni otros ordenadores. Los rollouts de cuentas diferentes presentes en esa misma carpeta pueden mezclarse en el historial: v0.1.1 no separa el consumo de tokens por cuenta. Los límites online corresponden a la autenticación leída en el momento de la consulta, cuya hora se muestra. Una respuesta detectada como perteneciente a una sesión cambiada se descarta; no se rellenan sus ventanas ausentes con cuotas locales de otras cuentas. Los límites locales con identidad conocida se agrupan mediante un identificador seudónimo; las identidades ausentes no se pueden separar con certeza.
+Version 1.0 includes the first audit corrections and the follow-up fix for oversized conversation events. The [audit response](docs/AUDIT-REMEDIATION.md) and [follow-up report](docs/AUDIT-FOLLOWUP.md) distinguish fixes, conservative mitigations and remaining limitations.
 
-### Límites online: opcionales y de solo lectura
+## Connect your local logs
 
-El modo local funciona sin conexión y sin leer `auth.json`. Para obtener límites recientes, activa **Ajustes → Consultar los límites de mi cuenta online** y confirma el aviso.
+AIUsage uses `CODEX_HOME` when set; otherwise it uses `%USERPROFILE%\.codex`. Select another folder in **Settings → Codex folder**. It reads `sessions/**/*.jsonl` and `archived_sessions/**/*.jsonl`; selecting a rollout folder directly is also supported.
 
-Se lee el `access_token` existente en `auth.json` y se envía **solo a `https://chatgpt.com/backend-api/wham/usage`**, con el identificador de cuenta cuando existe. No se envían conversaciones. La consulta se limita a una por minuto, tiene timeout, respeta Retry-After y aumenta la espera ante errores transitorios. No sigue redirecciones. Es el endpoint interno usado por OpenUsage, no una API pública estable.
+For WSL, select a Windows-accessible path such as `\\wsl.localhost\Ubuntu\home\YOUR_USER\.codex`. The distribution must be available. Automatic WSL discovery and combining multiple home folders are not implemented. Nested links/junctions are skipped to avoid loops and unrelated folders, with a warning for incomplete reading.
 
-AIUsage **no renueva ni sobrescribe credenciales**, no inicia conversaciones y no consume reinicios de límites. Si la sesión caduca, vuelve a autenticarte desde Codex. Una clave API no equivale a una sesión de ChatGPT. El almacén de credenciales de Windows no se lee en esta versión: si Codex solo guarda allí su sesión, la lectura local sigue funcionando, pero la consulta online no estará disponible. No copies credenciales de otra persona ni las adjuntes a una incidencia.
+Totals represent **accessible logs in the selected folder**, not all ChatGPT use, cloud activity or other devices. Token history from different accounts in that folder is aggregated. Known local quota identities are separated using pseudonymous identifiers; missing identities cannot be reliably separated. Online quotas belong to the credentials observed at query time, not necessarily every historical log in the folder.
 
-## Cómo interpretar los dólares
+### Optional, read-only online limits
 
-**No son cargos de tu suscripción, créditos gastados ni una factura de OpenAI.** Se calcula el equivalente teórico a tarifas API a partir de los tokens que registró Codex:
+Local mode works offline and does not read `auth.json`. To query recent limits, enable **Settings → Query my account limits online** and confirm the consent dialog.
+
+The existing `access_token` and account identifier, when present, are sent **only to `https://chatgpt.com/backend-api/wham/usage`**. Conversations are never sent. Requests have a timeout, run at most once a minute, respect `Retry-After`, back off after transient failures and do not follow redirects. This is an internal endpoint also used by OpenUsage, not a stable public API.
+
+AIUsage **does not refresh or overwrite credentials**, call models, start conversations or spend limit resets. Renew an expired session in Codex. An API key does not substitute for a ChatGPT login. Windows Credential Manager is not read: if Codex stores its login only there, local accounting still works, but online queries are unavailable. Never attach credentials to an issue.
+
+A response is discarded if credentials change during the query, including a normal token renewal. This conservative check can delay updated limits until the next query. A successful online snapshot replaces the local quota view; absent online windows, including Spark, are not filled from potentially unrelated local accounts. Observation times remain visible.
+
+## What the dollar amounts mean
+
+**They are not subscription charges, credits spent or an OpenAI invoice.** They estimate the API-equivalent cost of tokens recorded by Codex:
 
 ```text
-(entrada no cacheada × precio entrada
- + entrada cacheada × precio caché
- + escritura de caché × precio correspondiente
- + salida × precio salida) / 1.000.000
+(non-cached, non-cache-write input × input price
+ + cached input × cache-read price
+ + cache-write input × applicable price
+ + output × output price) / 1,000,000
 ```
 
-La entrada cacheada ya forma parte de la entrada. Los tokens de razonamiento ya están incluidos en la salida: no se cobran dos veces. El nivel de servicio se toma de cada registro, no de tu configuración actual. Los modelos incluidos aplican sus reglas de contexto largo por encima de 272.000 tokens de entrada y el multiplicador de prioridad cuando está registrado.
+Cached input is already part of input. Reasoning tokens are included in output and are not charged twice. Service tiers come from each log, not the current Codex configuration. Supported catalog entries apply long-context rules above their input threshold and priority multipliers when recorded; unverified inherited rules are explicitly qualified.
 
-Catálogo incluido, revisado el **1 de octubre de 2026**: `gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`. Fuentes en [pricing.json](src/AIUsage.Core/pricing.json). No se supone que un modelo desconocido cueste lo mismo que otro.
+The bundled catalog was reviewed on **2026-10-01** and includes `gpt-6.1-sol`, `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-5.6-sol`, `gpt-5.6-terra` and `gpt-5.6-luna`. Sources accompany each entry in [pricing.json](src/AIUsage.Core/pricing.json). Version 1.0 does not change numerical prices from 0.1.1; it additionally qualifies Sol 5.6's inherited long-context cache surcharge as unverified, consistently with Terra and Luna.
 
-El catálogo recalcula el historial accesible con esas tarifas; **no reconstruye precios históricos**, promociones pasadas, descuentos particulares, cargos de herramientas ni recargos regionales. Para `gpt-5.6-sol` se usa la promoción oficial observada el 1 de octubre de 2026 (4 / 0,4 / 20 USD por millón de entrada / caché / salida), anunciada al menos hasta el 21 de noviembre. Desde el 22 de noviembre se muestra una nota de revisión: no se presupone su fin ni se inventa otro precio. Las asignaciones de `gpt-reserve` y `codex-auto-review` posteriores al 9 de julio de 2026 a Luna 5.6 son compatibilidad heredada de OpenUsage v0.7.12, no una afirmación de que todos los modelos de revisión futuros sean Luna. Las equivalencias heredadas, reglas no confirmadas y tarifas personalizadas llevan notas por modelo y en el CSV; no se presentan como precios verificados sin reservas.
+History is recalculated using that catalog, **not historical prices**, earlier promotions, individual discounts, tool charges or regional surcharges. The Sol 5.6 promotion observed on 2026-10-01 uses 4 / 0.4 / 20 USD per million input / cached input / output tokens, announced until at least 2026-11-21. From 2026-11-22 the app requests a review rather than inventing an expiry or replacement price. `gpt-reserve` and post-2026-07-09 `codex-auto-review` mappings to Luna 5.6 are inherited compatibility assumptions, not promises about future models. Qualified rules and custom prices are explained per model and in CSV.
 
-### Tarifas personalizadas
+### Custom prices
 
-Abre **Ajustes → Editar precios personalizados**. Guarda un objeto JSON en `%LOCALAPPDATA%\AIUsage\price-overrides.json` y pulsa **Actualizar**:
+Choose **Settings → Edit custom prices**, edit `%LOCALAPPDATA%\AIUsage\price-overrides.json`, then refresh:
 
 ```json
 {
-  "mi-modelo": {
+  "my-model": {
     "Input": 2.0,
     "Cached": 0.1,
     "Output": 10.0,
     "CacheWriteMultiplier": 1.25,
     "LongThreshold": 272000,
     "FastMultiplier": 2,
-    "Source": "Fuente y fecha de la tarifa que has comprobado"
+    "Source": "Verified source and date"
   }
 }
 ```
 
-Los campos `Input`, `Cached` y `Output` son obligatorios. Se rechazan campos mal escritos, duplicados o desconocidos y cantidades inválidas; los nombres de modelo se normalizan sin distinguir mayúsculas. Tarifas en USD por millón. `LongThreshold: 0` desactiva el recargo de contexto largo; un umbral positivo usa 2× en entrada/caché y 1,5× en salida. La interfaz indica cuando hay tarifas personalizadas. Este archivo no modifica el modelo que ejecuta Codex.
+`Input`, `Cached` and `Output` are required, in USD per million. Invalid values and duplicate, misspelled or unknown fields are rejected. Model keys are case-insensitive and trimmed. `LongThreshold: 0` disables the surcharge; a positive threshold applies 2× input/cache and 1.5× output above it. Custom prices are identified and do not change the model Codex runs.
 
-### Caché y registros incompletos
+### Incomplete logs and cache recovery
 
-La última línea JSON completa sin salto de línea se incorpora cuando se observa estable en una segunda lectura. La vista provisional se vuelve a comprobar si el archivo crece. Un registro de contabilidad o metadatos de sesión superior al límite de lectura puede provocar la exclusión conservadora del archivo, con un aviso; no se convierten sus datos ambiguos en uso de una sesión raíz. Un mensaje de conversación grande no causa ese aviso si su tipo se puede identificar con seguridad.
+A complete JSON record without a final newline is included after a second stable observation and rechecked when the file grows. Recognized large conversation records, including `event_msg.user_message` and `event_msg.item_completed`, are skipped without erasing session accounting. Classification reads only the bounded JSON header; pasted text and images are not cached.
 
-Si un subagente carece de la hora de inicio necesaria para separar historial heredado de consumo nuevo, se muestra un aviso y no se adivina el consumo. Esto puede dejar el historial incompleto. La comprobación incremental está optimizada para archivos que se amplían: una modificación histórica que conserve tamaño, fecha y prefijo puede no detectarse. Tras editar registros antiguos utiliza **Ajustes → Reconstruir caché de lectura**. Solo se elimina la caché de AIUsage.
+Oversized accounting/session metadata or unknown event types can still conservatively exclude a file with a warning rather than bill ambiguous inherited history. A subagent without a reliable live-task start remains excluded when replay cannot be separated safely. These conditions may leave totals incomplete.
 
-### CSV y configuración regional
+Incremental checks target append-only logs: an older rewrite preserving size, modification time and prefix may be missed. After editing historical logs, use **Settings → Rebuild reading cache**. Only AIUsage's cache is removed. Schema 4 automatically rebuilds caches produced before the follow-up fix.
 
-La interfaz respeta la configuración regional de Windows para las cantidades. El CSV usa separador coma y punto decimal, independientes del idioma. En Excel con configuración española, impórtalo como CSV UTF-8 especificando esos separadores; no se garantiza la interpretación correcta al abrirlo con doble clic. Incluye `unpriced_events`, `qualified_events` y `pricing_notes` para no perder los avisos del cálculo.
+### CSV
 
-## Compilar y probar
+CSV uses UTF-8, a comma delimiter and invariant decimal points. Import explicitly with these settings; double-click import is not guaranteed across regional configurations. `unpriced_events`, `qualified_events` and `pricing_notes` preserve qualifications. No conversations, credentials or original file paths are exported. Potential spreadsheet formulas in text fields are escaped.
 
-Necesitas Windows y el SDK de .NET 10. El núcleo y sus pruebas también funcionan sin WPF en otros sistemas.
+## Build and test
+
+Use Windows and the .NET 10 SDK for the GUI. The core and console tests also run without WPF on other systems.
 
 ```powershell
 dotnet run --project tests/AIUsage.Tests -c Release
 dotnet run --project tests/AIUsage.AuditTests -c Release
+dotnet run --project tests/AIUsage.LocalizationTests -c Release
+dotnet run --project tests/AIUsage.FollowupTests -c Release
 dotnet build src/AIUsage.Windows -c Release -p:PublishSingleFile=false
 .\scripts\build.ps1 -Runtime win-x64
-.\artifacts\publish\win-x64\AIUsage.exe --demo
+.\artifacts\publish\win-x64\AIUsage.exe --demo --language en
 ```
 
-**Las pruebas son ejecutores de consola, no proyectos VSTest.** Usa los dos comandos `dotnet run` anteriores. `dotnet test` devuelve el error explicativo `AIU0001` para evitar un resultado aparentemente correcto sin haber ejecutado ninguna prueba. El pipeline comprueba también esta protección.
+These are executable test runners, **not VSTest projects**. `dotnet test` deliberately returns `AIU0001` to prevent a misleading success with no tests. See [build verification](docs/BUILD-VERIFICATION.md) and [localization maintenance](docs/LOCALIZATION.md).
 
-`--demo` usa únicamente datos sintéticos y no lee tu carpeta ni tus credenciales. `--tray` abre directamente en la bandeja. `--smoke-test CARPETA` ejecuta la vista demo, genera capturas de los dos temas y termina; está pensado para CI, no para consultar una cuenta.
+`--demo` uses synthetic data without reading real settings, logs or credentials. `--tray` starts hidden. `--language en|es|auto` overrides the process language; saving Settings persists the choice. `--smoke-test DIRECTORY` tests the language selector and tray menu, both themes, and scroll/focus preservation, then exits. Its `AIUsage-en-*.png` and `AIUsage-es-*.png` screenshots show the real WPF app with **synthetic data**, not a real-account validation.
 
-Las capturas generadas en las compilaciones y releases se denominan `AIUsage-dark-demo.png` y `AIUsage-light-demo.png`: son capturas del renderizado de la aplicación real con **datos sintéticos**, no pruebas de una cuenta real.
+## Scope and limitations
 
-## Alcance de v0.1.1
+**Codex is the only supported provider in 1.0.** Claude, Cursor, Copilot, pi, OpenCode, multiple profiles, automatic updates, code signing and an installer are not included. Internal quota endpoints and rollout formats can change. Mixed-DPI/multiple-monitor, Explorer recovery, concurrent RDP and comprehensive accessibility testing remain incomplete. ARM64 has not been run on ARM hardware, and real-account validation is still required.
 
-Codex es el único proveedor implementado. No se incluyen Claude, Cursor, Copilot, pi, OpenCode, multiperfil, autoactualizaciones, firma de código ni un instalador. La autenticación online puede dejar de funcionar si cambia el endpoint. La interpretación de rollouts se basa en el formato inspeccionado de OpenUsage v0.7.12; formatos futuros pueden requerir cambios.
-
-Revisa [SECURITY.md](SECURITY.md) antes de publicar una incidencia. Nunca adjuntes `auth.json`, tokens ni conversaciones privadas.
+Version 1.0 marks an independent AIUsage release line, not the removal of those limits. Read [SECURITY.md](SECURITY.md) before reporting a problem, and retain [third-party notices](THIRD-PARTY-NOTICES.md) when redistributing.

@@ -1,3 +1,4 @@
+using static AIUsage.Core.L10n;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -86,9 +87,9 @@ public static class UsageSummary
     {
         var day = Day(at, zone); return day >= from && day <= to;
     }
-    public static string Compact(long n) => n >= 1_000_000_000 ? $"{n / 1_000_000_000d:0.##}B" :
-        n >= 1_000_000 ? $"{n / 1_000_000d:0.##}M" : n >= 1000 ? $"{n / 1000d:0.#}K" : n.ToString("N0");
-    public static string Dollars(decimal n) => "$" + n.ToString("N2", CultureInfo.CurrentCulture);
+    public static string Compact(long n, IFormatProvider? culture = null) => n >= 1_000_000_000 ? (n / 1_000_000_000d).ToString("0.##", culture) + "B" :
+        n >= 1_000_000 ? (n / 1_000_000d).ToString("0.##", culture) + "M" : n >= 1000 ? (n / 1000d).ToString("0.#", culture) + "K" : n.ToString("N0", culture);
+    public static string Dollars(decimal n, IFormatProvider? culture = null) => "$" + n.ToString("N2", culture ?? CultureInfo.CurrentCulture);
 }
 
 // Stable pseudonymous identity for separating local accounts; never persist the raw account id.
@@ -96,5 +97,5 @@ public static class AccountIdentity
 {
     public static string? Key(string? id) => string.IsNullOrWhiteSpace(id) ? null :
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(id.Trim())));
-    public static string Label(string? key) => key is { Length: >= 8 } ? "Cuenta local " + key[..8] : "Cuenta desconocida";
+    public static string Label(string? key) => key is { Length: >= 8 } ? F("LocalAccount", key[..8]) : T("UnknownAccount");
 }

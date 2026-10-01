@@ -1,0 +1,417 @@
+<?xml version='1.0' encoding='utf-8'?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>AIUsage {0} · Independent Windows port of OpenUsage (MIT), with its own versions and roadmap. Codex only; other providers, pi and OpenCode are not included. Reads the selected local folder, not all cloud usage or other devices. Does not start with Windows automatically.</value>
+  </data>
+  <data name="AccountNotUpdated" xml:space="preserve">
+    <value>Logs · account not updated</value>
+  </data>
+  <data name="Activity7" xml:space="preserve">
+    <value>ACTIVITY · 7 DAYS</value>
+  </data>
+  <data name="AliasNote" xml:space="preserve">
+    <value>Inherited OpenUsage alias: {0} → gpt-5.6-luna; not verified for every record.</value>
+  </data>
+  <data name="AlreadyRunning" xml:space="preserve">
+    <value>AIUsage is already running. Look for its icon near the clock.</value>
+  </data>
+  <data name="AppData" xml:space="preserve">
+    <value>AIUsage data</value>
+  </data>
+  <data name="AppFailed" xml:space="preserve">
+    <value>AIUsage could not continue ({0}).</value>
+  </data>
+  <data name="AuthInvalidCharacters" xml:space="preserve">
+    <value>Codex authentication contains invalid characters. Sign in again using Codex.</value>
+  </data>
+  <data name="AuthInvalidFormat" xml:space="preserve">
+    <value>Codex authentication has an invalid format. Sign in again using Codex.</value>
+  </data>
+  <data name="AuthTooLarge" xml:space="preserve">
+    <value>auth.json exceeds 1 MB and has not been processed.</value>
+  </data>
+  <data name="BackToUsage" xml:space="preserve">
+    <value>← Back to usage</value>
+  </data>
+  <data name="ByModel" xml:space="preserve">
+    <value>BY MODEL</value>
+  </data>
+  <data name="CacheReuse" xml:space="preserve">
+    <value>{0:0.#}% of input reused from cache</value>
+  </data>
+  <data name="ChooseFolder" xml:space="preserve">
+    <value>Choose folder…</value>
+  </data>
+  <data name="ChooseFolderTitle" xml:space="preserve">
+    <value>Select .codex (or a sessions folder)</value>
+  </data>
+  <data name="CodexFolder" xml:space="preserve">
+    <value>Codex folder</value>
+  </data>
+  <data name="Configuration" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="CreditsReported" xml:space="preserve">
+    <value>Reported credits: </value>
+  </data>
+  <data name="CustomPricesFailed" xml:space="preserve">
+    <value>Custom prices were not applied: check price-overrides.json. The last valid catalog is still in use.</value>
+  </data>
+  <data name="CustomRateNote" xml:space="preserve">
+    <value>User-supplied custom price.</value>
+  </data>
+  <data name="CustomSuffix" xml:space="preserve">
+    <value> + custom</value>
+  </data>
+  <data name="Days30" xml:space="preserve">
+    <value>30 days</value>
+  </data>
+  <data name="Days7" xml:space="preserve">
+    <value>7 days</value>
+  </data>
+  <data name="DefaultFolder" xml:space="preserve">
+    <value>Empty = CODEX_HOME or %USERPROFILE%\.codex</value>
+  </data>
+  <data name="DemoBadge" xml:space="preserve">
+    <value>DEMO · SYNTHETIC DATA</value>
+  </data>
+  <data name="DemoStatus" xml:space="preserve">
+    <value>Demo view. No files or credentials are read.</value>
+  </data>
+  <data name="DuplicateModels" xml:space="preserve">
+    <value>Duplicate models.</value>
+  </data>
+  <data name="DuplicateNormalizedModels" xml:space="preserve">
+    <value>Duplicate models after normalizing case and whitespace.</value>
+  </data>
+  <data name="DuplicatePriceFields" xml:space="preserve">
+    <value>The price contains duplicate fields.</value>
+  </data>
+  <data name="EditPrices" xml:space="preserve">
+    <value>Edit custom prices</value>
+  </data>
+  <data name="EditorFailed" xml:space="preserve">
+    <value>Could not open the editor ({0}).</value>
+  </data>
+  <data name="EstimatedSuffix" xml:space="preserve">
+    <value> · ESTIMATED API COST</value>
+  </data>
+  <data name="Exit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="ExpectedPricesObject" xml:space="preserve">
+    <value>Expected a prices object.</value>
+  </data>
+  <data name="ExpectedRateObject" xml:space="preserve">
+    <value>Each price must be an object.</value>
+  </data>
+  <data name="ExportCsv" xml:space="preserve">
+    <value>Export CSV</value>
+  </data>
+  <data name="ExportFailed" xml:space="preserve">
+    <value>Could not export ({0}).</value>
+  </data>
+  <data name="FolderHelp" xml:space="preserve">
+    <value>The .codex folder containing sessions and archived_sessions. A WSL path accessible from Windows is also supported.</value>
+  </data>
+  <data name="HistoricalLimits" xml:space="preserve">
+    <value>Historical limits from logs, not a verified online account. Unknown identities cannot be reliably separated.</value>
+  </data>
+  <data name="InvalidInterval" xml:space="preserve">
+    <value>The interval must be between 15 and 3600 seconds.</value>
+  </data>
+  <data name="InvalidPrice" xml:space="preserve">
+    <value>Invalid price. Input, Cached and Output are required.</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Language / Idioma</value>
+  </data>
+  <data name="LanguageHelp" xml:space="preserve">
+    <value>Choose English or Spanish and press Save and refresh. No restart is needed. Other system languages use English.</value>
+  </data>
+  <data name="LanguageSystem" xml:space="preserve">
+    <value>System default</value>
+  </data>
+  <data name="LightTheme" xml:space="preserve">
+    <value>Light theme</value>
+  </data>
+  <data name="LimitsTitle" xml:space="preserve">
+    <value>CODEX LIMITS</value>
+  </data>
+  <data name="LocalAccount" xml:space="preserve">
+    <value>Local account {0}</value>
+  </data>
+  <data name="LocalLog" xml:space="preserve">
+    <value>Local log</value>
+  </data>
+  <data name="LocalLogs" xml:space="preserve">
+    <value>Local logs</value>
+  </data>
+  <data name="LocalStatus" xml:space="preserve">
+    <value>{0:HH:mm:ss} · {1:N0} accessible files · This device only</value>
+  </data>
+  <data name="LongCacheNote" xml:space="preserve">
+    <value>Inherited long-context cache surcharge, unverified.</value>
+  </data>
+  <data name="MissingCatalog" xml:space="preserve">
+    <value>The price catalog is missing.</value>
+  </data>
+  <data name="MissingFolder" xml:space="preserve">
+    <value>The selected folder does not exist or is not accessible.</value>
+  </data>
+  <data name="NeedChatGPTSession" xml:space="preserve">
+    <value>A ChatGPT session in Codex is required; an API key cannot query these limits.</value>
+  </data>
+  <data name="NewPrices" xml:space="preserve">
+    <value>Prices and new models</value>
+  </data>
+  <data name="NewPricesHelp" xml:space="preserve">
+    <value>Unknown models keep their tokens visible. Add or correct local prices in USD per million without rebuilding.</value>
+  </data>
+  <data name="NoAuth" xml:space="preserve">
+    <value>No auth.json found. Sign in using Codex. Windows Credential Manager is not read in this version.</value>
+  </data>
+  <data name="NoData" xml:space="preserve">
+    <value>No data</value>
+  </data>
+  <data name="NoDataHelp" xml:space="preserve">
+    <value>Use Codex to make a request, or check the folder in Settings.</value>
+  </data>
+  <data name="NoLimits" xml:space="preserve">
+    <value>No limit information yet.</value>
+  </data>
+  <data name="NoLimitsHelp" xml:space="preserve">
+    <value>Logs may include limits. Enable online queries separately in Settings.</value>
+  </data>
+  <data name="NoPeriodRecords" xml:space="preserve">
+    <value>No records in this period yet.</value>
+  </data>
+  <data name="NoPrice" xml:space="preserve">
+    <value>No price</value>
+  </data>
+  <data name="NotBill" xml:space="preserve">
+    <value>Not a subscription charge or an OpenAI invoice.</value>
+  </data>
+  <data name="NullPrice" xml:space="preserve">
+    <value>Null price.</value>
+  </data>
+  <data name="OnlineAccount" xml:space="preserve">
+    <value>Online account</value>
+  </data>
+  <data name="OnlineConsent" xml:space="preserve">
+    <value>AIUsage will read the access_token in auth.json and send it only to chatgpt.com to query your limits. It will not copy or refresh credentials, or send conversations. This is an internal endpoint that may change. Enable?</value>
+  </data>
+  <data name="OnlineFailed" xml:space="preserve">
+    <value>Account limits could not be queried ({0}). Previous online quotas are not reused; local logs retain their source and timestamp.</value>
+  </data>
+  <data name="OnlineHelp" xml:space="preserve">
+    <value>At most one request per minute. Does not modify auth.json, claim resets or call a model. Renew expired sessions in Codex. Windows Credential Manager is not read in this version.</value>
+  </data>
+  <data name="OnlineNotBefore" xml:space="preserve">
+    <value>Online query no earlier than {0:HH:mm:ss}.</value>
+  </data>
+  <data name="OnlineOption" xml:space="preserve">
+    <value>Query my account limits online</value>
+  </data>
+  <data name="OnlineTimeout" xml:space="preserve">
+    <value>The online request timed out. Local data is still available.</value>
+  </data>
+  <data name="OnlineTitle" xml:space="preserve">
+    <value>Optional online query</value>
+  </data>
+  <data name="OpenApp" xml:space="preserve">
+    <value>Open AIUsage</value>
+  </data>
+  <data name="OpenFailed" xml:space="preserve">
+    <value>Could not open the destination ({0}).</value>
+  </data>
+  <data name="PartialCost" xml:space="preserve">
+    <value>partial cost</value>
+  </data>
+  <data name="PartialCostNotice" xml:space="preserve">
+    <value>Partial cost: {0:N0} records have no known price. Their tokens are included; no price is invented.</value>
+  </data>
+  <data name="PercentUsed" xml:space="preserve">
+    <value>{0:0.#}% used</value>
+  </data>
+  <data name="Period30" xml:space="preserve">
+    <value>LAST 30 DAYS</value>
+  </data>
+  <data name="Period7" xml:space="preserve">
+    <value>LAST 7 DAYS</value>
+  </data>
+  <data name="PeriodToday" xml:space="preserve">
+    <value>TODAY</value>
+  </data>
+  <data name="PeriodYesterday" xml:space="preserve">
+    <value>YESTERDAY</value>
+  </data>
+  <data name="Pin" xml:space="preserve">
+    <value>Pin</value>
+  </data>
+  <data name="Pinned" xml:space="preserve">
+    <value>Pinned</value>
+  </data>
+  <data name="PriceExample" xml:space="preserve">
+    <value>Example: {"my-model":{"Input":2,"Cached":0.1,"Output":10,"LongThreshold":272000,"FastMultiplier":2}}</value>
+  </data>
+  <data name="PricesTooLarge" xml:space="preserve">
+    <value>The prices file exceeds 256 KB.</value>
+  </data>
+  <data name="PricingFooter" xml:space="preserve">
+    <value>Prices: {0}{1}. Theoretical costs using this catalog, not historical promotions, tool charges or regional surcharges. Days in {2}.</value>
+  </data>
+  <data name="PrivacyIntro" xml:space="preserve">
+    <value>Private by default. No telemetry or conversation uploads.</value>
+  </data>
+  <data name="PromoReviewNote" xml:space="preserve">
+    <value>Promotional price needs review; no expiry date or new price has been assumed.</value>
+  </data>
+  <data name="QualifiedNotice" xml:space="preserve">
+    <value>Some estimates use qualified rules, model aliases or custom prices. Check the note under each model and in the CSV.</value>
+  </data>
+  <data name="QuotaHttpError" xml:space="preserve">
+    <value>Could not read limits (HTTP {0}).</value>
+  </data>
+  <data name="QuotaInvalid" xml:space="preserve">
+    <value>Invalid limits response.</value>
+  </data>
+  <data name="QuotaRejected" xml:space="preserve">
+    <value>Request rejected (HTTP {0}). Next attempt no earlier than {1:HH:mm:ss}.</value>
+  </data>
+  <data name="QuotaTooLarge" xml:space="preserve">
+    <value>The limits response exceeds 1 MB.</value>
+  </data>
+  <data name="QuotaWaiting" xml:space="preserve">
+    <value>Online query waiting until {0:HH:mm:ss}. No further request was sent.</value>
+  </data>
+  <data name="ReadFolderFailed" xml:space="preserve">
+    <value>Could not read the Codex folder. Check the path and permissions in Settings ({0}).</value>
+  </data>
+  <data name="ReadingLogs" xml:space="preserve">
+    <value>Reading local logs…</value>
+  </data>
+  <data name="RebuildCache" xml:space="preserve">
+    <value>Rebuild reading cache</value>
+  </data>
+  <data name="RebuildFailed" xml:space="preserve">
+    <value>The cache could not be rebuilt. Original logs have not been modified.</value>
+  </data>
+  <data name="RebuildHelp" xml:space="preserve">
+    <value>Use after editing older logs. This removes only the AIUsage cache, not your sessions or credentials.</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="RefreshInterval" xml:space="preserve">
+    <value>Refresh every N seconds (15–3600)</value>
+  </data>
+  <data name="RenewSession" xml:space="preserve">
+    <value>Codex needs to renew its session. Open Codex and refresh again. AIUsage does not modify or refresh credentials.</value>
+  </data>
+  <data name="ResetDays" xml:space="preserve">
+    <value>Resets in {0} d {1} h</value>
+  </data>
+  <data name="ResetExpired" xml:space="preserve">
+    <value>Reset expired · refresh pending</value>
+  </data>
+  <data name="ResetHours" xml:space="preserve">
+    <value>Resets in {0} h {1} min</value>
+  </data>
+  <data name="ResetUnknown" xml:space="preserve">
+    <value>Reset time not reported</value>
+  </data>
+  <data name="ResetsAvailable" xml:space="preserve">
+    <value>Available resets: </value>
+  </data>
+  <data name="SaveRefresh" xml:space="preserve">
+    <value>Save and refresh</value>
+  </data>
+  <data name="ScanWarning" xml:space="preserve">
+    <value>Reading may be incomplete: {0:N0} file, record or folder issues. Files with ambiguous accounting may be excluded to avoid double-counting.</value>
+  </data>
+  <data name="Session" xml:space="preserve">
+    <value>Session</value>
+  </data>
+  <data name="SessionChanged" xml:space="preserve">
+    <value>The Codex session changed during the query. The previous response was discarded.</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="SettingsEmpty" xml:space="preserve">
+    <value>Empty settings.</value>
+  </data>
+  <data name="SettingsNotApplied" xml:space="preserve">
+    <value>Settings were not applied</value>
+  </data>
+  <data name="SettingsReadFailed" xml:space="preserve">
+    <value>Settings could not be read. Defaults are in use; the original file has not been overwritten.</value>
+  </data>
+  <data name="SettingsTooLarge" xml:space="preserve">
+    <value>The settings file exceeds 64 KB.</value>
+  </data>
+  <data name="ShareCost" xml:space="preserve">
+    <value>% of estimated cost</value>
+  </data>
+  <data name="ShareTokens" xml:space="preserve">
+    <value>% of tokens</value>
+  </data>
+  <data name="SolPromoNote" xml:space="preserve">
+    <value>API promotion observed on 2026-10-01, announced until at least 2026-11-21. History is re-estimated with this catalog, not historical prices.</value>
+  </data>
+  <data name="TierNote" xml:space="preserve">
+    <value>Inherited service-tier multiplier, unverified for this model.</value>
+  </data>
+  <data name="Today" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="TokenDetails" xml:space="preserve">
+    <value>Input: {0:N0}
+Cache (included in input): {1:N0}
+Output: {2:N0}
+Records: {3:N0}</value>
+  </data>
+  <data name="TrayNoData" xml:space="preserve">
+    <value>AIUsage · Today: no local data</value>
+  </data>
+  <data name="TrayUsage" xml:space="preserve">
+    <value>AIUsage · Today {0} · {1} tokens</value>
+  </data>
+  <data name="UnknownAccount" xml:space="preserve">
+    <value>Unknown account</value>
+  </data>
+  <data name="UnknownTier" xml:space="preserve">
+    <value>Unknown service tier; no price has been assumed.</value>
+  </data>
+  <data name="Unlimited" xml:space="preserve">
+    <value>Unlimited</value>
+  </data>
+  <data name="UnverifiedPrice" xml:space="preserve">
+    <value>No verified price is available for this model.</value>
+  </data>
+  <data name="UsageRecords" xml:space="preserve">
+    <value>{0} tokens  ·  {1:N0} usage records</value>
+  </data>
+  <data name="WaitForRefresh" xml:space="preserve">
+    <value>Wait for the current refresh to finish.</value>
+  </data>
+  <data name="Weekly" xml:space="preserve">
+    <value>Weekly</value>
+  </data>
+  <data name="Yesterday" xml:space="preserve">
+    <value>Yesterday</value>
+  </data>
+</root>

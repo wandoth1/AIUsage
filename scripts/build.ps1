@@ -10,6 +10,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Regression tests failed.' }
     dotnet run --project tests/AIUsage.AuditTests -c Release
     if ($LASTEXITCODE -ne 0) { throw 'Audit regression tests failed.' }
+    dotnet run --project tests/AIUsage.LocalizationTests -c Release
+    if ($LASTEXITCODE -ne 0) { throw 'Localization regression tests failed.' }
+    dotnet run --project tests/AIUsage.FollowupTests -c Release
+    if ($LASTEXITCODE -ne 0) { throw 'Follow-up regressions failed.' }
     $out = Join-Path $root "artifacts/publish/$Runtime"
     dotnet publish src/AIUsage.Windows/AIUsage.Windows.csproj -c Release -r $Runtime --self-contained true -o $out -p:ContinuousIntegrationBuild=true
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }

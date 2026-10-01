@@ -1,11 +1,11 @@
-# Seguridad
+# Security
 
-Esta versión es preliminar y no tiene firma de código. Las releases incluyen SHA-256 de los paquetes; verifica tanto la procedencia como la integridad. No desactives globalmente SmartScreen o el antivirus para usar la aplicación.
+AIUsage releases are currently **unsigned**. Releases include SHA-256 hashes; verify both origin and integrity. Do not globally disable SmartScreen, antivirus or other protections. A normal 1.0 release does not imply signing or independent security certification.
 
-No publiques `auth.json`, claves API, tokens OAuth, cookies, archivos completos de sesiones ni capturas con datos personales. Para reportar un fallo indica versión de AIUsage, arquitectura y versión de Windows, uso nativo o WSL y un ejemplo mínimo **sintético** del formato que falla.
+Never publish `auth.json`, API keys, OAuth tokens, cookies, full session logs or screenshots with personal data. For a defect report, include the AIUsage version, Windows version/architecture, native or WSL use, selected language and a minimal **synthetic** example of the failing format.
 
-Los endpoints de límites y formatos de rollouts no son contratos estables. La app advierte cuando un dato está ausente, incompleto o no puede valorarse. No se deben usar sus costes estimados como control de facturación ni como medida exacta del cupo de la cuenta.
+Quota endpoints and rollout formats are not stable contracts. The application warns when data is missing, incomplete or cannot be priced. Estimated costs must not be used as billing controls or exact measures of subscription quota.
 
-La primera versión es de solo lectura respecto a Codex. No reclama créditos, no refresca credenciales y no envía conversaciones. Revisa `docs/PRIVACY.md` y el código antes de habilitar el acceso online.
+AIUsage is read-only with respect to Codex. It does not claim resets, refresh credentials or send conversations. Review [privacy](docs/PRIVACY.md) and the code before enabling online access. Settings and cached activity remain private even without conversations or raw account identifiers.
 
-Para una vulnerabilidad que requiera material sensible utiliza el canal de reporte privado de GitHub si está habilitado. Si no lo está, abre una incidencia sin secretos para acordar un canal; no publiques una prueba de concepto con credenciales reales.
+Use GitHub private vulnerability reporting if enabled for sensitive reports. Otherwise open an issue without secrets to arrange a suitable channel; do not publish a proof of concept containing real credentials.
