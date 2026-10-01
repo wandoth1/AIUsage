@@ -1,4 +1,4 @@
-# Privacy and local data — 1.4.0
+# Privacy and local data — 1.4.1
 
 AIUsage is local-only. The authenticated client was deleted in 1.1.0; there is no OAuth, API-key, app-server, cookie or credential-store integration. No analytics, upload, automatic update check or model call is implemented. It does not read auth.json, launch Codex or modify original Codex logs/configuration.
 
