@@ -6,6 +6,7 @@ A System.Collections
 A System.ComponentModel
 A System.ComponentModel.Primitives
 A System.ComponentModel.TypeConverter
+A System.Console
 A System.Drawing.Common
 A System.Drawing.Primitives
 A System.Linq
@@ -22,6 +23,7 @@ T AIUsage.Core.AppSettings
 T AIUsage.Core.AppVersion
 T AIUsage.Core.AtomicJson
 T AIUsage.Core.ClaudeLogScanner
+T AIUsage.Core.ClaudeStatusLine
 T AIUsage.Core.CodexFolder
 T AIUsage.Core.CodexFolderCheck
 T AIUsage.Core.CsvExport
@@ -63,6 +65,7 @@ T System.ComponentModel.CancelEventArgs
 T System.ComponentModel.CancelEventHandler
 T System.ComponentModel.Component
 T System.ComponentModel.TypeConverter
+T System.Console
 T System.DateOnly
 T System.DateTime
 T System.DateTimeOffset
@@ -138,6 +141,7 @@ T System.Runtime.Versioning.TargetPlatformAttribute
 T System.STAThreadAttribute
 T System.Span`1
 T System.String
+T System.Text.Encoding
 T System.Text.Json.JsonException
 T System.Threading.CancellationToken
 T System.Threading.CancellationTokenSource

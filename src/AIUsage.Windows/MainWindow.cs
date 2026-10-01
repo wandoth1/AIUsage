@@ -35,6 +35,8 @@ public sealed partial class MainWindow : Window
     private ScanResult claudeScan = new([], [], 0, 0, DateTimeOffset.Now);
     private string source = AllSources, lastBuiltSource = AllSources, claudeHome = "", claudeError = "";
     private Dictionary<string, DashboardData> dashboards = new();
+    // Written by "AIUsage.exe --claude-statusline" when the user makes it Claude Code's status line.
+    private QuotaSnapshot? claudeLimits;
     private DashboardData dashboard = new(new(), new());
     private ScrollViewer? currentScroll;
     private int lastBuiltPeriod;
@@ -117,30 +119,41 @@ public sealed partial class MainWindow : Window
             try { prices = PriceCatalog.Load(PricesPath); pricingError = ""; }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             { pricingError = T("CustomPricesFailed"); }
+            // Each source records its own failure; the dashboards are always rebuilt from what was read.
             await ScanClaudeAsync();
-            string home = settings.ResolveHome();
-            activeHome = home;
-            scan = await Task.Run(() => scanner.Scan(home, cancellation.Token), cancellation.Token);
+            await ScanCodexAsync();
             SetDashboards(await Task.Run(BuildDashboards, cancellation.Token));
-            // Only when an explicit folder yields nothing: offer the detected folder, never switch silently.
-            folderSuggestion = scan.Files == 0 && settings.CodexHome.Length > 0
-                ? await Task.Run(() => CodexFolder.Suggest(home, DateTimeOffset.Now, cancellation.Token), cancellation.Token) : null;
-            error = "";
             var rows = dashboards.GetValueOrDefault(settings.ClaudeCode ? AllSources : CodexSource)?.ForPeriod(1) ?? [];
             string amount = rows.Any(r => r.Unpriced > 0) ? T("PartialCost") : UsageSummary.Dollars(rows.Sum(r => r.KnownCost), L10n.Culture);
             UsageChanged?.Invoke(rows.Sum(r => r.Events) == 0 ? T("TrayNoData") : F("TrayUsage", amount, UsageSummary.Compact(rows.Sum(r => r.Total), L10n.Culture)));
         }
         catch (OperationCanceledException) { }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or OverflowException)
+        { error = F("ReadFolderFailed", ex.GetType().Name); }
+        finally { busy = false; if (!stopped && !settingsView) Build(); }
+    }
+    private async Task ScanCodexAsync()
+    {
+        try
+        {
+            string home = settings.ResolveHome();
+            activeHome = home;
+            scan = await Task.Run(() => scanner.Scan(home, cancellation.Token), cancellation.Token);
+            // Only when an explicit folder yields nothing: offer the detected folder, never switch silently.
+            folderSuggestion = scan.Files == 0 && settings.CodexHome.Length > 0
+                ? await Task.Run(() => CodexFolder.Suggest(home, DateTimeOffset.Now, cancellation.Token), cancellation.Token) : null;
+            error = "";
+        }
         catch (LocalPathException ex) { error = ex.Message; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException or OverflowException)
         { error = F("ReadFolderFailed", ex.GetType().Name); }
-        finally { busy = false; if (!stopped && !settingsView) Build(); }
     }
     /// Claude Code failures are reported separately so they never hide Codex usage (and vice versa).
     private async Task ScanClaudeAsync()
     {
         claudeError = "";
-        if (!settings.ClaudeCode) { claudeScan = new([], [], 0, 0, DateTimeOffset.Now); claudeHome = ""; return; }
+        if (!settings.ClaudeCode) { claudeScan = new([], [], 0, 0, DateTimeOffset.Now); claudeHome = ""; claudeLimits = null; return; }
+        claudeLimits = demo ? null : await Task.Run(() => ClaudeStatusLine.Load(dataDir), cancellation.Token);
         try
         {
             string home = ClaudeLogScanner.ResolveHome();
@@ -350,6 +363,15 @@ public sealed partial class MainWindow : Window
         try { claudeFolder = ClaudeLogScanner.ResolveHome(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { claudeFolder = @"%USERPROFILE%\.claude"; }
         body.Children.Add(Text(F("ClaudeCodeHelp", claudeFolder), 11, false, "Muted"));
+        body.Children.Add(Label(T("ClaudeStatusTitle")));
+        body.Children.Add(Text(F("ClaudeStatusHelp", Path.Combine(claudeFolder, "settings.json")), 11, false, "Muted"));
+        string executable = Environment.ProcessPath ?? "AIUsage.exe";
+        // Never offer a command line whose path either shell could interpret (spaces, quotes, $, ;, & ...).
+        var snippet = new TextBox { Text = ClaudeStatusLine.SettingsSnippet(executable) ?? F("ClaudeStatusUnsafePath", executable), IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 8, 0, 6) };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(snippet, "ClaudeStatusSnippet");
+        body.Children.Add(snippet);
+        body.Children.Add(Text(T("ClaudeStatusNote"), 11, false, "Muted"));
         body.Children.Add(Label(T("AppData")));
         body.Children.Add(new TextBox { Text = dataDir, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
         body.Children.Add(Button(T("RebuildCache"), async () =>

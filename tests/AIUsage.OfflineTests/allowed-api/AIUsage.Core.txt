@@ -56,6 +56,7 @@ T System.Func`2
 T System.Globalization.CultureInfo
 T System.Globalization.DateTimeStyles
 T System.Globalization.NumberStyles
+T System.Globalization.UnicodeCategory
 T System.Guid
 T System.IDisposable
 T System.IEquatable`1
@@ -173,5 +174,6 @@ T System.TimeZoneInfo
 T System.Type
 T System.UnauthorizedAccessException
 T System.ValueTuple`2
+T System.ValueTuple`3
 T System.ValueType
 T System.Version

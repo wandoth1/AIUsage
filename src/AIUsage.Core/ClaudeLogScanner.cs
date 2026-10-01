@@ -5,8 +5,8 @@ using System.Text.Json;
 
 namespace AIUsage.Core;
 
-/// One Claude Code API request. Message and request ids are kept only as digests, for deduplication.
-public sealed record ClaudeEntry(string? Id, string? Request, bool Sidechain, bool HasSpeed, UsageEvent Event);
+/// One Claude Code API request. Message, request and session ids are kept only as digests, for deduplication.
+public sealed record ClaudeEntry(string? Id, string? Request, bool Sidechain, bool HasSpeed, UsageEvent Event, string? Session = null);
 
 public sealed class ClaudeFileCache
 {
@@ -15,6 +15,8 @@ public sealed class ClaudeFileCache
     public long Modified { get; set; }
     public long Offset { get; set; }
     public string Prefix { get; set; } = "";
+    // Digest of sampled bytes before Offset (see Fingerprint): detects most rewrites that also grow the file.
+    public string Consumed { get; set; } = "";
     public List<ClaudeEntry> Entries { get; set; } = [];
     public int Warnings { get; set; }
 }
@@ -26,7 +28,7 @@ public sealed class ClaudeFileCache
 public sealed class ClaudeLogScanner(string cacheDirectory)
 {
     // Bump whenever parsing or deduplication semantics change.
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
     public const int MaxRecordBytes = 16 * 1024 * 1024;
     public const string UsInferenceSuffix = "@us";
     private readonly object sync = new();
@@ -143,6 +145,9 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
             memory[path] = cache;
             return cache;
         }
+        // Claude Code only appends. Continuing requires the bytes already counted to be unchanged; a full
+        // comparison would mean rereading the file, so sampled ranges and the tail before the checkpoint are compared.
+        if (cache.Offset > 0 && Fingerprint(fs, cache.Offset) != cache.Consumed) cache = EmptyCache();
         fs.Position = cache.Offset;
         using var record = new MemoryStream();
         byte[] buffer = new byte[65536];
@@ -170,6 +175,7 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
             }
         }
         cache.Entries.RemoveAll(e => e.Event.At < since);
+        cache.Consumed = cache.Offset > 0 ? Fingerprint(fs, cache.Offset) : "";
         cache.Size = size;
         cache.Modified = modified;
         cache.Prefix = prefix;
@@ -178,6 +184,20 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
         catch (IOException) { /* The cache only speeds up the next start. */ }
         catch (UnauthorizedAccessException) { }
         return cache;
+    }
+    /// SHA-256 over the length, three 4 KiB samples and the last 64 KiB before <paramref name="end"/>.
+    internal static string Fingerprint(FileStream fs, long end)
+    {
+        using var sample = new MemoryStream();
+        var buffer = new byte[65536];
+        foreach (var (start, length) in new[] { (end / 4, 4096L), (end / 2, 4096L), (end / 4 * 3, 4096L), (Math.Max(0, end - 65536), 65536L) })
+        {
+            int count = (int)Math.Min(length, end - start);
+            fs.Position = start;
+            fs.ReadExactly(buffer, 0, count);
+            sample.Write(buffer, 0, count);
+        }
+        return end.ToString(CultureInfo.InvariantCulture) + ":" + Convert.ToHexString(SHA256.HashData(sample.GetBuffer().AsSpan(0, (int)sample.Length)));
     }
     private void ProcessRecord(MemoryStream record, ClaudeFileCache cache, DateTimeOffset since)
     {
@@ -215,8 +235,8 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
             string.Equals(geo.GetString(), "us", StringComparison.OrdinalIgnoreCase);
         if (!TryTokens(usage, usOnly, out var tokens, out var tier, out bool hasSpeed)) return result;
         bool sidechain = root.TryGetProperty("isSidechain", out var side) && side.ValueKind == JsonValueKind.True;
-        string? digest = Digest(id), request = Digest(requestId);
-        result.Add(new(digest, request, sidechain, hasSpeed, new UsageEvent(at, model, tokens, tier)));
+        string? digest = Digest(id), request = Digest(requestId), session = Digest(sessionId);
+        result.Add(new(digest, request, sidechain, hasSpeed, new UsageEvent(at, model, tokens, tier), session));
         if (!usage.TryGetProperty("iterations", out var iterations) || iterations.ValueKind != JsonValueKind.Array) return result;
         int advisor = 0;
         foreach (var iteration in iterations.EnumerateArray())
@@ -225,7 +245,7 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
                 Text(iteration, "model") is not { Length: > 0 } advisorModel ||
                 !TryTokens(iteration, usOnly, out var advisorTokens, out var advisorTier, out bool advisorSpeed)) continue;
             result.Add(new(id is null ? null : Digest(id + ":advisor:" + advisor.ToString(CultureInfo.InvariantCulture)), request,
-                sidechain, advisorSpeed, new UsageEvent(at, advisorModel, advisorTokens, advisorTier)));
+                sidechain, advisorSpeed, new UsageEvent(at, advisorModel, advisorTokens, advisorTier), session));
             advisor++;
         }
         return result;
@@ -282,7 +302,8 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
     private static string? Digest(string? value) => value is null ? null :
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)), 0, 16);
     /// Claude Code can log one request several times (resumed sessions, subagent sidechains). Keyed by
-    /// (message id, request id); a sidechain copy under a new request id matches on the message id alone.
+    /// (message id, request id), or (message id, session, time) without a request id. A sidechain copy under a new
+    /// request id matches on the message id within the same session only, so reused ids never merge sessions.
     /// On a collision prefer the main-chain record, then the larger total, then the record with a speed.
     internal static List<ClaudeEntry> Deduplicate(IEnumerable<ClaudeEntry> entries)
     {
@@ -292,15 +313,15 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
         foreach (var entry in entries)
         {
             if (entry.Id is null) { result.Add(entry); continue; }
-            string key = entry.Id + "|" + entry.Request;
+            string key = ExactKey(entry);
             int hit = exact.TryGetValue(key, out int found) ? found : -1;
             if (hit < 0 && byMessage.TryGetValue(entry.Id, out var candidates))
-                hit = candidates.FirstOrDefault(i => entry.Sidechain || result[i].Sidechain, -1);
+                hit = candidates.FirstOrDefault(i => (entry.Sidechain || result[i].Sidechain) && entry.Session == result[i].Session, -1);
             if (hit >= 0)
             {
                 if (ShouldReplace(entry, result[hit]))
                 {
-                    exact.Remove(result[hit].Id + "|" + result[hit].Request);
+                    exact.Remove(ExactKey(result[hit]));
                     result[hit] = entry; exact[key] = hit;
                 }
                 continue;
@@ -312,6 +333,8 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
         }
         return result;
     }
+    private static string ExactKey(ClaudeEntry e) => e.Request is not null ? e.Id + "|" + e.Request :
+        e.Id + "||" + e.Session + "|" + e.Event.At.UtcTicks.ToString(CultureInfo.InvariantCulture);
     private static bool ShouldReplace(ClaudeEntry candidate, ClaudeEntry existing)
     {
         if (candidate.Sidechain != existing.Sidechain) return existing.Sidechain;
@@ -339,12 +362,24 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
             using var file = new FileStream(LocalPaths.Require(path), FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete);
             if (file.Length > CacheStore.MaxFileBytes) return null;
             var cache = JsonSerializer.Deserialize<ClaudeFileCache>(file, Compact);
-            if (cache is not { Entries: not null, Offset: >= 0, Prefix: not null } || cache.Schema != SchemaVersion ||
-                cache.Entries.Any(e => e?.Event?.Tokens is null || e.Event.Model is null || e.Event.Tier is null)) return null;
+            if (cache is not { Entries: not null, Prefix: not null, Consumed: not null } || cache.Schema != SchemaVersion ||
+                cache.Offset < 0 || cache.Offset > cache.Size || cache.Warnings < 0 || cache.Entries.Count > 1_000_000 || !cache.Entries.All(Valid)) return null;
             return cache;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException) { return null; }
     }
+    // A cache entry must be something Parse could have produced; anything else forces a rebuild from the original.
+    private static readonly HashSet<string> Tiers = new(StringComparer.Ordinal) { "standard", "fast", "standard" + UsInferenceSuffix, "fast" + UsInferenceSuffix };
+    private static bool Valid(ClaudeEntry? e)
+    {
+        if (e?.Event?.Tokens is not { } t || e.Event.Model is not { Length: > 0 and <= 200 } model || model.Any(char.IsControl) ||
+            e.Event.Tier is null || !Tiers.Contains(e.Event.Tier) || e.Event.SessionId is not null || e.Event.Cumulative is not null || e.Event.Sequence != 0 ||
+            !IsDigest(e.Id) || !IsDigest(e.Request) || !IsDigest(e.Session) || e.Event.At.Year < 2000 || e.Event.At > DateTimeOffset.Now.AddDays(1)) return false;
+        if (t.Input < 0 || t.Cached < 0 || t.Output < 0 || t.Reasoning != 0 || t.CacheWrite < 0 || t.CacheWrite1h < 0 ||
+            t.Cached > t.Input || t.CacheWrite > t.Input - t.Cached || t.CacheWrite1h > t.CacheWrite || t.Output > long.MaxValue - t.Input) return false;
+        return t.Total == t.Input + t.Output;
+    }
+    private static bool IsDigest(string? value) => value is null || (value.Length == 32 && value.All(char.IsAsciiHexDigit));
     private void PruneCache()
     {
         try

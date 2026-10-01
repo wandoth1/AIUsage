@@ -110,6 +110,43 @@ internal static partial class Program
             File.WriteAllText(file, Claude("msg_r3", "req_r3", "claude-opus-5", 1, 1), new UTF8Encoding(false));
             var events = scanner.Scan(t.Root).Events; Equal(1, events.Count); Equal(2L, events[0].Tokens.Total);
         });
+        Test("Audit H03: a rewrite that also grows the file is read again", () =>
+        {
+            using var t = new ClaudeHome();
+            string head = JsonSerializer.Serialize(new { type = "summary", summary = new string('s', 700) }) + "\n";
+            string file = t.Write(@"projects\p\rewrite.jsonl", head + Claude("msg_w1", "req_w1", "claude-opus-5", 090, 10));
+            var scanner = new ClaudeLogScanner(t.Cache); Equal(100L, scanner.Scan(t.Root).Events.Sum(x => x.Tokens.Total));
+            File.WriteAllText(file, head + Claude("msg_w1", "req_w1", "claude-opus-5", 890, 10) + Claude("msg_w2", "req_w2", "claude-opus-5", 190, 10), new UTF8Encoding(false));
+            Equal(1100L, scanner.Scan(t.Root).Events.Sum(x => x.Tokens.Total));
+            Equal(1100L, new ClaudeLogScanner(t.Cache).Scan(t.Root).Events.Sum(x => x.Tokens.Total));
+        });
+        Test("Audit H04: an incoherent cache is rebuilt from the original", () =>
+        {
+            using var t = new ClaudeHome();
+            t.Write(@"projects\p\c.jsonl", Claude("msg_k", "req_k", "claude-opus-5", 100, 10));
+            new ClaudeLogScanner(t.Cache).Scan(t.Root);
+            string cacheFile = Directory.GetFiles(t.Cache, "*.json").Single();
+            File.WriteAllText(cacheFile, File.ReadAllText(cacheFile).Replace("\"Input\":100", "\"Input\":-1"));
+            var fresh = new ClaudeLogScanner(t.Cache); var scan = fresh.Scan(t.Root);
+            Equal(0, fresh.PersistentCacheHits); Equal(110L, scan.Events.Sum(x => x.Tokens.Total));
+            ClaudePrices.Cost(scan.Events[0]);
+        });
+        Test("Audit H05: reused message ids never merge different sessions", () =>
+        {
+            using var t = new ClaudeHome();
+            t.Write(@"projects\p\s1.jsonl", Claude("msg_same", "req_1", "claude-opus-5", 90, 10, session: "session-one"));
+            t.Write(@"projects\p\s2.jsonl", Claude("msg_same", "req_2", "claude-opus-5", 190, 10, sidechain: true, session: "session-two"));
+            Equal(300L, t.Scan().Events.Sum(x => x.Tokens.Total));
+            using var u = new ClaudeHome();
+            u.Write(@"projects\p\a.jsonl", Claude("msg_noreq", null, "claude-opus-5", 90, 10, session: "session-one"));
+            u.Write(@"projects\p\b.jsonl", Claude("msg_noreq", null, "claude-opus-5", 190, 10, session: "session-two"));
+            Equal(300L, u.Scan().Events.Sum(x => x.Tokens.Total));
+            // The same sidechain replay inside one session is still counted once.
+            using var v = new ClaudeHome();
+            v.Write(@"projects\p\main.jsonl", Claude("msg_rep", "req_main", "claude-opus-5", 90, 10, session: "same"));
+            v.Write(@"projects\p\main\subagents\agent.jsonl", Claude("msg_rep", "req_side", "claude-opus-5", 990, 10, sidechain: true, session: "same"));
+            Equal(100L, v.Scan().Events.Sum(x => x.Tokens.Total));
+        });
         Test("Claude: folder resolution honours CLAUDE_CONFIG_DIR", () =>
         {
             using var t = new ClaudeHome();
@@ -125,9 +162,9 @@ internal static partial class Program
         });
     }
     private static UsageEvent Single(ScanResult scan) { Equal(1, scan.Events.Count); return scan.Events[0]; }
-    private static string Claude(string id, string request, string model, long input, long output, long read = 0, long w5 = 0, long w1 = 0,
+    private static string Claude(string id, string? request, string model, long input, long output, long read = 0, long w5 = 0, long w1 = 0,
         long? legacyWrite = null, string? speed = "standard", string? geo = null, bool sidechain = false, string version = "2.1.0",
-        object? iterations = null, string text = "synthetic answer")
+        object? iterations = null, string text = "synthetic answer", string session = "synthetic-session")
     {
         var usage = new Dictionary<string, object?> { ["input_tokens"] = input, ["output_tokens"] = output, ["cache_read_input_tokens"] = read, ["service_tier"] = "standard", ["inference_geo"] = geo ?? "not_available" };
         if (legacyWrite is { } write) usage["cache_creation_input_tokens"] = write;
@@ -136,11 +173,12 @@ internal static partial class Program
         if (iterations is not null) usage["iterations"] = iterations;
         var row = new Dictionary<string, object?>
         {
-            ["parentUuid"] = null, ["isSidechain"] = sidechain, ["cwd"] = @"C:\synthetic", ["sessionId"] = "synthetic-session", ["version"] = version,
+            ["parentUuid"] = null, ["isSidechain"] = sidechain, ["cwd"] = @"C:\synthetic", ["sessionId"] = session, ["version"] = version,
             ["message"] = new Dictionary<string, object?> { ["id"] = id, ["type"] = "message", ["role"] = "assistant", ["model"] = model,
                 ["content"] = new[] { new { type = "text", text } }, ["usage"] = usage },
-            ["requestId"] = request, ["type"] = "assistant", ["uuid"] = Guid.NewGuid().ToString(), ["timestamp"] = At.ToString("O")
+            ["type"] = "assistant", ["uuid"] = Guid.NewGuid().ToString(), ["timestamp"] = At.ToString("O")
         };
+        if (request is not null) row["requestId"] = request;
         return JsonSerializer.Serialize(row) + "\n";
     }
     private sealed class ClaudeHome : IDisposable
