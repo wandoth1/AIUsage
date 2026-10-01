@@ -1,6 +1,6 @@
-# Local-only architecture and boundaries — 1.1.1
+# Local-only architecture and boundaries — 1.2.0
 
-The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserves that boundary and addresses the subsequent local-security audit. This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
+The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserved that boundary and addressed the subsequent local-security audit; 1.2.0 keeps it unchanged while adding metadata-only detection of the Codex data folder. This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
 
 ## Absent capabilities
 
@@ -18,7 +18,7 @@ LocalPaths validates resident local drives and path ancestors. UNC/WSL shares, m
 
 ## Runtime and caches
 
-1.1.1 is a self-contained folder deployment; native libraries do not use the former single-file extraction mechanism. Keep the entire package together. Existing TEMP extraction remnants from old versions are documented separately. Standard .NET local diagnostics IPC remains subject to OS permissions and is NOT disabled. StartupHookSupport is disabled in the shipped configuration, without changing machine-wide settings. A user able to replace that configuration or executable is outside this protection.
+Since 1.1.1 the package is a self-contained folder deployment; native libraries do not use the former single-file extraction mechanism. Keep the entire package together. Existing TEMP extraction remnants from old versions are documented separately. Standard .NET local diagnostics IPC remains subject to OS permissions and is NOT disabled. StartupHookSupport is disabled in the shipped configuration, without changing machine-wide settings. A user able to replace that configuration or executable is outside this protection.
 
 Schema 5 caches are streamed compact JSON. Large histories use immutable event pages and a manifest committed last, sharing a 32 MiB per-file read/write limit. An incomplete generation is discarded, never presented as partial successful accounting. Total history still uses proportional memory/storage; this is not a global resource quota. Cache rebuilding changes only AIUsage files.
 

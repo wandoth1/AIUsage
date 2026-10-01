@@ -2,7 +2,7 @@
 
 AIUsage is an independent Windows port of OpenUsage under MIT. The original reference was OpenUsage v0.7.12; that is provenance, not our release number or a continuing dependency. See UPSTREAM.md for attribution and adaptation history.
 
-Our product line started with 0.1.x previews and AIUsage 1.0.0. AIUsage 1.1.0 removed online integration. AIUsage 1.1.1 is local-security maintenance. These numbers are independent of upstream releases and do not assert complete feature/provider parity.
+Our product line started with 0.1.x previews and AIUsage 1.0.0. AIUsage 1.1.0 removed online integration. AIUsage 1.1.1 is local-security maintenance. AIUsage 1.2.0 adds automatic detection of the local Codex data folder. These numbers are independent of upstream releases and do not assert complete feature/provider parity.
 
 Patch releases fix existing behavior; minor releases introduce reviewed functionality or deliberate product changes; major releases indicate substantial compatibility changes. Where a protective restriction changes accepted input or packaging, release notes and upgrade instructions must call it out even in a maintenance release. The 1.1.1 folder package must be extracted in full, and direct folders now require rollout- filenames.
 
