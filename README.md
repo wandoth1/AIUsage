@@ -1,6 +1,6 @@
 # AIUsage for Windows
 
-**Your Codex and Claude Code usage, entirely local.** AIUsage 1.4.0 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code usage is optional (Settings → Claude Code) and comes only from the transcripts Claude Code already keeps on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
+**Your Codex and Claude Code usage, entirely local.** AIUsage 1.4.1 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code usage is optional (Settings → Claude Code) and comes only from the transcripts Claude Code already keeps on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
 
 **No account access. No credential reader. No network client.** The optional online integration from 1.0.0 and earlier was removed, not merely disabled. There is no switch, token, app-server integration or undocumented endpoint that can re-enable it. The app does not launch Codex, another AI, a browser or an external editor.
 
@@ -8,7 +8,11 @@ AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robin
 
 [Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Security](SECURITY.md)
 
-## What's new in 1.4.0
+## What's new in 1.4.1
+
+- **Clearer Claude plan limits card.** When no limits have arrived yet, the card lists the three steps to enable them, and it states that they are updated only while you use Claude Code in a terminal: the Claude desktop app does not run the status line.
+
+## New in 1.4.0
 
 - **Claude plan limits through Claude Code's documented status line (optional).** Make AIUsage Claude Code's status line and the 5-hour and weekly limits of your Pro/Max plan (or a gateway spend limit) appear in AIUsage, with reset times. Claude Code itself passes them to AIUsage on this PC through its documented status line feature: no credentials, no sign-in, no requests to Anthropic. See [Claude plan limits](#claude-plan-limits-optional).
 - **Clearer limits.** Codex limits and Claude plan limits are now separate cards.
@@ -26,17 +30,17 @@ Release notes: [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md). Previous: 1.2.0 a
 
 | Package | Platform |
 |---|---|
-| `AIUsage-1.4.0-win-x64.zip` | Windows on Intel / AMD |
-| `AIUsage-1.4.0-win-arm64.zip` | Windows on ARM |
+| `AIUsage-1.4.1-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.4.1-win-arm64.zip` | Windows on ARM |
 
-**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.4.0 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
+**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.4.1 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
 
-Closing a window only hides it. Starting 1.4.0 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
+Closing a window only hides it. Starting 1.4.1 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
 
 **Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus or SmartScreen. Check the repository and the ZIP's SHA-256 against `SHA256SUMS.txt`, or build from source. `PAYLOAD-SHA256.json` additionally lists files inside each extracted package. These hashes verify integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-1.4.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.4.1-win-x64.zip -Algorithm SHA256
 ```
 
 Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the published x64 Windows app. ARM64 is cross-compiled and its application metadata inspected, not executed on ARM hardware. No services or startup registration are installed.
@@ -79,13 +83,13 @@ AIUsage never reads your Claude credentials and never asks Anthropic for your li
    {
      "statusLine": {
        "type": "command",
-       "command": "C:/Users/you/Documents/AIUsage-1.4.0-win-x64/AIUsage.exe --claude-statusline"
+       "command": "C:/Users/you/Documents/AIUsage-1.4.1-win-x64/AIUsage.exe --claude-statusline"
      }
    }
    ```
 2. Add it to Claude Code's user settings file, `%USERPROFILE%\.claude\settings.json`, or `settings.json` inside `CLAUDE_CONFIG_DIR` if you set that variable (Settings shows the right file). Merge it with any settings already there and restart Claude Code.
 
-Claude Code then shows the model and your limits at the bottom (for example `Opus 5.5 · 5h 24% · 7d 41%`), and AIUsage shows the same values with reset times after its next refresh. `AIUsage.exe --claude-statusline` opens no window, keeps only the limit percentages and reset times in `%LOCALAPPDATA%\AIUsage\claude-limits.json` and discards everything else Claude Code sends. It replaces any status line you already have. AIUsage never edits Claude Code's settings itself. Limits appear only for Pro and Max plans (or a gateway spend limit), after Claude Code's first response in a session, and only while you use Claude Code; the card shows when they were last received. If you move AIUsage to a new folder, update the path. You can always check limits inside Claude Code with `/usage`.
+**Claude Code runs the status line only in a terminal** (the `claude` command); the Claude desktop app does not run it, so limits are updated only while you use Claude Code in a terminal. Claude Code then shows the model and your limits at the bottom (for example `Opus 5.5 · 5h 24% · 7d 41%`), and AIUsage shows the same values with reset times after its next refresh. `AIUsage.exe --claude-statusline` opens no window, keeps only the limit percentages and reset times in `%LOCALAPPDATA%\AIUsage\claude-limits.json` and discards everything else Claude Code sends. It replaces any status line you already have. AIUsage never edits Claude Code's settings itself. Limits appear only for Pro and Max plans (or a gateway spend limit), after Claude Code's first response in a session, and only while you use Claude Code; the card shows when they were last received. If you move AIUsage to a new folder, update the path. You can always check limits inside Claude Code with `/usage`.
 
 ## Dashboard and Codex limits
 

@@ -26,7 +26,11 @@ Your Codex data appears to be in {1} (recent sessions in the last 32 days: {2}).
   <data name="ClaudeCodeOption" xml:space="preserve"><value>Include Claude Code usage</value></data>
   <data name="ClaudeCodeHelp" xml:space="preserve"><value>Reads only the token counters that Claude Code saves on this PC ({0}\projects). AIUsage never opens your Claude credentials, never signs in and never contacts Anthropic. Off by default.</value></data>
   <data name="SourceAll" xml:space="preserve"><value>All</value></data>
-  <data name="ClaudeLimits" xml:space="preserve"><value>AIUsage never reads your Claude credentials. Plan limits appear here only if you make AIUsage Claude Code's status line (Settings → Claude Code); Claude Code then passes them to AIUsage on this PC. You can also check them inside Claude Code with /usage.</value></data>
+  <data name="ClaudeLimits" xml:space="preserve"><value>No Claude plan limits yet. To see them here:
+1. In Settings → Claude Code, copy the entry under "Claude plan limits (optional)".
+2. Paste it into the Claude Code settings file named there.
+3. Use Claude Code in a terminal (the claude command). Limits arrive after its first response.
+The Claude desktop app does not run the status line. Pro and Max plans only. AIUsage never uses your credentials; you can also check limits with /usage.</value></data>
   <data name="ClaudeNoData" xml:space="preserve"><value>No Claude Code usage in the last 32 days.</value></data>
   <data name="ClaudeNoDataHelp" xml:space="preserve"><value>Use Claude Code on this PC, or check that {0}\projects exists.</value></data>
   <data name="ClaudeScanFailed" xml:space="preserve"><value>Claude Code usage could not be read: {0}</value></data>
@@ -34,10 +38,10 @@ Your Codex data appears to be in {1} (recent sessions in the last 32 days: {2}).
   <data name="ClaudeNotBill" xml:space="preserve"><value>Claude Code figures use Anthropic API list prices. With a Pro or Max subscription this is not what you pay.</value></data>
   <data name="LocalOnlyBadgeClaude" xml:space="preserve"><value>CODEX + CLAUDE CODE · LOCAL ONLY</value></data>
   <data name="ClaudeLimitsTitle" xml:space="preserve"><value>CLAUDE PLAN LIMITS</value></data>
-  <data name="ClaudeLimitsSource" xml:space="preserve"><value>From Claude Code's status line on this PC, updated whenever Claude Code refreshes it. Limits are included for Pro and Max plans, or a spend limit behind a Claude apps gateway.</value></data>
+  <data name="ClaudeLimitsSource" xml:space="preserve"><value>From Claude Code's status line on this PC. Updated only while you use Claude Code in a terminal (the claude command), not from the desktop app. Included for Pro and Max plans, or a spend limit behind a Claude apps gateway.</value></data>
   <data name="ClaudeStatusTitle" xml:space="preserve"><value>Claude plan limits (optional)</value></data>
   <data name="ClaudeStatusHelp" xml:space="preserve"><value>Claude Code passes your plan usage (5-hour and weekly windows) to the status line command you configure. To make AIUsage that command, add this entry to Claude Code's settings file, {0} (merge it with the settings already there):</value></data>
-  <data name="ClaudeStatusNote" xml:space="preserve"><value>AIUsage keeps only the percentages and reset times, and never changes Claude Code's settings itself. This replaces any status line you already have; AIUsage then shows the model and your limits there. Update the path if you move AIUsage to another folder.</value></data>
+  <data name="ClaudeStatusNote" xml:space="preserve"><value>Claude Code runs the status line only in a terminal (the claude command), not in the Claude desktop app. AIUsage keeps only the percentages and reset times, and never changes Claude Code's settings itself. This replaces any status line you already have; AIUsage then shows the model and your limits there. Update the path if you move AIUsage to another folder.</value></data>
   <data name="ClaudeStatusSource" xml:space="preserve"><value>Claude Code status line</value></data>
   <data name="SpendLimit" xml:space="preserve"><value>Spend limit</value></data>
   <data name="ClaudeStatusUnsafePath" xml:space="preserve"><value>No entry is offered for this location: {0}
