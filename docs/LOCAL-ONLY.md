@@ -1,6 +1,6 @@
-# Local-only architecture and boundaries — 1.2.0
+# Local-only architecture and boundaries — 1.3.0
 
-The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserved that boundary and addressed the subsequent local-security audit; 1.2.0 keeps it unchanged while adding metadata-only detection of the Codex data folder. This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
+The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserved that boundary and addressed the subsequent local-security audit; 1.2.0 kept it unchanged while adding metadata-only detection of the Codex data folder; 1.3.0 keeps it unchanged while adding an optional, read-only Claude Code source (see PRIVACY.md). This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
 
 ## Absent capabilities
 

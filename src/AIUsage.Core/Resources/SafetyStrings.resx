@@ -22,4 +22,16 @@ Your Codex data appears to be in {1} (recent sessions in the last 32 days: {2}).
   <data name="DetectedFolder" xml:space="preserve"><value>Detected automatically: {0} · recent sessions: {1}</value></data>
   <data name="NothingDetected" xml:space="preserve"><value>No Codex data folder was detected automatically. Enter the local folder that contains sessions or archived_sessions.</value></data>
   <data name="DetectingFolder" xml:space="preserve"><value>Detecting the Codex data folder…</value></data>
+  <data name="GeoNote" xml:space="preserve"><value>US-only inference (inference_geo "us") estimated at 1.1x.</value></data>
+  <data name="ClaudeCodeOption" xml:space="preserve"><value>Include Claude Code usage</value></data>
+  <data name="ClaudeCodeHelp" xml:space="preserve"><value>Reads only the token counters that Claude Code saves on this PC ({0}\projects). AIUsage never opens your Claude credentials, never signs in and never contacts Anthropic. Off by default.</value></data>
+  <data name="SourceAll" xml:space="preserve"><value>All</value></data>
+  <data name="ClaudeLimits" xml:space="preserve"><value>Claude plan limits are not shown: reading them would require your Claude account credentials, and Anthropic does not allow third-party apps to use them. Check them inside Claude Code with /usage.</value></data>
+  <data name="ClaudeNoData" xml:space="preserve"><value>No Claude Code usage in the last 32 days.</value></data>
+  <data name="ClaudeNoDataHelp" xml:space="preserve"><value>Use Claude Code on this PC, or check that {0}\projects exists.</value></data>
+  <data name="ClaudeScanFailed" xml:space="preserve"><value>Claude Code usage could not be read: {0}</value></data>
+  <data name="ClaudeActiveFolder" xml:space="preserve"><value>Claude Code folder: {0}</value></data>
+  <data name="ClaudeNotBill" xml:space="preserve"><value>Claude Code figures use Anthropic API list prices. With a Pro or Max subscription this is not what you pay.</value></data>
+  <data name="LocalOnlyBadgeClaude" xml:space="preserve"><value>CODEX + CLAUDE CODE · LOCAL ONLY</value></data>
+  <data name="ClaudeLimitsTitle" xml:space="preserve"><value>PLAN LIMITS</value></data>
 </root>

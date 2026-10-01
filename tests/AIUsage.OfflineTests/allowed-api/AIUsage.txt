@@ -21,6 +21,7 @@ T AIUsage.Core.AccountIdentity
 T AIUsage.Core.AppSettings
 T AIUsage.Core.AppVersion
 T AIUsage.Core.AtomicJson
+T AIUsage.Core.ClaudeLogScanner
 T AIUsage.Core.CodexFolder
 T AIUsage.Core.CodexFolderCheck
 T AIUsage.Core.CsvExport

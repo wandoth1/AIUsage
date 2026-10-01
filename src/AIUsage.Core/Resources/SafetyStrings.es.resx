@@ -22,4 +22,16 @@ Tus datos de Codex parecen estar en {1} (sesiones en los últimos 32 días: {2})
   <data name="DetectedFolder" xml:space="preserve"><value>Detectada automáticamente: {0} · sesiones recientes: {1}</value></data>
   <data name="NothingDetected" xml:space="preserve"><value>No se ha detectado automáticamente ninguna carpeta de datos de Codex. Indica la carpeta local que contiene sessions o archived_sessions.</value></data>
   <data name="DetectingFolder" xml:space="preserve"><value>Detectando la carpeta de datos de Codex…</value></data>
+  <data name="GeoNote" xml:space="preserve"><value>Inferencia solo en EE. UU. (inference_geo "us") estimada a 1,1x.</value></data>
+  <data name="ClaudeCodeOption" xml:space="preserve"><value>Incluir el uso de Claude Code</value></data>
+  <data name="ClaudeCodeHelp" xml:space="preserve"><value>Lee solo los contadores de tokens que Claude Code guarda en este PC ({0}\projects). AIUsage nunca abre tus credenciales de Claude, no inicia sesión y no contacta con Anthropic. Desactivado por defecto.</value></data>
+  <data name="SourceAll" xml:space="preserve"><value>Todo</value></data>
+  <data name="ClaudeLimits" xml:space="preserve"><value>Los límites del plan de Claude no se muestran: leerlos exigiría las credenciales de tu cuenta de Claude, y Anthropic no permite que aplicaciones de terceros las usen. Consúltalos dentro de Claude Code con /usage.</value></data>
+  <data name="ClaudeNoData" xml:space="preserve"><value>Sin uso de Claude Code en los últimos 32 días.</value></data>
+  <data name="ClaudeNoDataHelp" xml:space="preserve"><value>Usa Claude Code en este PC o comprueba que existe {0}\projects.</value></data>
+  <data name="ClaudeScanFailed" xml:space="preserve"><value>No se pudo leer el uso de Claude Code: {0}</value></data>
+  <data name="ClaudeActiveFolder" xml:space="preserve"><value>Carpeta de Claude Code: {0}</value></data>
+  <data name="ClaudeNotBill" xml:space="preserve"><value>Las cifras de Claude Code usan los precios de lista de la API de Anthropic. Con una suscripción Pro o Max no es lo que pagas.</value></data>
+  <data name="LocalOnlyBadgeClaude" xml:space="preserve"><value>CODEX + CLAUDE CODE · SOLO LOCAL</value></data>
+  <data name="ClaudeLimitsTitle" xml:space="preserve"><value>LÍMITES DEL PLAN</value></data>
 </root>

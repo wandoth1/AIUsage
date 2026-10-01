@@ -7,7 +7,8 @@ namespace AIUsage.Core;
 
 public sealed record ModelRate(decimal Input, decimal Cached, decimal Output,
     decimal CacheWriteMultiplier = 1, long LongThreshold = 0, decimal FastMultiplier = 2, string Source = "",
-    string Note = "", bool TierRulesVerified = true, bool LongCacheVerified = true, DateOnly? ReviewAfter = null);
+    string Note = "", bool TierRulesVerified = true, bool LongCacheVerified = true, DateOnly? ReviewAfter = null,
+    decimal CacheWrite1hMultiplier = 2);
 public sealed record PriceQuote(decimal? Cost, string PricingModel, string Note = "");
 
 public sealed class PriceCatalog
@@ -83,7 +84,7 @@ public sealed class PriceCatalog
     {
         if (r is null || string.IsNullOrWhiteSpace(key) || key.Length > 200 || key.Any(char.IsControl) ||
             r.Input is < 0 or > 1_000_000 || r.Cached is < 0 or > 1_000_000 || r.Output is < 0 or > 1_000_000 ||
-            r.FastMultiplier is <= 0 or > 100 || r.CacheWriteMultiplier is <= 0 or > 100 || r.LongThreshold < 0 ||
+            r.FastMultiplier is <= 0 or > 100 || r.CacheWriteMultiplier is <= 0 or > 100 || r.CacheWrite1hMultiplier is <= 0 or > 100 || r.LongThreshold < 0 ||
             r.Source is null || r.Note is null || r.Source.Length > 2000 || r.Note.Length > 2000)
             throw new InvalidOperationException(T("InvalidPrice"));
     }
@@ -106,6 +107,13 @@ public sealed class PriceCatalog
         }
         if (!rates.TryGetValue(model, out var rate)) return new(null, model, T("UnverifiedPrice"));
         string serviceTier = e.Tier.Trim().ToLowerInvariant();
+        // Claude 4.6+ requests pinned to US-only inference (inference_geo "us") cost 1.1x in every category.
+        decimal geo = 1;
+        if (serviceTier.EndsWith(ClaudeLogScanner.UsInferenceSuffix, StringComparison.Ordinal))
+        {
+            serviceTier = serviceTier[..^ClaudeLogScanner.UsInferenceSuffix.Length];
+            geo = 1.1m; notes.Add(T("GeoNote"));
+        }
         decimal tier = serviceTier switch
         {
             "standard" or "default" or "auto" or "" => 1,
@@ -126,8 +134,10 @@ public sealed class PriceCatalog
         var t = e.Tokens;
         long cached = Math.Clamp(t.Cached, 0, t.Input);
         long write = Math.Clamp(t.CacheWrite, 0, t.Input - cached);
+        long write1h = Math.Clamp(t.CacheWrite1h, 0, write);
         decimal cost = ((t.Input - cached - write) * rate.Input * inputFactor + cached * rate.Cached * inputFactor +
-            write * rate.Input * rate.CacheWriteMultiplier * inputFactor + t.Output * rate.Output * outputFactor) * tier / 1_000_000m;
+            (write - write1h) * rate.Input * rate.CacheWriteMultiplier * inputFactor +
+            write1h * rate.Input * rate.CacheWrite1hMultiplier * inputFactor + t.Output * rate.Output * outputFactor) * tier * geo / 1_000_000m;
         return new(cost, model, string.Join(" ", notes));
     }
 }

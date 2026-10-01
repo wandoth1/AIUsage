@@ -98,6 +98,7 @@ T System.NotSupportedException
 T System.Nullable`1
 T System.Object
 T System.OperatingSystem
+T System.OverflowException
 T System.ParamArrayAttribute
 T System.Predicate`1
 T System.ReadOnlyMemory`1
