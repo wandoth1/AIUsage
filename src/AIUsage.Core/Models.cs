@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace AIUsage.Core;
@@ -56,25 +58,43 @@ public sealed record Tokens(long Input, long Cached, long Output, long Reasoning
     }
 }
 
-public sealed record UsageEvent(DateTimeOffset At, string Model, Tokens Tokens, string Tier = "standard");
-public sealed record LimitWindow(string Name, double UsedPercent, DateTimeOffset? ResetAt, long? Seconds);
+public sealed record UsageEvent(DateTimeOffset At, string Model, Tokens Tokens, string Tier = "standard",
+    string? SessionId = null, Tokens? Cumulative = null, long Sequence = 0);
+public sealed record LimitWindow(string Name, double UsedPercent, DateTimeOffset? ResetAt, long? Seconds, string Id = "");
 public sealed record QuotaSnapshot(DateTimeOffset At, string Source, string? Plan, List<LimitWindow> Windows,
-    string? Credits = null, long? ResetCredits = null);
+    string? Credits = null, long? ResetCredits = null, string? AccountKey = null);
 public sealed record ScanResult(List<UsageEvent> Events, List<QuotaSnapshot> Quotas, int Files, int Warnings, DateTimeOffset At);
-public sealed record ModelSummary(string Model, long Input, long Cached, long Output, long Total, decimal KnownCost, int Unpriced, int Events);
+public sealed record ModelSummary(string Model, long Input, long Cached, long Output, long Total, decimal KnownCost, int Unpriced, int Events, int Qualified = 0, string PricingNotes = "");
 
 public static class UsageSummary
 {
     public static DateOnly Day(DateTimeOffset at, TimeZoneInfo zone) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, zone).DateTime);
     public static List<ModelSummary> Group(IEnumerable<UsageEvent> source, PriceCatalog prices) => source
         .GroupBy(e => e.Model, StringComparer.Ordinal)
-        .Select(g => new ModelSummary(g.Key, g.Sum(e => e.Tokens.Input), g.Sum(e => e.Tokens.Cached),
-            g.Sum(e => e.Tokens.Output), g.Sum(e => e.Tokens.Total), g.Sum(e => prices.Cost(e) ?? 0),
-            g.Count(e => prices.Cost(e) is null), g.Count()))
+        .Select(g =>
+        {
+            var quotes = g.Select(prices.Quote).ToArray();
+            return new ModelSummary(g.Key, g.Sum(e => e.Tokens.Input), g.Sum(e => e.Tokens.Cached),
+                g.Sum(e => e.Tokens.Output), g.Sum(e => e.Tokens.Total), quotes.Sum(q => q.Cost ?? 0),
+                quotes.Count(q => q.Cost is null), g.Count(), quotes.Count(q => q.Note.Length > 0),
+                string.Join(" | ", quotes.Select(q => q.Note).Where(n => n.Length > 0).Distinct()));
+        })
         .OrderByDescending(g => g.KnownCost).ThenByDescending(g => g.Total).ToList();
     public static List<UsageEvent> Between(IEnumerable<UsageEvent> events, DateOnly from, DateOnly to, TimeZoneInfo zone) =>
-        events.Where(e => Day(e.At, zone) >= from && Day(e.At, zone) <= to).ToList();
+        events.Where(e => IsBetween(e.At, from, to, zone)).ToList();
+    private static bool IsBetween(DateTimeOffset at, DateOnly from, DateOnly to, TimeZoneInfo zone)
+    {
+        var day = Day(at, zone); return day >= from && day <= to;
+    }
     public static string Compact(long n) => n >= 1_000_000_000 ? $"{n / 1_000_000_000d:0.##}B" :
         n >= 1_000_000 ? $"{n / 1_000_000d:0.##}M" : n >= 1000 ? $"{n / 1000d:0.#}K" : n.ToString("N0");
-    public static string Dollars(decimal n) => "$" + n.ToString("N2", CultureInfo.InvariantCulture);
+    public static string Dollars(decimal n) => "$" + n.ToString("N2", CultureInfo.CurrentCulture);
+}
+
+// Stable pseudonymous identity for separating local accounts; never persist the raw account id.
+public static class AccountIdentity
+{
+    public static string? Key(string? id) => string.IsNullOrWhiteSpace(id) ? null :
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(id.Trim())));
+    public static string Label(string? key) => key is { Length: >= 8 } ? "Cuenta local " + key[..8] : "Cuenta desconocida";
 }

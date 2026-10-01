@@ -6,7 +6,7 @@ namespace AIUsage.Core;
 
 public sealed class FileCache
 {
-    public int Schema { get; set; } = 1;
+    public int Schema { get; set; } // Missing/legacy versions must not deserialize as current.
     public long Size { get; set; }
     public long Modified { get; set; }
     public long Offset { get; set; }
@@ -15,18 +15,40 @@ public sealed class FileCache
     public List<UsageEvent> Events { get; set; } = [];
     public List<QuotaSnapshot> Quotas { get; set; } = [];
     public int Warnings { get; set; }
+    // An EOF record is a preview only. Offset/State remain BEFORE it so later appends can retract it.
+    public UsageEvent? TailEvent { get; set; }
+    public QuotaSnapshot? TailQuota { get; set; }
+    public int TailWarnings { get; set; }
+    public bool TailBlocked { get; set; }
 }
 
-/// Reads only complete JSONL records, preserves parser state across appends and never locks Codex out.
+/// Commits newline-terminated records; previews valid stable EOF records without advancing the checkpoint.
 /// Cache stores token metadata only: no prompt, response, working-directory or credential content.
 public sealed class LogScanner(string cacheDirectory)
 {
+    // Bump whenever parser, quota or deduplication semantics change.
+    public const int ParserSchemaVersion = 2;
+    private readonly object sync = new();
+    private static FileCache EmptyCache() => new() { Schema = ParserSchemaVersion };
     public const int MaxRecordBytes = 2 * 1024 * 1024;
     private readonly Dictionary<string, FileCache> memory = new(StringComparer.OrdinalIgnoreCase);
     public ScanResult Scan(string home, CancellationToken ct = default)
     {
+        lock (sync) { ct.ThrowIfCancellationRequested(); return ScanCore(home, ct); }
+    }
+    public void ClearCache()
+    {
+        lock (sync)
+        {
+            memory.Clear();
+            if (Directory.Exists(cacheDirectory))
+                foreach (var file in Directory.EnumerateFiles(cacheDirectory, "*.json", SearchOption.TopDirectoryOnly)) File.Delete(file);
+        }
+    }
+    private ScanResult ScanCore(string home, CancellationToken ct)
+    {
         var since = DateTimeOffset.Now.AddDays(-32);
-        var events = new HashSet<UsageEvent>();
+        var events = new Dictionary<(string Scope, UsageEvent Event), UsageEvent>();
         var quotas = new List<QuotaSnapshot>();
         int warnings = 0, files = 0;
         var discovered = Discover(home, ref warnings, ct);
@@ -39,9 +61,18 @@ public sealed class LogScanner(string cacheDirectory)
                 if (info.LastWriteTimeUtc < since.UtcDateTime) continue;
                 files++;
                 var data = ReadFile(path, info, since, ct);
-                foreach (var e in data.Events) if (e.At >= since) events.Add(e);
-                quotas.AddRange(data.Quotas);
-                warnings += data.Warnings;
+                if (!data.State.AccountingBlocked && !data.TailBlocked)
+                {
+                    foreach (var e in data.Events.Concat(data.TailEvent is { } tail ? [tail] : []))
+                    {
+                        // Without a session id, two files cannot be proven to be copies.
+                        string scope = e.SessionId is null ? Path.GetFullPath(path).ToUpperInvariant() : $"{data.State.AccountKey}:{e.SessionId}";
+                        if (e.At >= since) events.TryAdd((scope, e), e);
+                    }
+                    quotas.AddRange(data.Quotas);
+                    if (data.TailQuota is not null) quotas.Add(data.TailQuota);
+                }
+                warnings += data.Warnings + data.TailWarnings;
             }
             catch (IOException) { warnings++; }
             catch (UnauthorizedAccessException) { warnings++; }
@@ -51,25 +82,27 @@ public sealed class LogScanner(string cacheDirectory)
         var active = discovered.ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var key in memory.Keys.Where(k => !active.Contains(k)).ToArray()) memory.Remove(key);
         PruneCache();
-        return new(events.OrderBy(e => e.At).ToList(), quotas, files, warnings, DateTimeOffset.Now);
+        return new(events.Values.OrderBy(e => e.At).ToList(), quotas, files, warnings, DateTimeOffset.Now);
     }
     private FileCache ReadFile(string path, FileInfo info, DateTimeOffset since, CancellationToken ct)
     {
         string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToUpperInvariant())));
         string cachePath = Path.Combine(cacheDirectory, key + ".json");
-        if (!memory.TryGetValue(path, out var cache)) cache = Load(cachePath) ?? new();
+        if (!memory.TryGetValue(path, out var cache)) cache = Load(cachePath) ?? EmptyCache();
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 65536, FileOptions.SequentialScan);
         long size = fs.Length, modified = info.LastWriteTimeUtc.Ticks;
         byte[] head = new byte[(int)Math.Min(size, 512)];
         fs.ReadExactly(head);
         string prefix = Convert.ToHexString(SHA256.HashData(head));
-        if (cache.Prefix != prefix || size < cache.Size || cache.Offset > size ||
-            (size == cache.Size && cache.Modified != modified)) cache = new();
-        if (cache.Size == size && cache.Modified == modified && cache.Prefix == prefix)
+        if (cache.Schema != ParserSchemaVersion || cache.Prefix != prefix || size < cache.Size || cache.Offset > size ||
+            (size == cache.Size && cache.Modified != modified)) cache = EmptyCache();
+        bool stable = cache.Size == size && cache.Modified == modified && cache.Prefix == prefix;
+        if (stable && cache.Offset == size)
         {
             memory[path] = cache;
             return cache;
         }
+        cache.TailEvent = null; cache.TailQuota = null; cache.TailWarnings = 0; cache.TailBlocked = false;
         fs.Position = cache.Offset;
         var parser = new CodexParser(cache.State);
         using var record = new MemoryStream();
@@ -90,31 +123,29 @@ public sealed class LogScanner(string cacheDirectory)
                     else oversized = true;
                     continue;
                 }
-                if (oversized) cache.Warnings++;
-                else if (record.Length > 0)
-                {
-                    var bytes = record.ToArray();
-                    int start = bytes.Length >= 3 && bytes[0] == 239 && bytes[1] == 187 && bytes[2] == 191 ? 3 : 0;
-                    // Ignore conversation content before JSON parsing; only accounting/context records matter.
-                    var span = bytes.AsSpan(start);
-                    if (span.IndexOf("\"token_count\""u8) >= 0 || span.IndexOf("\"turn_context\""u8) >= 0 ||
-                        span.IndexOf("\"session_meta\""u8) >= 0 || span.IndexOf("\"task_started\""u8) >= 0 ||
-                        span.IndexOf("\"thread_settings_applied\""u8) >= 0)
-                    {
-                        var e = parser.Parse(bytes.AsMemory(start), out var quota);
-                        if (e is not null && e.At >= since) cache.Events.Add(e);
-                        if (quota is not null && quota.Windows.Count > 0)
-                        {
-                            string identity = string.Join('|', quota.Windows.Select(w => w.Name));
-                            cache.Quotas.RemoveAll(q => string.Join('|', q.Windows.Select(w => w.Name)) == identity);
-                            cache.Quotas.Add(quota);
-                        }
-                    }
-                }
+                ProcessRecord(record, oversized, parser, cache, since);
                 cache.Offset = position; // A trailing partial record is deliberately reread next time.
                 record.SetLength(0);
                 oversized = false;
             }
+        }
+        if (stable && record.Length > 0)
+        {
+            var tailParser = new CodexParser(parser.State.Copy());
+            var bytes = RecordBytes(record);
+            if (oversized) tailParser.SkipOversized(bytes.Span);
+            else
+            {
+                // Invalid EOF JSON may simply be an active writer's partial record: retry, don't warn.
+                bool valid;
+                try { using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = 64 }); valid = true; }
+                catch (JsonException) { valid = false; }
+                QuotaSnapshot? q = null;
+                if (valid) cache.TailEvent = tailParser.Parse(bytes, out q);
+                cache.TailQuota = q;
+            }
+            cache.TailWarnings = tailParser.Warnings;
+            cache.TailBlocked = tailParser.State.AccountingBlocked;
         }
         cache.State = parser.State;
         cache.Warnings += parser.Warnings;
@@ -128,13 +159,43 @@ public sealed class LogScanner(string cacheDirectory)
         catch (UnauthorizedAccessException) { cache.Warnings++; }
         return cache;
     }
+    private static ReadOnlyMemory<byte> RecordBytes(MemoryStream record)
+    {
+        var bytes = record.GetBuffer().AsMemory(0, (int)record.Length);
+        return bytes.Span.StartsWith("\uFEFF"u8) ? bytes[3..] : bytes;
+    }
+    private static void ProcessRecord(MemoryStream record, bool oversized, CodexParser parser, FileCache cache, DateTimeOffset since)
+    {
+        var bytes = RecordBytes(record);
+        if (oversized) parser.SkipOversized(bytes.Span);
+        else if (!bytes.IsEmpty)
+        {
+            var span = bytes.Span;
+            if (span.IndexOf("\"token_count\""u8) >= 0 || span.IndexOf("\"turn_context\""u8) >= 0 ||
+                span.IndexOf("\"session_meta\""u8) >= 0 || span.IndexOf("\"task_started\""u8) >= 0 ||
+                span.IndexOf("\"thread_settings_applied\""u8) >= 0)
+            {
+                var e = parser.Parse(bytes, out var quota);
+                if (e is not null && e.At >= since) cache.Events.Add(e);
+                if (quota is not null && quota.Windows.Count > 0)
+                {
+                    string identity = QuotaIdentity(quota);
+                    cache.Quotas.RemoveAll(q => QuotaIdentity(q) == identity);
+                    cache.Quotas.Add(quota);
+                }
+            }
+        }
+        if (parser.State.AccountingBlocked) { cache.Events.Clear(); cache.Quotas.Clear(); }
+    }
+    private static string QuotaIdentity(QuotaSnapshot q) => q.AccountKey + ":" +
+        string.Join('|', q.Windows.Select(w => w.Id.Length > 0 ? w.Id : w.Name).Order(StringComparer.Ordinal));
     private static FileCache? Load(string path)
     {
         try
         {
             if (!File.Exists(path) || new FileInfo(path).Length > 32 * 1024 * 1024) return null;
             var c = JsonSerializer.Deserialize<FileCache>(File.ReadAllText(path));
-            return c is { Schema: 1, State: not null, Events: not null, Quotas: not null, Offset: >= 0 } ? c : null;
+            return c is { State: not null, Events: not null, Quotas: not null, Offset: >= 0 } && c.Schema == ParserSchemaVersion ? c : null;
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException) { return null; }
     }

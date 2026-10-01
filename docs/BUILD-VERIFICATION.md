@@ -1,16 +1,30 @@
-# Verificación de la entrega inicial
+# Verificación de compilaciones y pruebas
 
-El workflow `36872557145`, commit `91ccb40cc2d14f108728ac19b5126a70b5bafcda`, completó el 1 de octubre de 2026:
+## Evidencia previa a las correcciones
 
-- 48 pruebas sintéticas, 0 fallos.
-- Compilación WPF en Windows Server 2025 x64, SDK .NET 10.0.401.
-- Publicación autocontenida para win-x64 y win-arm64.
-- Ejecución de la prueba WPF y renderizado de los temas oscuro y claro.
+La entrega `v0.1.0-r1` corresponde a `db62c5a548452e2eb5fbb2d1ed7be95a0028d29c`. Su workflow `36873903102` pasó 48 pruebas sintéticas y la prueba de renderizado WPF x64. Esto no detectaba los fallos de exactitud de la auditoría posterior.
 
-Se descargaron los artefactos y se comprobaron los hashes SHA-256 de ambos ZIP, capturas e informe. Las cabeceras PE de los ejecutables identificaban AMD64 (`0x8664`) y ARM64 (`0xaa64`) respectivamente. Se inspeccionaron visualmente ambas capturas: son datos demo, no consumo real del usuario.
+En el commit `6d8689091da0c275ee9dc98e2ba5027bffe24c8f` se añadieron únicamente pruebas independientes y su paso de CI, sin modificar producción. El [run 36879730529](https://github.com/wandoth1/AIUsage/actions/runs/36879730529) conservó 48/48 pruebas originales correctas y falló 13/13 casos nuevos. Su publicación quedó bloqueada.
 
-En la inspección final del contenido de los ZIP se detectó que el selector de licencias no recogía todos los nombres de avisos de terceros del runtime. La revisión `v0.1.0-r1` corrige el empaquetado y hace obligatoria la incorporación de las seis licencias/avisos de .NET, WPF y Windows Forms desde sus tags oficiales. Se conserva la versión de aplicación 0.1.0 y se repiten las pruebas durante la nueva publicación.
+Una ejecución intermedia de las correcciones, [36882826391](https://github.com/wandoth1/AIUsage/actions/runs/36882826391), pasó 48 pruebas originales y 44 de 45 nuevas. La prueba adicional de escrituras simultáneas descubrió una colisión de renombrados en Windows; la corrección posterior serializa los escritores del proceso sin relajar el assert.
 
-La compilación inicial contiene el aviso WFO0003 de WinForms por la declaración DPI del manifiesto. La aplicación principal es WPF; WinForms se utiliza para la bandeja y el selector de carpetas. El aviso no impidió compilar o ejecutar la prueba de renderizado. No se afirma validación de todos los escenarios de DPI/monitores, hardware ARM o sesiones reales.
+## Contrato de validación de v0.1.1
 
-No se probaron peticiones de cuota con credenciales reales. No se ejecutó el binario ARM64 en hardware ARM. Estas comprobaciones no equivalen a una auditoría externa de seguridad ni garantizan compatibilidad con futuros formatos de Codex.
+El workflow debe completar, por este orden:
+
+1. `dotnet run --project tests/AIUsage.Tests -c Release`: 48 casos.
+2. `dotnet run --project tests/AIUsage.AuditTests -c Release`: 45 casos, con HTTP simulado y fixtures independientes.
+3. Comprobar que `dotnet test` sobre ambos ejecutores devuelve el error explicativo `AIU0001` y no un éxito sin pruebas.
+4. Compilar WPF y publicar paquetes autocontenidos x64 y ARM64.
+5. Ejecutar **el binario x64 publicado** con `--smoke-test`: renderizar dos temas y comprobar conservación de desplazamiento/foco.
+6. Verificar licencias incluidas, concordancia de versiones, empaquetar y generar SHA-256.
+
+Solo una ejecución correcta en `main`, solicitada para publicar, puede crear la release. Los resultados concretos del artefacto descargado están en `regression-tests.txt`, `audit-tests.txt`, `test-runner-guard.txt` y `BUILD-INFO.json`. Este último identifica commit, run, SDK y alcance de validación; no es una firma ni una attestación.
+
+Dos fixtures originales cambiaron con justificación: la prueba de una copia ahora incluye el mismo identificador de sesión; un registro sobredimensionado de tipo desconocido espera exclusión conservadora con aviso en vez de contabilizar uso posterior potencialmente heredado. No se cambiaron expectativas de precio para ocultar discrepancias con las fuentes oficiales.
+
+## Límites
+
+No se ejecutan credenciales, rollouts ni conversaciones reales. Las pruebas HTTP no realizan conexiones externas. Las capturas son renderizados reales con datos demo. ARM64 solo se compila; no se afirma ejecución en hardware ARM. Tampoco se afirma validación integral de DPI por monitor, varios monitores, RDP concurrente, reinicio de Explorer, lector de pantalla o importación de CSV en Excel.
+
+El aviso WFO0003 de la integración WinForms/WPF puede seguir apareciendo. No equivale a un fallo de la prueba de renderizado ni demuestra compatibilidad en todos los escenarios DPI. La verificación del núcleo no reemplaza pruebas de uso real autorizadas.

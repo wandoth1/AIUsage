@@ -1,0 +1,7 @@
+<Project>
+  <!-- These projects are dependency-free executable runners, not VSTest assemblies. -->
+  <Target Name="RejectSilentVSTest" BeforeTargets="VSTest"
+          Condition="'$(MSBuildProjectName)' == 'AIUsage.Tests' Or '$(MSBuildProjectName)' == 'AIUsage.AuditTests'">
+    <Error Code="AIU0001" Text="This project uses an executable test runner. Run: dotnet run --project $(MSBuildProjectFullPath) -c Release. dotnet test would not execute this suite." />
+  </Target>
+</Project>
