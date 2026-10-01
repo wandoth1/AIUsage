@@ -3,7 +3,7 @@ using System.Text.Json;
 using AIUsage.Core;
 
 // Independent reproductions from the second audit; all data is synthetic.
-internal static class Program
+internal static partial class Program
 {
     private static int passed, failed;
     private static readonly DateTimeOffset At = DateTimeOffset.UtcNow.AddMinutes(-5);
@@ -37,6 +37,7 @@ internal static class Program
             using var t = new Home(); t.Write(Row("session_meta", new { id = "child", forked_from_id = "parent", text = new string('x', LogScanner.MaxRecordBytes + 64) }) + Context() + Count(3000, 300));
             var r = new LogScanner(t.Cache).Scan(t.Root); Equal(0, r.Events.Count); Require(r.Warnings > 0, "Missing warning");
         });
+        MoreCases();
         Console.WriteLine($"RESULT: {passed} passed; {failed} failed."); return failed == 0 ? 0 : 1;
     }
     private static string Row(string type, object payload) => JsonSerializer.Serialize(new { timestamp = At.ToString("O"), type, payload }) + "\n";

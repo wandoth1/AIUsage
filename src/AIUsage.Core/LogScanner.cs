@@ -27,7 +27,7 @@ public sealed class FileCache
 public sealed class LogScanner(string cacheDirectory)
 {
     // Bump whenever parser, quota or deduplication semantics change.
-    public const int ParserSchemaVersion = 3;
+    public const int ParserSchemaVersion = 4;
     private readonly object sync = new();
     private static FileCache EmptyCache() => new() { Schema = ParserSchemaVersion };
     public const int MaxRecordBytes = 2 * 1024 * 1024;

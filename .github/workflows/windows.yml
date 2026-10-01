@@ -40,10 +40,15 @@ jobs:
         run: |
           dotnet run --project tests/AIUsage.LocalizationTests -c Release 2>&1 | Tee-Object artifacts/localization-tests.txt
           if ($LASTEXITCODE -ne 0) { throw 'Localization regression tests failed.' }
+      - name: Second-audit regressions
+        shell: pwsh
+        run: |
+          dotnet run --project tests/AIUsage.FollowupTests -c Release 2>&1 | Tee-Object artifacts/followup-tests.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Follow-up regressions failed.' }
       - name: Reject silent dotnet test success
         shell: pwsh
         run: |
-          foreach ($project in @('AIUsage.Tests', 'AIUsage.AuditTests', 'AIUsage.LocalizationTests')) {
+          foreach ($project in @('AIUsage.Tests', 'AIUsage.AuditTests', 'AIUsage.LocalizationTests', 'AIUsage.FollowupTests')) {
             $output = & dotnet test "tests/$project" -c Release 2>&1 | Out-String
             $code = $LASTEXITCODE
             $output | Add-Content artifacts/test-runner-guard.txt
@@ -97,7 +102,7 @@ jobs:
           git archive --format=zip --output="artifacts/release/AIUsage-$packageVersion-source.zip" HEAD
           if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
           Copy-Item artifacts/screenshots/*.png artifacts/release
-          Copy-Item artifacts/regression-tests.txt, artifacts/audit-tests.txt, artifacts/localization-tests.txt, artifacts/test-runner-guard.txt artifacts/release
+          Copy-Item artifacts/regression-tests.txt, artifacts/audit-tests.txt, artifacts/localization-tests.txt, artifacts/followup-tests.txt, artifacts/test-runner-guard.txt artifacts/release
           @{
             repository = $env:GITHUB_REPOSITORY
             commit = $env:GITHUB_SHA
@@ -128,6 +133,7 @@ jobs:
             artifacts/regression-tests.txt
             artifacts/audit-tests.txt
             artifacts/localization-tests.txt
+            artifacts/followup-tests.txt
             artifacts/test-runner-guard.txt
             artifacts/screenshots/*
           if-no-files-found: ignore
