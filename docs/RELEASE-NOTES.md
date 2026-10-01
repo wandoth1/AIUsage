@@ -7,6 +7,17 @@ Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The e
 - **Claude plan limits (optional).** Claude Code's documented status line feature passes your Pro/Max plan usage (5-hour and weekly windows, with reset times) to a command you configure. Make `AIUsage.exe --claude-statusline` that command and AIUsage shows those limits in a **Claude plan limits** card. Settings → Claude Code shows the exact entry to add to `%USERPROFILE%\.claude\settings.json`. Claude Code also displays the model and your limits in its status line.
 - **Separate limit cards.** In the **All** view, Codex limits and Claude plan limits are now two clearly separated cards.
 
+## Independent audit fixes
+
+An independent audit of 1.3.0 and this release found no credential access, network calls, scraping or automation of Claude Code. Its findings are fixed:
+
+- The status line entry is offered only for paths neither Git Bash nor PowerShell can interpret (letters, digits, `.`, `_`, `-`); otherwise Settings asks you to move AIUsage, for example to `C:\AIUsage`. Previously a path with spaces failed in PowerShell and shell symbols in a folder name could be interpreted.
+- A transcript rewritten and extended after a previous read is now detected (sampled ranges and the last 64 KiB before the checkpoint) and read again.
+- Cache entries and the limits snapshot are fully validated; anything incoherent is rebuilt or ignored, and window names and durations come from known ids only.
+- Deduplication no longer merges different sessions that reuse a message id, matching current ccusage.
+- A Codex folder error no longer stops Claude Code totals from updating, and vice versa.
+- Settings names Claude Code's active settings file (including `CLAUDE_CONFIG_DIR`), and the status line output drops bidirectional and invisible Unicode format characters.
+
 ## Privacy and Anthropic rules
 
 AIUsage still never reads Claude credentials, never signs in, never contacts Anthropic and never automates Claude Code. The limits come only from what Claude Code itself passes to the status line command on this PC. The status line mode opens no window, keeps only the limit percentages and reset times (`%LOCALAPPDATA%\AIUsage\claude-limits.json`) and discards everything else Claude Code sends (working directory, transcript path, session id, costs). AIUsage never edits Claude Code's settings; you add the entry yourself. AIUsage is not affiliated with or endorsed by Anthropic.

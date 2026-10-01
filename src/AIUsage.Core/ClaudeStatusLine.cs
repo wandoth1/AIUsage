@@ -41,17 +41,31 @@ public static class ClaudeStatusLine
     {
         if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("rate_limits", out var limits) || limits.ValueKind != JsonValueKind.Object) return null;
         var windows = new List<LimitWindow>();
-        foreach (var (key, name, seconds) in new (string, string, long?)[] { ("five_hour", "Session", 18000), ("seven_day", "Weekly", 604800), ("spend_limit", "Spend limit", null) })
+        foreach (string key in Windows)
         {
             if (!limits.TryGetProperty(key, out var window) || window.ValueKind != JsonValueKind.Object ||
-                !window.TryGetProperty("used_percentage", out var used) || used.ValueKind != JsonValueKind.Number ||
-                !used.TryGetDouble(out double percent) || !double.IsFinite(percent) || percent < 0 || percent > 100_000) continue;
+                !window.TryGetProperty("used_percentage", out var used) || used.ValueKind != JsonValueKind.Number || !used.TryGetDouble(out double percent)) continue;
             DateTimeOffset? reset = null;
             if (window.TryGetProperty("resets_at", out var at) && at.ValueKind == JsonValueKind.Number && at.TryGetInt64(out long epoch) &&
                 epoch is > 0 and < 253402300799) reset = DateTimeOffset.FromUnixTimeSeconds(epoch);
-            windows.Add(new("Claude · " + name, percent, reset, seconds, "claude:" + key));
+            if (Window(key, percent, reset) is { } w) windows.Add(w);
         }
         return windows.Count == 0 ? null : new QuotaSnapshot(now, Source, null, windows);
+    }
+    // The only windows Claude Code documents. Names and durations derive from the id, never from stored text.
+    private static readonly string[] Windows = ["five_hour", "seven_day", "spend_limit"];
+    private static LimitWindow? Window(string key, double percent, DateTimeOffset? reset)
+    {
+        // five_hour/seven_day run 0-100; a gateway spend limit can exceed 100 once it is overspent.
+        double maximum = key == "spend_limit" ? 1000 : 100;
+        if (!double.IsFinite(percent) || percent < 0 || percent > maximum) return null;
+        return key switch
+        {
+            "five_hour" => new("Claude · Session", percent, reset, 18000, "claude:five_hour"),
+            "seven_day" => new("Claude · Weekly", percent, reset, 604800, "claude:seven_day"),
+            "spend_limit" => new("Claude · Spend limit", percent, reset, null, "claude:spend_limit"),
+            _ => null
+        };
     }
     private static string Render(JsonElement root, QuotaSnapshot? snapshot)
     {
@@ -66,14 +80,17 @@ public static class ClaudeStatusLine
         }
         return string.Join(" · ", parts);
     }
-    // Status line text is rendered by a terminal: never echo control characters from the input.
-    private static string Clean(string text)
+    // Status line text is rendered by a terminal: drop control characters (ANSI/OSC introducers), Unicode
+    // format characters (bidirectional overrides, invisible marks) and line/paragraph separators.
+    public static string Clean(string text)
     {
         var b = new StringBuilder();
-        foreach (char c in text.Take(80)) if (!char.IsControl(c)) b.Append(c);
+        foreach (char c in text.Take(80))
+            if (char.GetUnicodeCategory(c) is not (UnicodeCategory.Control or UnicodeCategory.Format or UnicodeCategory.LineSeparator or
+                UnicodeCategory.ParagraphSeparator or UnicodeCategory.Surrogate or UnicodeCategory.OtherNotAssigned)) b.Append(c);
         return b.ToString();
     }
-    /// The last snapshot written by the status line command, or null when none is available.
+    /// The last snapshot written by the status line command, rebuilt from known windows only; null when unavailable.
     public static QuotaSnapshot? Load(string dataDirectory)
     {
         try
@@ -81,18 +98,29 @@ public static class ClaudeStatusLine
             string path = LocalPaths.Require(Path.Combine(dataDirectory, FileName));
             if (!File.Exists(path)) return null;
             using var document = JsonDocument.Parse(LocalStorage.ReadText(path, 65536));
-            var snapshot = document.RootElement.Deserialize<QuotaSnapshot>();
-            if (snapshot is not { Windows: not null, Source: Source } || snapshot.Windows.Count is 0 or > 3 ||
-                snapshot.Windows.Any(w => w is null || w.Name is null || w.Id is null || !w.Id.StartsWith("claude:", StringComparison.Ordinal))) return null;
-            return snapshot;
+            var stored = document.RootElement.Deserialize<QuotaSnapshot>();
+            if (stored is not { Windows: not null, Source: Source } || stored.Windows.Count is 0 or > 3 || stored.At > DateTimeOffset.Now.AddDays(1)) return null;
+            var windows = new List<LimitWindow>();
+            foreach (var w in stored.Windows)
+            {
+                if (w?.Id is not { } id || !id.StartsWith("claude:", StringComparison.Ordinal) || windows.Any(x => x.Id == id)) return null;
+                if (Window(id["claude:".Length..], w.UsedPercent, w.ResetAt) is not { } known) return null;
+                windows.Add(known);
+            }
+            return new QuotaSnapshot(stored.At, Source, null, windows);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or ArgumentException or NotSupportedException) { return null; }
     }
-    /// The statusLine entry for Claude Code's settings.json. Forward slashes: Claude Code may run it through Git Bash.
-    public static string SettingsSnippet(string executable)
+    /// The statusLine entry for Claude Code's settings.json, or null when the executable path cannot be written
+    /// safely. Claude Code runs the command through Git Bash or PowerShell; the path is emitted unquoted, so it
+    /// must contain only characters that neither shell interprets: letters, digits and . _ - / after "X:/".
+    public static string? SettingsSnippet(string executable)
     {
         string path = executable.Replace('\\', '/');
-        string command = (path.Any(char.IsWhiteSpace) ? "\"" + path + "\"" : path) + " " + Argument;
-        return "{\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": " + JsonSerializer.Serialize(command) + "\n  }\n}";
+        if (!IsShellSafePath(path)) return null;
+        return "{\n  \"statusLine\": {\n    \"type\": \"command\",\n    \"command\": " + JsonSerializer.Serialize(path + " " + Argument) + "\n  }\n}";
     }
+    internal static bool IsShellSafePath(string path) =>
+        path.Length is > 3 and < 260 && char.IsAsciiLetter(path[0]) && path[1] == ':' && path[2] == '/' &&
+        path[3..].All(c => char.IsLetterOrDigit(c) || c is '.' or '_' or '-' or '/') && !path.Contains("//", StringComparison.Ordinal);
 }

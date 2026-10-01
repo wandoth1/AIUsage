@@ -10,7 +10,7 @@ AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robin
 
 ## What's new in 1.4.0
 
-- **Claude plan limits, the official way (optional).** Make AIUsage Claude Code's status line and the 5-hour and weekly limits of your Pro/Max plan appear in AIUsage, with reset times. Claude Code itself passes them to AIUsage on this PC through its documented status line feature: no credentials, no sign-in, no requests to Anthropic. See [Claude plan limits](#claude-plan-limits-optional).
+- **Claude plan limits through Claude Code's documented status line (optional).** Make AIUsage Claude Code's status line and the 5-hour and weekly limits of your Pro/Max plan (or a gateway spend limit) appear in AIUsage, with reset times. Claude Code itself passes them to AIUsage on this PC through its documented status line feature: no credentials, no sign-in, no requests to Anthropic. See [Claude plan limits](#claude-plan-limits-optional).
 - **Clearer limits.** Codex limits and Claude plan limits are now separate cards.
 
 ## New in 1.3.0
@@ -59,11 +59,11 @@ On first use with no settings file, AIUsage uses `CODEX_HOME`, otherwise `%USERP
 
 Claude Code support is **off by default**. Enable **Settings → Claude Code → Include Claude Code usage** and press **Save and refresh** (Spanish: **Ajustes → Claude Code → Incluir el uso de Claude Code → Guardar y actualizar**). A row of buttons then switches the dashboard between **All**, **Codex** and **Claude Code**, and the footer shows the Claude folder being read.
 
-**What is read.** Only `*.jsonl` transcripts under `projects\` of `CLAUDE_CONFIG_DIR`, otherwise `%USERPROFILE%\.claude` (subagent transcripts included). Lines without a usage block, such as prompts and tool output, are skipped before parsing. From assistant records AIUsage keeps only the timestamp, model, token counters, `speed` and `inference_geo`; message and request ids are kept only as SHA-256 digests to avoid double counting. The cache lives in `%LOCALAPPDATA%\AIUsage\cache-claude`.
+**What is read.** Only `*.jsonl` transcripts under `projects\` of `CLAUDE_CONFIG_DIR`, otherwise `%USERPROFILE%\.claude` (subagent transcripts included). Lines without a usage block, such as prompts and tool output, are skipped before parsing. From assistant records AIUsage keeps only the timestamp, model, token counters, `speed` and `inference_geo`; message, request and session ids are kept only as SHA-256 digests to avoid double counting. The cache lives in `%LOCALAPPDATA%\AIUsage\cache-claude`.
 
 **What is never done.** AIUsage does not open `.credentials.json`, `history.jsonl`, settings or any other file outside `projects\`. It does not sign in to Claude, use Claude credentials or OAuth, call Anthropic services, or launch or automate Claude Code. Claude Code's own files are never modified.
 
-**Counting.** Requests that Claude Code logs more than once (resumed sessions, subagent sidechains) are counted once, following the same rules as ccusage and OpenUsage. Advisor iterations are priced under their own model. Records generated locally by Claude Code (`<synthetic>`) are not API requests and are ignored.
+**Counting.** Requests that Claude Code logs more than once (resumed sessions, subagent sidechains) are counted once, following the same rules as ccusage: a sidechain copy is matched only within its own session, so reused ids never merge different sessions. Transcripts are read incrementally; before continuing a file AIUsage checks that sampled ranges and the last 64 KiB already counted are unchanged, and rereads the file otherwise. An edit elsewhere inside an old transcript can go unnoticed: use **Settings → Rebuild reading cache** after editing transcripts by hand. Advisor iterations are priced under their own model. Records generated locally by Claude Code (`<synthetic>`) are not API requests and are ignored.
 
 **Prices.** Estimates use Anthropic's published API list prices (platform.claude.com, checked 2026-10-01): uncached input, 5-minute and 1-hour cache writes, cache reads and output, fast mode on Opus 5.5 / 5 / 4.8, and the 1.1x US-only inference multiplier. **With a Pro or Max subscription this is not what you pay**; it shows what the same usage would cost on the API. Web-search charges and private discounts are not included.
 
@@ -71,9 +71,9 @@ Claude Code support is **off by default**. Enable **Settings → Claude Code →
 
 ### Claude plan limits (optional)
 
-AIUsage never reads your Claude credentials and never asks Anthropic for your limits; third-party apps must not use Claude account credentials. Instead, Claude Code has a documented [status line](https://code.claude.com/docs/en/statusline) feature: it runs a command you choose and passes it session data on stdin, which for Pro and Max plans includes `rate_limits` (5-hour and weekly percentages and reset times). Make AIUsage that command and the limits appear in the **Claude plan limits** card.
+AIUsage never reads your Claude credentials and never asks Anthropic for your limits; third-party apps must not use Claude account credentials. Instead, Claude Code has a documented [status line](https://code.claude.com/docs/en/statusline) feature: it runs a command you choose and passes it session data on stdin, which for Pro and Max plans includes `rate_limits` (5-hour and weekly percentages and reset times; behind a Claude apps gateway with spend limits, a `spend_limit` window, which needs Claude Code 2.1.251 or later). Make AIUsage that command and the limits appear in the **Claude plan limits** card.
 
-1. Open **Settings → Claude Code → Claude plan limits (optional)** and copy the entry shown there. It contains the path of the AIUsage you are running, with forward slashes, for example:
+1. Open **Settings → Claude Code → Claude plan limits (optional)** and copy the entry shown there. It contains the path of the AIUsage you are running, with forward slashes, for example (the path must contain only letters, digits, `.`, `_` and `-`, because Claude Code runs it through Git Bash or PowerShell; otherwise Settings asks you to move AIUsage, for example to `C:\AIUsage`):
 
    ```json
    {
@@ -83,9 +83,9 @@ AIUsage never reads your Claude credentials and never asks Anthropic for your li
      }
    }
    ```
-2. Add it to `%USERPROFILE%\.claude\settings.json` (merge it with any settings already there) and restart Claude Code.
+2. Add it to Claude Code's user settings file, `%USERPROFILE%\.claude\settings.json`, or `settings.json` inside `CLAUDE_CONFIG_DIR` if you set that variable (Settings shows the right file). Merge it with any settings already there and restart Claude Code.
 
-Claude Code then shows the model and your limits at the bottom (for example `Opus 5.5 · 5h 24% · 7d 41%`), and AIUsage shows the same values with reset times after its next refresh. `AIUsage.exe --claude-statusline` opens no window, keeps only the limit percentages and reset times in `%LOCALAPPDATA%\AIUsage\claude-limits.json` and discards everything else Claude Code sends. It replaces any status line you already have. AIUsage never edits Claude Code's settings itself. Limits appear only for Pro and Max plans, after Claude Code's first response in a session. If you move AIUsage to a new folder, update the path. You can always check limits inside Claude Code with `/usage`.
+Claude Code then shows the model and your limits at the bottom (for example `Opus 5.5 · 5h 24% · 7d 41%`), and AIUsage shows the same values with reset times after its next refresh. `AIUsage.exe --claude-statusline` opens no window, keeps only the limit percentages and reset times in `%LOCALAPPDATA%\AIUsage\claude-limits.json` and discards everything else Claude Code sends. It replaces any status line you already have. AIUsage never edits Claude Code's settings itself. Limits appear only for Pro and Max plans (or a gateway spend limit), after Claude Code's first response in a session, and only while you use Claude Code; the card shows when they were last received. If you move AIUsage to a new folder, update the path. You can always check limits inside Claude Code with `/usage`.
 
 ## Dashboard and Codex limits
 

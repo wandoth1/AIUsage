@@ -34,10 +34,12 @@ Your Codex data appears to be in {1} (recent sessions in the last 32 days: {2}).
   <data name="ClaudeNotBill" xml:space="preserve"><value>Claude Code figures use Anthropic API list prices. With a Pro or Max subscription this is not what you pay.</value></data>
   <data name="LocalOnlyBadgeClaude" xml:space="preserve"><value>CODEX + CLAUDE CODE · LOCAL ONLY</value></data>
   <data name="ClaudeLimitsTitle" xml:space="preserve"><value>CLAUDE PLAN LIMITS</value></data>
-  <data name="ClaudeLimitsSource" xml:space="preserve"><value>From Claude Code's status line on this PC, updated whenever Claude Code refreshes it. Only Pro and Max plans include limits.</value></data>
+  <data name="ClaudeLimitsSource" xml:space="preserve"><value>From Claude Code's status line on this PC, updated whenever Claude Code refreshes it. Limits are included for Pro and Max plans, or a spend limit behind a Claude apps gateway.</value></data>
   <data name="ClaudeStatusTitle" xml:space="preserve"><value>Claude plan limits (optional)</value></data>
-  <data name="ClaudeStatusHelp" xml:space="preserve"><value>Claude Code passes your plan usage (5-hour and weekly windows) to the status line command you configure. To make AIUsage that command, add this to %USERPROFILE%\.claude\settings.json:</value></data>
+  <data name="ClaudeStatusHelp" xml:space="preserve"><value>Claude Code passes your plan usage (5-hour and weekly windows) to the status line command you configure. To make AIUsage that command, add this entry to Claude Code's settings file, {0} (merge it with the settings already there):</value></data>
   <data name="ClaudeStatusNote" xml:space="preserve"><value>AIUsage keeps only the percentages and reset times, and never changes Claude Code's settings itself. This replaces any status line you already have; AIUsage then shows the model and your limits there. Update the path if you move AIUsage to another folder.</value></data>
   <data name="ClaudeStatusSource" xml:space="preserve"><value>Claude Code status line</value></data>
   <data name="SpendLimit" xml:space="preserve"><value>Spend limit</value></data>
+  <data name="ClaudeStatusUnsafePath" xml:space="preserve"><value>No entry is offered for this location: {0}
+Claude Code runs the command through Git Bash or PowerShell, and this path contains spaces or symbols that those shells could interpret. Move the AIUsage folder to a path with only letters, digits, '.', '_' and '-' (for example C:\AIUsage) and open Settings again.</value></data>
 </root>

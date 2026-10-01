@@ -34,10 +34,12 @@ Tus datos de Codex parecen estar en {1} (sesiones en los últimos 32 días: {2})
   <data name="ClaudeNotBill" xml:space="preserve"><value>Las cifras de Claude Code usan los precios de lista de la API de Anthropic. Con una suscripción Pro o Max no es lo que pagas.</value></data>
   <data name="LocalOnlyBadgeClaude" xml:space="preserve"><value>CODEX + CLAUDE CODE · SOLO LOCAL</value></data>
   <data name="ClaudeLimitsTitle" xml:space="preserve"><value>LÍMITES DEL PLAN DE CLAUDE</value></data>
-  <data name="ClaudeLimitsSource" xml:space="preserve"><value>Desde la barra de estado de Claude Code en este PC; se actualiza cada vez que Claude Code la refresca. Solo los planes Pro y Max incluyen límites.</value></data>
+  <data name="ClaudeLimitsSource" xml:space="preserve"><value>Desde la barra de estado de Claude Code en este PC; se actualiza cada vez que Claude Code la refresca. Incluye límites con los planes Pro y Max, o un límite de gasto detrás de un gateway de aplicaciones de Claude.</value></data>
   <data name="ClaudeStatusTitle" xml:space="preserve"><value>Límites del plan de Claude (opcional)</value></data>
-  <data name="ClaudeStatusHelp" xml:space="preserve"><value>Claude Code pasa tu uso del plan (ventana de 5 horas y semanal) al comando de barra de estado que configures. Para que ese comando sea AIUsage, añade esto a %USERPROFILE%\.claude\settings.json:</value></data>
+  <data name="ClaudeStatusHelp" xml:space="preserve"><value>Claude Code pasa tu uso del plan (ventana de 5 horas y semanal) al comando de barra de estado que configures. Para que ese comando sea AIUsage, añade esta entrada al archivo de ajustes de Claude Code, {0} (fusiónala con los ajustes que ya tenga):</value></data>
   <data name="ClaudeStatusNote" xml:space="preserve"><value>AIUsage solo guarda los porcentajes y las horas de reinicio, y nunca cambia la configuración de Claude Code por su cuenta. Sustituye la barra de estado que ya tengas; AIUsage mostrará en ella el modelo y tus límites. Actualiza la ruta si mueves AIUsage a otra carpeta.</value></data>
   <data name="ClaudeStatusSource" xml:space="preserve"><value>Barra de estado de Claude Code</value></data>
   <data name="SpendLimit" xml:space="preserve"><value>Límite de gasto</value></data>
+  <data name="ClaudeStatusUnsafePath" xml:space="preserve"><value>No se ofrece entrada para esta ubicación: {0}
+Claude Code ejecuta el comando con Git Bash o PowerShell, y esta ruta contiene espacios o símbolos que esos intérpretes podrían interpretar. Mueve la carpeta de AIUsage a una ruta solo con letras, números, '.', '_' y '-' (por ejemplo C:\AIUsage) y vuelve a abrir Ajustes.</value></data>
 </root>
