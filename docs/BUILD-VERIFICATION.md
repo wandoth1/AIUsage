@@ -1,30 +1,36 @@
-# Verificación de compilaciones y pruebas
+# Build and test verification
 
-## Evidencia previa a las correcciones
+## Historical evidence
 
-La entrega `v0.1.0-r1` corresponde a `db62c5a548452e2eb5fbb2d1ed7be95a0028d29c`. Su workflow `36873903102` pasó 48 pruebas sintéticas y la prueba de renderizado WPF x64. Esto no detectaba los fallos de exactitud de la auditoría posterior.
+AIUsage v0.1.0-r1 (`db62c5a548452e2eb5fbb2d1ed7be95a0028d29c`) passed 48 tests and x64 WPF rendering in run 36873903102 but did not reveal every later audit defect.
 
-En el commit `6d8689091da0c275ee9dc98e2ba5027bffe24c8f` se añadieron únicamente pruebas independientes y su paso de CI, sin modificar producción. El [run 36879730529](https://github.com/wandoth1/AIUsage/actions/runs/36879730529) conservó 48/48 pruebas originales correctas y falló 13/13 casos nuevos. Su publicación quedó bloqueada.
+[Run 36879730529](https://github.com/wandoth1/AIUsage/actions/runs/36879730529) added thirteen independent reproductions without production changes: the original 48 passed and all thirteen new cases failed. Publication was blocked. An intermediate run exposed Windows concurrent rename contention; writers were serialized without weakening the assertion. The published [0.1.1 run](https://github.com/wandoth1/AIUsage/actions/runs/36885332740) passed 48 original plus 45 audit tests and its WPF smoke checks.
 
-Una ejecución intermedia de las correcciones, [36882826391](https://github.com/wandoth1/AIUsage/actions/runs/36882826391), pasó 48 pruebas originales y 44 de 45 nuevas. La prueba adicional de escrituras simultáneas descubrió una colisión de renombrados en Windows; la corrección posterior serializa los escritores del proceso sin relajar el assert.
+The second audit subsequently found G-1. [Run 36891781462](https://github.com/wandoth1/AIUsage/actions/runs/36891781462) independently reproduced three failures around large non-accounting messages, while positive accounting/metadata quarantine controls passed. See [AUDIT-FOLLOWUP.md](AUDIT-FOLLOWUP.md). This is why a passing suite is not presented as proof of complete correctness.
 
-## Contrato de validación de v0.1.1
+## AIUsage 1.0 validation contract
 
-El workflow debe completar, por este orden:
+The Windows workflow must pass:
 
-1. `dotnet run --project tests/AIUsage.Tests -c Release`: 48 casos.
-2. `dotnet run --project tests/AIUsage.AuditTests -c Release`: 45 casos, con HTTP simulado y fixtures independientes.
-3. Comprobar que `dotnet test` sobre ambos ejecutores devuelve el error explicativo `AIU0001` y no un éxito sin pruebas.
-4. Compilar WPF y publicar paquetes autocontenidos x64 y ARM64.
-5. Ejecutar **el binario x64 publicado** con `--smoke-test`: renderizar dos temas y comprobar conservación de desplazamiento/foco.
-6. Verificar licencias incluidas, concordancia de versiones, empaquetar y generar SHA-256.
+1. Original regression runner: `dotnet run --project tests/AIUsage.Tests -c Release`.
+2. Independent audit runner: `dotnet run --project tests/AIUsage.AuditTests -c Release`.
+3. English/Spanish runner: `dotnet run --project tests/AIUsage.LocalizationTests -c Release`.
+4. Second-audit runner: `dotnet run --project tests/AIUsage.FollowupTests -c Release`.
+5. Expected AIU0001 failures for dotnet test on all four executable runners, avoiding false zero-test success.
+6. WPF build and self-contained x64/ARM64 publication with complete runtime notices.
+7. The published x64 executable's smoke checks: select both languages using Settings, preserve synthetic totals, verify tray labels and refresh scroll/focus, and render dashboard/settings in both themes.
+8. Package/assembly/manifest version checks, all eight screenshots, source ZIP, binaries, build metadata and SHA-256 hashes.
 
-Solo una ejecución correcta en `main`, solicitada para publicar, puede crear la release. Los resultados concretos del artefacto descargado están en `regression-tests.txt`, `audit-tests.txt`, `test-runner-guard.txt` y `BUILD-INFO.json`. Este último identifica commit, run, SDK y alcance de validación; no es una firma ni una attestación.
+Only an explicitly requested successful main run creates a normal release. Validation has read-only repository permission; publication has contents-write permission. Actions are SHA-pinned and checkout does not persist credentials. Existing releases are not silently overwritten.
 
-Dos fixtures originales cambiaron con justificación: la prueba de una copia ahora incluye el mismo identificador de sesión; un registro sobredimensionado de tipo desconocido espera exclusión conservadora con aviso en vez de contabilizar uso posterior potencialmente heredado. No se cambiaron expectativas de precio para ocultar discrepancias con las fuentes oficiales.
+Artifacts contain `regression-tests.txt`, `audit-tests.txt`, `localization-tests.txt`, `followup-tests.txt`, `test-runner-guard.txt` and `BUILD-INFO.json`. Metadata identifies the source commit, workflow run, SDK and validation scope. The source ZIP contains tracked files at that commit. Hashes and metadata are not signatures or cryptographic attestations.
 
-## Límites
+Localization intentionally updates canonical quota-label assertions to English and pricing-note assertions to English translations. Numerical expectations remain unchanged; separate tests reconcile both languages. Schema 4 migrates neutral quota labels and false quarantines from the prior parser.
 
-No se ejecutan credenciales, rollouts ni conversaciones reales. Las pruebas HTTP no realizan conexiones externas. Las capturas son renderizados reales con datos demo. ARM64 solo se compila; no se afirma ejecución en hardware ARM. Tampoco se afirma validación integral de DPI por monitor, varios monitores, RDP concurrente, reinicio de Explorer, lector de pantalla o importación de CSV en Excel.
+Two first-audit fixtures changed with justification: copied logs now carry the same session ID; oversized unknown accounting expects quarantine rather than trusting potentially inherited usage. The second-audit fix retains that protection while exempting recognized non-accounting events. Tests are not removed or weakened to hide accounting failures.
 
-El aviso WFO0003 de la integración WinForms/WPF puede seguir apareciendo. No equivale a un fallo de la prueba de renderizado ni demuestra compatibilidad en todos los escenarios DPI. La verificación del núcleo no reemplaza pruebas de uso real autorizadas.
+## Limits
+
+No real credentials, conversations or account requests in tests. HTTP uses mocks. Screenshots show the actual WPF app with synthetic data. ARM64 is only cross-compiled. Mixed-DPI/multiple-monitor, concurrent RDP, Explorer restart, screen-reader use and Excel CSV import are not comprehensively validated.
+
+The WFO0003 warning from WPF/WinForms integration may remain. Passing rendering tests does not establish every DPI scenario. Core tests do not replace authorized real-world validation.

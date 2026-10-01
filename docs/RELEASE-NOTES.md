@@ -1,32 +1,37 @@
-# AIUsage 0.1.1 · Correcciones de auditoría
+# AIUsage 1.0.0 for Windows
 
-Actualización de la aplicación, no solo del empaquetado. Port funcional parcial de OpenUsage v0.7.12 para Windows; Codex sigue siendo el único proveedor.
+First release of the **independently versioned AIUsage 1.x line**, following our own 0.1.x development previews. AIUsage remains an independent Windows port of OpenUsage under MIT. Upstream versions record provenance, not AIUsage version numbers; future upstream improvements may be selectively ported or omitted.
 
-## Actualizar
+## What's new
 
-Cierra la versión anterior desde **Salir**, extrae todo el ZIP nuevo en otra carpeta y abre `AIUsage.exe`. `win-x64` es para Intel/AMD; `win-arm64` es para Windows ARM. El runtime está incluido y no se necesitan privilegios de administrador. Los ajustes se conservan y la caché antigua se reconstruye automáticamente. No borres `.codex`.
+- English and Spanish application text: Settings, dashboard, tray menus, tooltips, consent dialogs, errors and pricing explanations.
+- Persistent language selection: **Settings → Language / Idioma → English / Español / System default → Save and refresh**. No restart. Automatic selection uses Spanish for Spanish-language Windows, English otherwise.
+- English README, privacy/security/build documentation, audit responses and release notes; explicit independent versioning/upstream policy.
+- Consistent version 1.0.0 in the executable manifest, About, user agent and Windows package names.
+- Localization tests, both-language/both-theme WPF checks and a tracked-source archive with build metadata and SHA-256 hashes.
 
-## Correcciones principales
+## Second-audit corrections included
 
-- Cuotas de Codex y Spark separadas por identificador y duración; sin mezclar ventanas online y locales de distintas cuentas.
-- Desactivar priority deja de mantener el multiplicador anterior; los contadores de ocupación de contexto ya no son consumo.
-- Deduplicación con identidad de sesión y contadores, sin eliminar uso legítimo de sesiones independientes.
-- Tarifas personalizadas estrictas, notas de procedencia y promoción de GPT-5.6 Sol observada el 1 de octubre de 2026.
-- Última línea estable sin salto final, esquema de caché versionado y reconstrucción manual.
-- Validación de autenticación antes de formar cabeceras; detección de cambios de sesión durante una consulta; espera progresiva y Retry-After.
-- Agregaciones fuera del hilo WPF, conservación de desplazamiento y foco al refrescar, errores de ajustes persistentes y modo demo independiente.
-- Escrituras locales serializadas dentro del proceso, temporales únicos y acciones CI fijadas por SHA.
+Fixed a regression in 0.1.1: a conversation event larger than 2 MB, such as an inline image or a paginated tool result, could incorrectly exclude the entire session. The parser now recognizes safe message types from the bounded JSON header without caching their content. Unknown or unreadable accounting/session metadata still triggers conservative exclusion with a warning.
 
-## Evidencias de la publicación
+Cache schema 4 automatically rebuilds older caches, including previously quarantined sessions. Added independent reproductions, migration/append/EOF/privacy checks and positive controls that retain protection against unreadable accounting. Sol 5.6's inherited long-context cache surcharge is now visibly qualified as unverified, consistently with Terra and Luna; numerical tariffs are unchanged.
 
-El pipeline ejecuta los 48 casos del ejecutor original y 45 casos de auditoría. Los 13 casos iniciales de auditoría se reprodujeron primero sobre código de producción sin modificar: fallaban los 13, aunque pasaban las 48 pruebas anteriores.
+All other accounting/security corrections from 0.1.1 remain. See `docs/AUDIT-FOLLOWUP.md` for evidence and decisions. The external follow-up audited 0.1.1 and identified this shared parser issue; it was not a full audit of the new bilingual GUI.
 
-La publicación requiere que ambas suites pasen, que la protección contra `dotnet test` sin pruebas funcione y que el ejecutable x64 supere la prueba WPF con ambos temas y conservación de desplazamiento/foco. Los informes de cada ejecución y `BUILD-INFO.json` se adjuntan a la release. Las capturas usan datos sintéticos, no una cuenta real.
+## Downloads and upgrade
 
-## Límites que se mantienen
+Extract the **whole ZIP**, then run `AIUsage.exe`. The .NET runtime is included; no administrator rights or installer are needed.
 
-Un archivo con metadatos de contabilidad demasiado grandes o un subagente sin información suficiente puede quedar excluido con aviso: se evita duplicar consumo, no se afirma haber recuperado datos ambiguos. Las reglas de precio no confirmadas se señalan. No se reconstruyen precios históricos ni se separa el historial de tokens de varias cuentas mezcladas en una carpeta.
+- `AIUsage-1.0.0-win-x64.zip`: Windows on Intel / AMD.
+- `AIUsage-1.0.0-win-arm64.zip`: Windows on ARM (cross-compiled, not hardware-tested).
+- `AIUsage-1.0.0-source.zip`: tracked source from the build commit.
 
-ARM64 está compilado de forma cruzada, no ejecutado en hardware ARM. La autenticación se prueba con respuestas HTTP simuladas, no con credenciales reales. Siguen pendientes escenarios de varios monitores/DPI, lector de pantalla y reinicio de Explorer. No hay firma de código, instalador ni autoactualización. SHA-256 y BUILD-INFO verifican integridad/describen procedencia; no son una firma de editor ni una attestación criptográfica.
+Exit the old app, extract into a new folder and run the new executable. Settings are retained; missing language preferences default to system selection. The reading cache rebuilds automatically. **Do not delete `.codex`.**
 
-Detalle: `docs/AUDIT-REMEDIATION.md` y `docs/BUILD-VERIFICATION.md`.
+## Validation and limits
+
+Publication is gated on the original regression, audit, localization and follow-up suites; executable-runner guards; Windows compilation; x64/ARM64 publishing; and the published x64 WPF smoke checks. Result files and `BUILD-INFO.json` accompany this release. Screenshots contain synthetic data, not a real account.
+
+Codex is the only provider. Real-account and ARM64 hardware validation, comprehensive multiple-monitor/DPI, RDP and accessibility checks remain outstanding. Ambiguous subagents can still be excluded with a warning; token history aggregates accounts within a folder.
+
+**Binaries are unsigned.** Hashes/build metadata are not publisher signatures. Do not disable Windows protections. There is no automatic updater or installer. Dollars are estimated API equivalents, not subscription charges or invoices. Original MIT attribution is preserved.
