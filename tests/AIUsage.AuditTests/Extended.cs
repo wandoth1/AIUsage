@@ -80,10 +80,10 @@ internal static partial class Program
         Check("H09 alias equivalence and custom rates are explicitly qualified", () =>
         {
             var e = new UsageEvent(At, "gpt-reserve", new(1000, 0, 100, 0, 1100));
-            var q = PriceCatalog.Load().Quote(e); Equal("gpt-5.6-luna", q.PricingModel); Assert(q.Note.Contains("heredada"), "Missing alias note");
+            var q = PriceCatalog.Load().Quote(e); Equal("gpt-5.6-luna", q.PricingModel); Assert(q.Note.Contains("Inherited OpenUsage alias"), "Missing alias note");
             using var t = new Home(); string path = Path.Combine(t.Root, "p.json");
             File.WriteAllText(path, "{\"gpt-reserve\":{\"Input\":2,\"Cached\":1,\"Output\":10}}");
-            q = PriceCatalog.Load(path).Quote(e); Equal("gpt-reserve", q.PricingModel); Equal(0.003m, q.Cost); Assert(q.Note.Contains("personalizada"), "Missing override note");
+            q = PriceCatalog.Load(path).Quote(e); Equal("gpt-reserve", q.PricingModel); Equal(0.003m, q.Cost); Assert(q.Note.Contains("User-supplied custom price"), "Missing override note");
         });
         Check("H03 current Sol promo and historical repricing are labelled", () =>
         {
@@ -93,7 +93,7 @@ internal static partial class Program
         Check("H09 qualified estimates are carried into CSV, not only UI", () =>
         {
             var csv = CsvExport.Build([new(At, "gpt-reserve", new(1000, 0, 100, 0, 1100))], PriceCatalog.Load(), TimeZoneInfo.Utc);
-            Assert(csv.Contains("qualified_events,pricing_notes") && csv.Contains("heredada"), "Missing provenance in CSV");
+            Assert(csv.Contains("qualified_events,pricing_notes") && csv.Contains("Inherited OpenUsage alias"), "Missing provenance in CSV");
         });
         Check("H11 missing schema field is not trusted as current", () =>
         {

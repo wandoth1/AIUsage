@@ -85,7 +85,7 @@ public sealed class CodexParser(ParserState? state = null)
             if (State.ReplayGate) { if (total is not null) State.Previous = total; return null; }
             var rateLimits = p.Get("rate_limits");
             if (rateLimits.ValueKind == JsonValueKind.Object)
-                quota = QuotaParser.Parse(rateLimits, at.Value, "Registro local") with { AccountKey = State.AccountKey };
+                quota = QuotaParser.Parse(rateLimits, at.Value, "Local log") with { AccountKey = State.AccountKey };
             if (total is not null && total == State.Previous) return null;
             var last = info.Get("last_token_usage");
             Tokens? usage = last.ValueKind == JsonValueKind.Object ? Tokens.Read(last) : total?.Delta(State.Previous);

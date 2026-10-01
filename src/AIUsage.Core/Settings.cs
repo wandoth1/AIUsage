@@ -1,3 +1,4 @@
+using static AIUsage.Core.L10n;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -10,6 +11,7 @@ public sealed class AppSettings
     public int RefreshSeconds { get; set; } = 60;
     public bool OnlineQuota { get; set; }
     public bool LightTheme { get; set; }
+    public string Language { get; set; } = "auto";
     public string ResolveHome()
     {
         string path = string.IsNullOrWhiteSpace(CodexHome) ? Environment.GetEnvironmentVariable("CODEX_HOME") ?? "" : CodexHome;
@@ -23,8 +25,9 @@ public sealed class AppSettings
     public static AppSettings Load(string path)
     {
         if (!File.Exists(path)) return new();
-        if (new FileInfo(path).Length > 65536) throw new InvalidOperationException("El fichero de ajustes supera 64 KB.");
-        var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? throw new InvalidOperationException("Ajustes vacíos.");
+        if (new FileInfo(path).Length > 65536) throw new InvalidOperationException(T("SettingsTooLarge"));
+        var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? throw new InvalidOperationException(T("SettingsEmpty"));
+        settings.Language = L10n.NormalizeSetting(settings.Language);
         settings.RefreshSeconds = Math.Clamp(settings.RefreshSeconds, 15, 3600);
         return settings;
     }

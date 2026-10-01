@@ -35,10 +35,15 @@ jobs:
         run: |
           dotnet run --project tests/AIUsage.AuditTests -c Release 2>&1 | Tee-Object artifacts/audit-tests.txt
           if ($LASTEXITCODE -ne 0) { throw 'Audit regression tests failed.' }
+      - name: English and Spanish localization tests
+        shell: pwsh
+        run: |
+          dotnet run --project tests/AIUsage.LocalizationTests -c Release 2>&1 | Tee-Object artifacts/localization-tests.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Localization regression tests failed.' }
       - name: Reject silent dotnet test success
         shell: pwsh
         run: |
-          foreach ($project in @('AIUsage.Tests', 'AIUsage.AuditTests')) {
+          foreach ($project in @('AIUsage.Tests', 'AIUsage.AuditTests', 'AIUsage.LocalizationTests')) {
             $output = & dotnet test "tests/$project" -c Release 2>&1 | Out-String
             $code = $LASTEXITCODE
             $output | Add-Content artifacts/test-runner-guard.txt
@@ -60,14 +65,14 @@ jobs:
             Copy-Item README.md, LICENSE, THIRD-PARTY-NOTICES.md "artifacts/publish/$rid"
             Copy-Item docs "artifacts/publish/$rid/docs" -Recurse -Force
           }
-      - name: Execute x64 WPF smoke test and capture both themes
+      - name: Execute x64 bilingual WPF smoke tests and capture both themes
         shell: pwsh
         run: |
           $destination = Join-Path $env:GITHUB_WORKSPACE 'artifacts/screenshots'
           New-Item -ItemType Directory -Force $destination | Out-Null
           $exe = Join-Path $env:GITHUB_WORKSPACE 'artifacts/publish/win-x64/AIUsage.exe'
           $p = Start-Process -FilePath $exe -ArgumentList @('--smoke-test', ('"' + $destination + '"')) -PassThru
-          if (-not $p.WaitForExit(60000)) { $p.Kill(); throw 'WPF smoke test timed out.' }
+          if (-not $p.WaitForExit(90000)) { $p.Kill(); throw 'WPF smoke test timed out.' }
           if ($p.ExitCode -ne 0) { throw "WPF smoke test exit code $($p.ExitCode)" }
           if (-not (Test-Path "$destination/ui-smoke-ok.txt")) { throw 'Missing smoke-test success marker.' }
       - name: Package and hash
@@ -80,14 +85,19 @@ jobs:
           $packageVersion = $tag.Substring(1)
           $sourceVersion = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
           if ($sourceVersion -ne $version) { throw 'Assembly/package version mismatch.' }
+          $manifestVersion = ([xml](Get-Content src/AIUsage.Windows/app.manifest -Raw)).assembly.assemblyIdentity.version
+          if ($manifestVersion -ne "$version.0") { throw 'Manifest/package version mismatch.' }
+          if ((Get-ChildItem artifacts/screenshots -Filter 'AIUsage-*.png').Count -ne 8) { throw 'Missing bilingual smoke screenshots.' }
           New-Item -ItemType Directory -Force artifacts/release | Out-Null
           foreach ($rid in @('win-x64', 'win-arm64')) {
             $notices = Get-ChildItem "artifacts/publish/$rid/runtime-notices" -File -Filter '*.TXT'
             if ($notices.Count -ne 6) { throw "Runtime notices missing for $rid" }
             Compress-Archive -Path "artifacts/publish/$rid/*" -DestinationPath "artifacts/release/AIUsage-$packageVersion-$rid.zip" -CompressionLevel Optimal
           }
+          git archive --format=zip --output="artifacts/release/AIUsage-$packageVersion-source.zip" HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Source archive failed.' }
           Copy-Item artifacts/screenshots/*.png artifacts/release
-          Copy-Item artifacts/regression-tests.txt, artifacts/audit-tests.txt, artifacts/test-runner-guard.txt artifacts/release
+          Copy-Item artifacts/regression-tests.txt, artifacts/audit-tests.txt, artifacts/localization-tests.txt, artifacts/test-runner-guard.txt artifacts/release
           @{
             repository = $env:GITHUB_REPOSITORY
             commit = $env:GITHUB_SHA
@@ -96,7 +106,7 @@ jobs:
             release_tag = $tag
             dotnet_sdk = (& dotnet --version)
             runner_os = $env:RUNNER_OS
-            runtime_validation = 'x64 WPF synthetic smoke; ARM64 cross-compiled only'
+            runtime_validation = 'x64 WPF English/Spanish, dark/light synthetic smoke; ARM64 cross-compiled only'
           } | ConvertTo-Json | Set-Content artifacts/release/BUILD-INFO.json -Encoding utf8NoBOM
           Get-ChildItem artifacts/release -File | Sort-Object Name | ForEach-Object {
             $hash = Get-FileHash $_.FullName -Algorithm SHA256
@@ -117,6 +127,7 @@ jobs:
           path: |
             artifacts/regression-tests.txt
             artifacts/audit-tests.txt
+            artifacts/localization-tests.txt
             artifacts/test-runner-guard.txt
             artifacts/screenshots/*
           if-no-files-found: ignore
@@ -137,7 +148,7 @@ jobs:
         with:
           name: windows-release
           path: release-files
-      - name: Publish tested preview
+      - name: Publish verified Windows release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -152,4 +163,4 @@ jobs:
             echo "Release $TAG already exists. Update VERSION / RELEASE_TAG before another release."
             exit 1
           fi
-          gh release create "$TAG" release-files/* --target "$GITHUB_SHA" --prerelease --title "AIUsage $TAG · Windows preview" --notes-file docs/RELEASE-NOTES.md
+          gh release create "$TAG" release-files/* --target "$GITHUB_SHA" --latest --title "AIUsage $TAG · Windows" --notes-file docs/RELEASE-NOTES.md

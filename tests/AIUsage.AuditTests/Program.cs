@@ -10,6 +10,7 @@ internal static partial class Program
     private static int passed, failed;
     public static async Task<int> Main()
     {
+        L10n.SetLanguage("en");
         Check("H01 local Spark quota must not replace Codex", () =>
         {
             using var t = new Home();
@@ -17,8 +18,8 @@ internal static partial class Program
                 Row("event_msg", new { type = "token_count", rate_limits = new { limit_id = "codex", primary = new { used_percent = 20, window_minutes = 300 } } }) +
                 Row("event_msg", new { type = "token_count", rate_limits = new { limit_id = "codex_bengalfox", limit_name = "GPT-5.3-Codex-Spark", primary = new { used_percent = 90, window_minutes = 300 } } }));
             var windows = new LogScanner(t.Cache).Scan(t.Root).Quotas.SelectMany(q => q.Windows).ToArray();
-            Equal(20d, windows.Single(w => w.Name == "Codex · Sesión").UsedPercent);
-            Equal(90d, windows.Single(w => w.Name == "Spark · Sesión").UsedPercent);
+            Equal(20d, windows.Single(w => w.Name == "Codex · Session").UsedPercent);
+            Equal(90d, windows.Single(w => w.Name == "Spark · Session").UsedPercent);
         });
         Check("H02 a complete settings snapshot without tier resets priority", () =>
         {
