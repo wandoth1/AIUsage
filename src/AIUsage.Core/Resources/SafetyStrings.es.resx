@@ -11,4 +11,15 @@
   <data name="ActiveFolder" xml:space="preserve"><value>Carpeta de lectura: {0}</value></data>
   <data name="NoFolderRead" xml:space="preserve"><value>No se ha leído ninguna carpeta de registros en esta sesión.</value></data>
   <data name="SettingsReadFailed" xml:space="preserve"><value>No se han podido leer los ajustes. El análisis está detenido hasta que confirmes una carpeta explícita.</value></data>
+  <data name="InstallFolderCorrected" xml:space="preserve"><value>La carpeta configurada {0} es donde está instalada la aplicación Codex, no donde guarda sus registros de uso. AIUsage ha pasado a la detección automática; puedes cambiarlo en Ajustes.</value></data>
+  <data name="InstallFolderRejected" xml:space="preserve"><value>{0} es la carpeta donde está instalada la aplicación Codex; nunca contiene registros de uso. Deja el campo vacío para usar la detección automática.</value></data>
+  <data name="NoLogsUseDetected" xml:space="preserve"><value>No se han encontrado registros de Codex en {0}.
+
+Tus datos de Codex parecen estar en {1} (sesiones en los últimos 32 días: {2}). ¿Usar la carpeta detectada?</value></data>
+  <data name="NoLogsSaveAnyway" xml:space="preserve"><value>No se han encontrado registros de Codex en {0}. ¿Guardar esta carpeta de todos modos?</value></data>
+  <data name="FolderSuggestion" xml:space="preserve"><value>No se han encontrado registros de Codex en {0}. Tus datos de Codex parecen estar en {1} (sesiones en los últimos 32 días: {2}).</value></data>
+  <data name="UseDetectedFolder" xml:space="preserve"><value>Usar carpeta detectada</value></data>
+  <data name="DetectedFolder" xml:space="preserve"><value>Detectada automáticamente: {0} · sesiones recientes: {1}</value></data>
+  <data name="NothingDetected" xml:space="preserve"><value>No se ha detectado automáticamente ninguna carpeta de datos de Codex. Indica la carpeta local que contiene sessions o archived_sessions.</value></data>
+  <data name="DetectingFolder" xml:space="preserve"><value>Detectando la carpeta de datos de Codex…</value></data>
 </root>

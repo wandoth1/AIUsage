@@ -43,6 +43,16 @@ public sealed partial class MainWindow
         if (unpriced > 0) body.Children.Add(Notice(F("PartialCostNotice", unpriced)));
         if (scan.Warnings > 0) body.Children.Add(Notice(F("ScanWarning", scan.Warnings)));
         if (rows.Any(r => r.Qualified > 0 && r.KnownCost > 0)) body.Children.Add(Notice(T("QualifiedNotice")));
+        if (folderNotice.Length > 0) body.Children.Add(Notice(folderNotice));
+        if (folderSuggestion is { } suggestion)
+        {
+            var offer = new StackPanel();
+            offer.Children.Add(Text(F("FolderSuggestion", activeHome, suggestion.Path, suggestion.RecentRollouts), 12, false, "Warning"));
+            var use = Button(T("UseDetectedFolder"), async () => await UseDetectedFolderAsync());
+            use.Margin = new Thickness(0, 10, 0, 0); use.HorizontalAlignment = HorizontalAlignment.Left;
+            offer.Children.Add(use);
+            body.Children.Add(Card(offer));
+        }
         if (settingsError.Length > 0) body.Children.Add(Notice(settingsError));
         if (error.Length > 0) body.Children.Add(Notice(error));
         if (pricingError.Length > 0) body.Children.Add(Notice(pricingError));

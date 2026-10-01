@@ -37,6 +37,12 @@ public sealed partial class MainWindow : Window
     private bool busy, settingsView, stopped;
     private bool settingsConfirmed = true;
     private string activeHome = "", settingsWarningKey = "";
+    // Folder detection: metadata only (rollout names and dates), never log contents.
+    private string folderNotice = "", correctedInstallFolder = "";
+    private CodexFolderCheck? folderSuggestion, detectedFolder;
+    private bool detecting, detectionRan;
+    private TextBlock? detectedLine;
+    private Button? useDetectedButton;
     private int period = 1;
     private TextBlock? status;
     public event Action<string>? UsageChanged;
@@ -59,10 +65,18 @@ public sealed partial class MainWindow : Window
             settingsConfirmed = loaded.CanScan;
             settingsWarningKey = loaded.WarningKey ?? "";
             settingsView = !settingsConfirmed;
+            // A Codex install folder never holds logs: fall back to automatic detection instead of showing nothing.
+            if (settingsConfirmed && CodexFolder.CorrectInstallFolderSetting(settings) is { } removed)
+            {
+                correctedInstallFolder = removed;
+                try { AtomicJson.Write(SettingsPath, settings); }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
+            }
         }
         settings.Language = L10n.NormalizeSetting(languageOverride ?? settings.Language);
         ApplyLanguage();
         if (settingsWarningKey.Length > 0) settingsError = T(settingsWarningKey);
+        if (correctedInstallFolder.Length > 0) folderNotice = F("InstallFolderCorrected", correctedInstallFolder);
         scanner = new LogScanner(Path.Combine(dataDir, "cache"));
         Theme.Apply(settings.LightTheme);
         if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
@@ -100,6 +114,9 @@ public sealed partial class MainWindow : Window
             activeHome = home;
             scan = await Task.Run(() => scanner.Scan(home, cancellation.Token), cancellation.Token);
             dashboard = await Task.Run(() => DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)), cancellation.Token);
+            // Only when an explicit folder yields nothing: offer the detected folder, never switch silently.
+            folderSuggestion = scan.Files == 0 && settings.CodexHome.Length > 0
+                ? await Task.Run(() => CodexFolder.Suggest(home, DateTimeOffset.Now, cancellation.Token), cancellation.Token) : null;
             error = "";
             var rows = dashboard.ForPeriod(1);
             string amount = rows.Any(r => r.Unpriced > 0) ? T("PartialCost") : UsageSummary.Dollars(rows.Sum(r => r.KnownCost), L10n.Culture);
@@ -130,7 +147,8 @@ public sealed partial class MainWindow : Window
         var header = new DockPanel { Margin = new Thickness(22, 20, 16, 16) };
         var actions = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Top };
         actions.Children.Add(Button(Topmost ? T("Pinned") : T("Pin"), () => { Topmost = !Topmost; Build(); }));
-        actions.Children.Add(Button(T("Settings"), () => { settingsView = !settingsView; Build(); }));
+        // While scanning is paused after a settings error, detection runs only when the user asks for it.
+        actions.Children.Add(Button(T("Settings"), () => { settingsView = !settingsView; Build(); if (settingsView && settingsConfirmed) _ = DetectFolderAsync(); }));
         actions.Children.Add(Button("×", Hide));
         DockPanel.SetDock(actions, Dock.Right); header.Children.Add(actions);
         var title = new StackPanel(); title.Children.Add(Text("AIUsage", 25, true));
@@ -250,6 +268,21 @@ public sealed partial class MainWindow : Window
         System.Windows.Automation.AutomationProperties.SetAutomationId(home, "CodexFolderInput");
         body.Children.Add(home);
         body.Children.Add(Text(T("DefaultFolder"), 11, false, "Muted"));
+        Button? save = null;
+        detectedLine = Text(DetectedFolderText(), 11, false, "Accent");
+        detectedLine.Margin = new Thickness(0, 6, 0, 0); body.Children.Add(detectedLine);
+        useDetectedButton = Button(T("UseDetectedFolder"), async () =>
+        {
+            if (save is null) return;
+            if (!detectionRan) await DetectFolderAsync();
+            if (detectedFolder is not { HasLogs: true } found) return;
+            // Empty means automatic detection; after a settings error an explicit folder is required.
+            home.Text = settingsConfirmed ? "" : found.Path;
+            save.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        });
+        useDetectedButton.Margin = new Thickness(0, 8, 0, 0); useDetectedButton.HorizontalAlignment = HorizontalAlignment.Left;
+        useDetectedButton.IsEnabled = DetectedButtonEnabled();
+        body.Children.Add(useDetectedButton);
         body.Children.Add(Text(T("LocalFolderHelp"), 11, false, "Muted"));
         body.Children.Add(Label(T("AppData")));
         body.Children.Add(new TextBox { Text = dataDir, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
@@ -269,7 +302,7 @@ public sealed partial class MainWindow : Window
         var editPrices = Button(T("EditPrices"), EditPrices);
         editPrices.Margin = new Thickness(0, 10, 0, 10); body.Children.Add(editPrices);
         body.Children.Add(Text(T("PriceExample"), 11, false, "Muted"));
-        var save = Button(T("SaveRefresh"), async () =>
+        save = Button(T("SaveRefresh"), async () =>
         {
             try
             {
@@ -281,9 +314,11 @@ public sealed partial class MainWindow : Window
                     if (!settingsConfirmed && next.CodexHome.Length == 0) throw new InvalidOperationException(T("ChooseExplicitFolder"));
                     string resolved = next.ResolveHome();
                     if (next.CodexHome.Length > 0 && !Directory.Exists(resolved)) throw new InvalidOperationException(T("MissingFolder"));
+                    if (next.CodexHome.Length > 0 && !await ConfirmFolderHasLogsAsync(next, resolved)) return;
                 }
                 if (!demo) AtomicJson.Write(SettingsPath, next);
                 settings = next; settingsConfirmed = true; settingsWarningKey = ""; activeHome = ""; settingsError = ""; pricingError = ""; error = "";
+                folderNotice = ""; folderSuggestion = null;
                 ApplyLanguage();
                 scan = new([], [], 0, 0, DateTimeOffset.Now); dashboard = new(new(), new());
                 if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
@@ -296,6 +331,57 @@ public sealed partial class MainWindow : Window
         save.Background = Theme.Brush("Tint"); save.Foreground = Theme.Brush("Accent"); save.Margin = new Thickness(0, 20, 0, 14); body.Children.Add(save);
         body.Children.Add(Text(F("About", AppVersion.Value), 11, false, "Muted"));
         return body;
+    }
+    private string DetectedFolderText() =>
+        detecting ? T("DetectingFolder") :
+        detectedFolder is { HasLogs: true } found ? F("DetectedFolder", found.Path, found.RecentRollouts) :
+        detectionRan ? T("NothingDetected") : "";
+    private async Task DetectFolderAsync()
+    {
+        if (demo || detecting) return;
+        detecting = true; UpdateDetectedUi();
+        try
+        {
+            detectedFolder = await Task.Run(() => CodexFolder.AutoDetectedPath() is { } path ? CodexFolder.Inspect(path, DateTimeOffset.Now, cancellation.Token) : null, cancellation.Token);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { detectedFolder = null; }
+        finally { detecting = false; detectionRan = true; if (!stopped) UpdateDetectedUi(); }
+    }
+    // Updates the Settings controls in place: rebuilding the panel would discard text the user is typing.
+    private void UpdateDetectedUi()
+    {
+        if (detectedLine is not null) detectedLine.Text = DetectedFolderText();
+        if (useDetectedButton is not null) useDetectedButton.IsEnabled = DetectedButtonEnabled();
+    }
+    private bool DetectedButtonEnabled() => !detecting && (detectedFolder?.HasLogs == true || (!settingsConfirmed && !detectionRan));
+    /// For an explicit folder without Codex logs, offer the detected folder or ask before saving. False cancels.
+    private async Task<bool> ConfirmFolderHasLogsAsync(AppSettings next, string resolved)
+    {
+        if (CodexFolder.IsInstallFolder(resolved)) throw new InvalidOperationException(F("InstallFolderRejected", resolved));
+        var chosen = await Task.Run(() => CodexFolder.Inspect(resolved, DateTimeOffset.Now, cancellation.Token), cancellation.Token);
+        if (chosen.HasLogs) return true;
+        var suggestion = await Task.Run(() => CodexFolder.Suggest(resolved, DateTimeOffset.Now, cancellation.Token), cancellation.Token);
+        if (suggestion is not null)
+        {
+            if (MessageBox.Show(this, F("NoLogsUseDetected", resolved, suggestion.Path, suggestion.RecentRollouts), "AIUsage",
+                    MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                next.CodexHome = settingsConfirmed ? "" : suggestion.Path;
+            return true;
+        }
+        return MessageBox.Show(this, F("NoLogsSaveAnyway", resolved), "AIUsage", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+    }
+    private async Task UseDetectedFolderAsync()
+    {
+        if (demo || busy) return;
+        var next = new AppSettings { CodexHome = "", RefreshSeconds = settings.RefreshSeconds, LightTheme = settings.LightTheme, Language = settings.Language };
+        try { AtomicJson.Write(SettingsPath, next); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        { MessageBox.Show(this, T("SettingsNotApplied"), "AIUsage", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+        settings = next; folderSuggestion = null; folderNotice = ""; activeHome = "";
+        scan = new([], [], 0, 0, DateTimeOffset.Now); dashboard = new(new(), new());
+        scanner = new LogScanner(Path.Combine(dataDir, "cache"));
+        await RefreshAsync();
     }
     private void Export()
     {

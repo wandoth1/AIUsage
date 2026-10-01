@@ -61,7 +61,7 @@
     <value>7 días</value>
   </data>
   <data name="DefaultFolder" xml:space="preserve">
-    <value>Vacío = CODEX_HOME o %USERPROFILE%\.codex</value>
+    <value>Vacío = detección automática (CODEX_HOME o %USERPROFILE%\.codex)</value>
   </data>
   <data name="DemoBadge" xml:space="preserve">
     <value>DEMO · DATOS SINTÉTICOS</value>

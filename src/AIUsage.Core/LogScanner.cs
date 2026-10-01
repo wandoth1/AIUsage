@@ -210,7 +210,8 @@ public sealed class LogScanner(string cacheDirectory)
     private static string QuotaIdentity(QuotaSnapshot q) => q.AccountKey + ":" +
         string.Join('|', q.Windows.Select(w => w.Id.Length > 0 ? w.Id : w.Name).Order(StringComparer.Ordinal));
     private static FileCache? Load(string path) => CacheStore.Load(path);
-    private static List<string> Discover(string home, ref int warnings, CancellationToken ct)
+    // Shared with CodexFolder so folder detection counts exactly the files a scan would read.
+    internal static List<string> Discover(string home, ref int warnings, CancellationToken ct)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
