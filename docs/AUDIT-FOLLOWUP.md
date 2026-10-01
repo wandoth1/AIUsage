@@ -1,5 +1,7 @@
 # Second-audit follow-up — included in AIUsage 1.0.0
 
+> Historical audit record. AIUsage 1.1.0 removes the optional authenticated client and all online controls described below. These notes are retained for provenance, not instructions for the current app. See [local-only design](LOCAL-ONLY.md).
+
 Date: 2026-10-01. The supplied follow-up reviewed **0.1.1**, commit `ae72f4c3abeb3f1c946683a2e8e766992243e7e2`, and observed that the in-progress bilingual branch shared G-1. It was **not a complete audit of the new bilingual interface**. The original private report/workspace is not published.
 
 ## G-1: large conversations incorrectly excluded the whole session

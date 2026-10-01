@@ -40,13 +40,16 @@ public sealed class LogScanner(string cacheDirectory)
     {
         lock (sync)
         {
+            LocalPaths.Require(cacheDirectory);
             memory.Clear();
             if (Directory.Exists(cacheDirectory))
-                foreach (var file in Directory.EnumerateFiles(cacheDirectory, "*.json", SearchOption.TopDirectoryOnly)) File.Delete(file);
+                foreach (var file in Directory.EnumerateFiles(cacheDirectory, "*.json", SearchOption.TopDirectoryOnly)) File.Delete(LocalPaths.Require(file));
         }
     }
     private ScanResult ScanCore(string home, CancellationToken ct)
     {
+        home = LocalPaths.Require(home);
+        LocalPaths.Require(cacheDirectory);
         var since = DateTimeOffset.Now.AddDays(-32);
         var events = new Dictionary<(string Scope, UsageEvent Event), UsageEvent>();
         var quotas = new List<QuotaSnapshot>();
@@ -57,6 +60,7 @@ public sealed class LogScanner(string cacheDirectory)
             ct.ThrowIfCancellationRequested();
             try
             {
+                LocalPaths.Require(path);
                 var info = new FileInfo(path);
                 if (info.LastWriteTimeUtc < since.UtcDateTime) continue;
                 files++;
@@ -89,7 +93,7 @@ public sealed class LogScanner(string cacheDirectory)
         string key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToUpperInvariant())));
         string cachePath = Path.Combine(cacheDirectory, key + ".json");
         if (!memory.TryGetValue(path, out var cache)) cache = Load(cachePath) ?? EmptyCache();
-        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 65536, FileOptions.SequentialScan);
+        using var fs = new FileStream(LocalPaths.Require(path), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, 65536, FileOptions.SequentialScan);
         long size = fs.Length, modified = info.LastWriteTimeUtc.Ticks;
         byte[] head = new byte[(int)Math.Min(size, 512)];
         fs.ReadExactly(head);
@@ -193,6 +197,7 @@ public sealed class LogScanner(string cacheDirectory)
     {
         try
         {
+            LocalPaths.Require(path);
             if (!File.Exists(path) || new FileInfo(path).Length > 32 * 1024 * 1024) return null;
             var c = JsonSerializer.Deserialize<FileCache>(File.ReadAllText(path));
             return c is { State: not null, Events: not null, Quotas: not null, Offset: >= 0 } && c.Schema == ParserSchemaVersion ? c : null;
@@ -203,8 +208,14 @@ public sealed class LogScanner(string cacheDirectory)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        string[] roots = new[] { "sessions", "archived_sessions" }.Select(d => Path.Combine(home, d)).Where(Directory.Exists).ToArray();
-        if (roots.Length == 0) roots = [home];
+        var roots = new List<string>();
+        foreach (string name in new[] { "sessions", "archived_sessions" })
+        {
+            try { string root = LocalPaths.Require(Path.Combine(home, name)); if (Directory.Exists(root)) roots.Add(root); }
+            catch (IOException) { warnings++; }
+            catch (UnauthorizedAccessException) { warnings++; }
+        }
+        if (roots.Count == 0) roots.Add(home);
         foreach (var root in roots)
         {
             if (!Directory.Exists(root)) continue;
@@ -214,14 +225,18 @@ public sealed class LogScanner(string cacheDirectory)
                 ct.ThrowIfCancellationRequested();
                 try
                 {
+                    LocalPaths.Require(dir);
                     foreach (var f in Directory.EnumerateFiles(dir, "*.jsonl"))
                     {
+                        try { LocalPaths.Require(f); }
+                        catch (IOException) { warnings++; continue; }
+                        catch (UnauthorizedAccessException) { warnings++; continue; }
                         string relative = Path.GetRelativePath(root, f);
                         if (seen.Add(relative)) result.Add(f); // Active copy wins over archived copy.
                     }
                     foreach (var d in Directory.EnumerateDirectories(dir))
                     {
-                        if ((File.GetAttributes(d) & FileAttributes.ReparsePoint) == 0) stack.Push(d);
+                        if (LocalPaths.IsResident(File.GetAttributes(d))) stack.Push(d);
                         else warnings++; // Do not follow nested junctions into loops or unrelated trees.
                     }
                 }
@@ -235,9 +250,10 @@ public sealed class LogScanner(string cacheDirectory)
     {
         try
         {
+            LocalPaths.Require(cacheDirectory);
             if (!Directory.Exists(cacheDirectory)) return;
             foreach (var f in Directory.EnumerateFiles(cacheDirectory, "*.json"))
-                if (File.GetLastWriteTimeUtc(f) < DateTime.UtcNow.AddDays(-35)) File.Delete(f);
+                if (File.GetLastWriteTimeUtc(LocalPaths.Require(f)) < DateTime.UtcNow.AddDays(-35)) File.Delete(f);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* Cache is optional. */ }
     }

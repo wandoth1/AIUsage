@@ -1,36 +1,46 @@
-# Build and test verification
+# Build and verification — 1.1.0
 
-## Historical evidence
+## Requirements and trust boundary
 
-AIUsage v0.1.0-r1 (`db62c5a548452e2eb5fbb2d1ed7be95a0028d29c`) passed 48 tests and x64 WPF rendering in run 36873903102 but did not reveal every later audit defect.
+Build with .NET 10 on Windows. SDK/NuGet restore, license collection and GitHub distribution use public networks. The installed application does not run those tools. Read scripts before executing them. `scripts/build.ps1` validates the suites and API boundary before producing a self-contained local package; CI also runs the published x64 executable and creates screenshots. Never supply real authentication or conversations to CI.
 
-[Run 36879730529](https://github.com/wandoth1/AIUsage/actions/runs/36879730529) added thirteen independent reproductions without production changes: the original 48 passed and all thirteen new cases failed. Publication was blocked. An intermediate run exposed Windows concurrent rename contention; writers were serialized without weakening the assertion. The published [0.1.1 run](https://github.com/wandoth1/AIUsage/actions/runs/36885332740) passed 48 original plus 45 audit tests and its WPF smoke checks.
+## Suites
 
-The second audit subsequently found G-1. [Run 36891781462](https://github.com/wandoth1/AIUsage/actions/runs/36891781462) independently reproduced three failures around large non-accounting messages, while positive accounting/metadata quarantine controls passed. See [AUDIT-FOLLOWUP.md](AUDIT-FOLLOWUP.md). This is why a passing suite is not presented as proof of complete correctness.
+Tests are independent executable runners, not VSTest projects:
 
-## AIUsage 1.0 validation contract
+```powershell
+dotnet run --project tests/AIUsage.Tests -c Release
+dotnet run --project tests/AIUsage.AuditTests -c Release
+dotnet run --project tests/AIUsage.LocalizationTests -c Release
+dotnet run --project tests/AIUsage.FollowupTests -c Release
+```
 
-The Windows workflow must pass:
+The original accounting suite has 48 cases. The local audit suite now has 34: eleven tests specific to the deleted authenticated client/online merging were retired with that feature. Localization retains 22 cases, updated for offline migration and messages. The 17 follow-up accounting regressions remain. These are distinct suites, not historical counts silently summed into the new result.
 
-1. Original regression runner: `dotnet run --project tests/AIUsage.Tests -c Release`.
-2. Independent audit runner: `dotnet run --project tests/AIUsage.AuditTests -c Release`.
-3. English/Spanish runner: `dotnet run --project tests/AIUsage.LocalizationTests -c Release`.
-4. Second-audit runner: `dotnet run --project tests/AIUsage.FollowupTests -c Release`.
-5. Expected AIU0001 failures for dotnet test on all four executable runners, avoiding false zero-test success.
-6. WPF build and self-contained x64/ARM64 publication with complete runtime notices.
-7. The published x64 executable's smoke checks: select both languages using Settings, preserve synthetic totals, verify tray labels and refresh scroll/focus, and render dashboard/settings in both themes.
-8. Package/assembly/manifest version checks, all eight screenshots, source ZIP, binaries, build metadata and SHA-256 hashes.
+After publishing both runtime identifiers, run the local-only suite against the actual intermediate application-owned assemblies used by publishing:
 
-Only an explicitly requested successful main run creates a normal release. Validation has read-only repository permission; publication has contents-write permission. Actions are SHA-pinned and checkout does not persist credentials. Existing releases are not silently overwritten.
+```powershell
+dotnet run --project tests/AIUsage.OfflineTests -c Release -- --repo-root . --app-assembly src/AIUsage.Windows/bin/Release/net10.0-windows/win-x64/AIUsage.dll --app-assembly src/AIUsage.Windows/bin/Release/net10.0-windows/win-arm64/AIUsage.dll
+```
 
-Artifacts contain `regression-tests.txt`, `audit-tests.txt`, `localization-tests.txt`, `followup-tests.txt`, `test-runner-guard.txt` and `BUILD-INFO.json`. Metadata identifies the source commit, workflow run, SDK and validation scope. The source ZIP contains tracked files at that commit. Hashes and metadata are not signatures or cryptographic attestations.
+Source/API guards fail if a client, credential reader, subprocess/browser integration, dynamic assembly loading or unapproved native import returns. The bundled .NET/WPF framework may contain networking capability; the inspection targets **our code**, not all framework APIs. The suite also tests local-path rejection, settings migration, immutable sources, locked synthetic credentials, local export and built-in price validation. It observes .NET network-start events in its own synthetic test process; this is not a packet capture. Test output reports skips explicitly, including hosts unable to create a synthetic symbolic link.
 
-Localization intentionally updates canonical quota-label assertions to English and pricing-note assertions to English translations. Numerical expectations remain unchanged; separate tests reconcile both languages. Schema 4 migrates neutral quota labels and false quarantines from the prior parser.
+`dotnet test` deliberately errors with AIU0001 rather than returning success after zero tests. CI verifies that guard for all five projects.
 
-Two first-audit fixtures changed with justification: copied logs now carry the same session ID; oversized unknown accounting expects quarantine rather than trusting potentially inherited usage. The second-audit fix retains that protection while exempting recognized non-accounting events. Tests are not removed or weakened to hide accounting failures.
+## Published x64 executable
 
-## Limits
+```powershell
+.\scripts\verify-local-runtime.ps1 -Executable artifacts/publish/win-x64/AIUsage.exe -Destination artifacts/screenshots
+```
 
-No real credentials, conversations or account requests in tests. HTTP uses mocks. Screenshots show the actual WPF app with synthetic data. ARM64 is only cross-compiled. Mixed-DPI/multiple-monitor, concurrent RDP, Explorer restart, screen-reader use and Excel CSV import are not comprehensively validated.
+The helper makes a temporary synthetic Codex folder and AIUsage data directory, with legacy online=true settings, a 1,100-token rollout and exclusively locked fake credential/configuration files. It exercises the normal app workflow, requires correct accounting and no error, verifies settings cleanup and unchanged source hashes, and checks that only local Settings are available. It then checks both language selections, invariant demo totals, tray translation, dark/light rendering and scroll/focus preservation. Eight synthetic screenshots and separate local/UI success markers must exist. The fake credential directory is removed before diagnostics are uploaded.
 
-The WFO0003 warning from WPF/WinForms integration may remain. Passing rendering tests does not establish every DPI scenario. Core tests do not replace authorized real-world validation.
+## Packaging and evidence
+
+Windows CI checks application/manifest/tag version agreement, compiles x64 and ARM64, collects six complete runtime license/notice files, and packages the app, English documentation and source snapshot. BUILD-INFO identifies commit/run/SDK. SHA256SUMS checks integrity. None is a publisher signature or cryptographic attestation.
+
+A failing test, guard or packaging step blocks release. A PR never publishes. Every release has its own immutable-in-practice tag/files; the workflow refuses to overwrite an existing release. Previous releases remain historical, not represented as local-only builds.
+
+## Not established
+
+No legal or provider-policy certification, account-enforcement guarantee, real-account comparison, external network trace, hostile-OS sandbox proof, full accessibility test, mixed-DPI/multimonitor matrix, RDP/Explorer matrix or ARM64 execution. Built-in paths/metadata guards reduce unintended remote file access but cannot control Windows, security agents, cloud synchronization or every storage provider. Existing accounting limitations remain documented in README and historical audit notes.

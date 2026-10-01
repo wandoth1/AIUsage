@@ -1,37 +1,25 @@
-# AIUsage 1.0.0 for Windows
+# AIUsage 1.1.0 — local-only Windows release
 
-First release of the **independently versioned AIUsage 1.x line**, following our own 0.1.x development previews. AIUsage remains an independent Windows port of OpenUsage under MIT. Upstream versions record provenance, not AIUsage version numbers; future upstream improvements may be selectively ported or omitted.
+AIUsage is now exclusively local. **The optional authenticated integration is removed from the code, not just disabled.** No HTTP client, credential reader, account API/app-server call, browser launch, external editor or telemetry remains in application-owned code.
 
-## What's new
+## Downloads
 
-- English and Spanish application text: Settings, dashboard, tray menus, tooltips, consent dialogs, errors and pricing explanations.
-- Persistent language selection: **Settings → Language / Idioma → English / Español / System default → Save and refresh**. No restart. Automatic selection uses Spanish for Spanish-language Windows, English otherwise.
-- English README, privacy/security/build documentation, audit responses and release notes; explicit independent versioning/upstream policy.
-- Consistent version 1.0.0 in the executable manifest, About, user agent and Windows package names.
-- Localization tests, both-language/both-theme WPF checks and a tracked-source archive with build metadata and SHA-256 hashes.
+- `AIUsage-1.1.0-win-x64.zip` — Intel/AMD Windows.
+- `AIUsage-1.1.0-win-arm64.zip` — Windows ARM; cross-compiled, not hardware-tested.
+- `AIUsage-1.1.0-source.zip` — source snapshot.
 
-## Second-audit corrections included
+Portable and self-contained. Extract the complete ZIP on a local disk and open `AIUsage.exe`. **Exit the old version from its tray menu first.** Closing its window is not enough. Settings migrate automatically, discarding the former online option. Do not delete `.codex`. Keep older releases only for intentional historical comparison, not accidental daily use.
 
-Fixed a regression in 0.1.1: a conversation event larger than 2 MB, such as an inline image or a paginated tool result, could incorrectly exclude the entire session. The parser now recognizes safe message types from the bounded JSON header without caching their content. Unknown or unreadable accounting/session metadata still triggers conservative exclusion with a warning.
+## Retained and changed
 
-Cache schema 4 automatically rebuilds older caches, including previously quarantined sessions. Added independent reproductions, migration/append/EOF/privacy checks and positive controls that retain protection against unreadable accounting. Sol 5.6's inherited long-context cache surcharge is now visibly qualified as unverified, consistently with Terra and Luna; numerical tariffs are unchanged.
+English/Spanish, themes, tray integration, tokens, bundled/custom API estimates, per-model details, history, incremental parsing and both accounting-audit fixes are retained. Limits are now **only historical values already in logs**, with observation time and stale-reset labels. No current account balance is queried.
 
-All other accounting/security corrections from 0.1.1 remain. See `docs/AUDIT-FOLLOWUP.md` for evidence and decisions. The external follow-up audited 0.1.1 and identified this shared parser issue; it was not a full audit of the new bilingual GUI.
+Network/UNC/WSL shares, mapped network drives, device paths, links/junctions and remote-storage placeholders are rejected or skipped. Old network paths need a separate local rollout copy. CSV now saves to `%LOCALAPPDATA%\AIUsage\exports`; its path is displayed without launching another program. Custom prices use an internal JSON editor with validation.
 
-## Downloads and upgrade
+## Verification
 
-Extract the **whole ZIP**, then run `AIUsage.exe`. The .NET runtime is included; no administrator rights or installer are needed.
+Publication is gated on the accounting, local audit, localization, follow-up and new offline suites; executable-runner guards; compiled Core/x64/ARM64 API checks; normal x64 workflow with inaccessible synthetic credentials, unchanged source hashes and migration from online=true; and bilingual dark/light demo rendering. Test outputs, BUILD-INFO and SHA256SUMS accompany this release. Retired tests for the deleted online client are explicitly documented, not counted as passes.
 
-- `AIUsage-1.0.0-win-x64.zip`: Windows on Intel / AMD.
-- `AIUsage-1.0.0-win-arm64.zip`: Windows on ARM (cross-compiled, not hardware-tested).
-- `AIUsage-1.0.0-source.zip`: tracked source from the build commit.
+No real credentials or private conversations were used. ARM64 is not executed. This is not a packet-capture result, legal opinion, provider approval or zero-ban guarantee. Windows/security/sync services may communicate independently of AIUsage. Use resident non-synchronized local storage for offline operation. Build/release tooling, unlike the app, uses the internet.
 
-Exit the old app, extract into a new folder and run the new executable. Settings are retained; missing language preferences default to system selection. The reading cache rebuilds automatically. **Do not delete `.codex`.**
-
-## Validation and limits
-
-Publication is gated on the original regression, audit, localization and follow-up suites; executable-runner guards; Windows compilation; x64/ARM64 publishing; and the published x64 WPF smoke checks. Result files and `BUILD-INFO.json` accompany this release. Screenshots contain synthetic data, not a real account.
-
-Codex is the only provider. Real-account and ARM64 hardware validation, comprehensive multiple-monitor/DPI, RDP and accessibility checks remain outstanding. Ambiguous subagents can still be excluded with a warning; token history aggregates accounts within a folder.
-
-**Binaries are unsigned.** Hashes/build metadata are not publisher signatures. Do not disable Windows protections. There is no automatic updater or installer. Dollars are estimated API equivalents, not subscription charges or invoices. Original MIT attribution is preserved.
+Unsigned binaries; hashes are integrity checks, not publisher signatures. No installer/updater, automatic startup, other AI providers or claim of complete OpenUsage parity. MIT and runtime notices are retained. See README, docs/PRIVACY.md and docs/LOCAL-ONLY.md for scope and remaining limitations.

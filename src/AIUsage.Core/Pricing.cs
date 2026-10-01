@@ -21,6 +21,7 @@ public sealed class PriceCatalog
     {
         using var stream = typeof(PriceCatalog).Assembly.GetManifestResourceStream("AIUsage.Core.pricing.json") ?? throw new InvalidOperationException(T("MissingCatalog"));
         var catalog = new PriceCatalog(ReadEntries(stream));
+        if (overridesPath is not null) overridesPath = LocalPaths.Require(overridesPath);
         if (overridesPath is not null && File.Exists(overridesPath))
         {
             using var customFile = new FileStream(overridesPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
@@ -37,6 +38,12 @@ public sealed class PriceCatalog
             }
         }
         return catalog;
+    }
+    public static void ValidateOverrides(string json)
+    {
+        if (System.Text.Encoding.UTF8.GetByteCount(json) > 256 * 1024) throw new InvalidOperationException(T("PricesTooLarge"));
+        using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+        _ = ReadEntries(stream);
     }
     private static Dictionary<string, ModelRate> ReadEntries(Stream stream)
     {

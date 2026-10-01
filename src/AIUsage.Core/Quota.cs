@@ -1,8 +1,6 @@
 using static AIUsage.Core.L10n;
 // Duration-based window mapping adapted from OpenUsage v0.7.12 (MIT).
 using System.Globalization;
-using System.Net;
-using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace AIUsage.Core;
@@ -61,108 +59,12 @@ public static class QuotaParser
 
 public static class QuotaSelection
 {
-    public static List<(QuotaSnapshot Snapshot, LimitWindow Window)> Select(IEnumerable<QuotaSnapshot> local, QuotaSnapshot? online)
+    public static List<(QuotaSnapshot Snapshot, LimitWindow Window)> Select(IEnumerable<QuotaSnapshot> local)
     {
-        // Never fill missing online windows with unrelated, older local account limits.
-        IEnumerable<QuotaSnapshot> snapshots = online is null ? local : [online];
-        return snapshots.SelectMany(q => q.Windows.Select(w => (Snapshot: q, Window: w)))
+        // These snapshots come only from the selected local rollouts. No account service exists.
+        return local.SelectMany(q => q.Windows.Select(w => (Snapshot: q, Window: w)))
             .GroupBy(x => (x.Snapshot.AccountKey, Id: string.IsNullOrEmpty(x.Window.Id) ? x.Window.Name : x.Window.Id))
             .Select(g => g.OrderByDescending(x => x.Snapshot.At).First())
             .OrderBy(x => x.Snapshot.AccountKey).ThenBy(x => x.Window.Name).ToList();
     }
-}
-
-public sealed class CodexUsageClient : IDisposable
-{
-    public const string UsageEndpoint = "https://chatgpt.com/backend-api/wham/usage";
-    private const int MaxBytes = 1_048_576;
-    private readonly HttpClient http;
-    private readonly TimeProvider clock;
-    private readonly SemaphoreSlim gate = new(1, 1);
-    private int transientFailures;
-    public DateTimeOffset NextAllowedAt { get; private set; } = DateTimeOffset.MinValue;
-    public CodexUsageClient() : this(new HttpClientHandler { AllowAutoRedirect = false }, TimeProvider.System) { }
-    // Injection is for deterministic, offline regression tests; the app always uses the default handler.
-    public CodexUsageClient(HttpMessageHandler handler, TimeProvider? clock = null)
-    {
-        http = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(12), MaxResponseContentBufferSize = MaxBytes };
-        this.clock = clock ?? TimeProvider.System;
-    }
-    public async Task<QuotaSnapshot> ReadAsync(string home, CancellationToken ct)
-    {
-        await gate.WaitAsync(ct);
-        try
-        {
-            if (clock.GetUtcNow() < NextAllowedAt)
-                throw new InvalidOperationException(F("QuotaWaiting", NextAllowedAt.ToLocalTime()));
-            string path = Path.Combine(home, "auth.json");
-            var credentials = await ReadCredentials(path, ct);
-            using var request = new HttpRequestMessage(HttpMethod.Get, UsageEndpoint);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credentials.Access);
-            request.Headers.UserAgent.ParseAdd("AIUsage-Windows/" + AppVersion.Value);
-            if (credentials.Account is not null) request.Headers.Add("ChatGPT-Account-Id", credentials.Account);
-            NextAllowedAt = clock.GetUtcNow().AddMinutes(1);
-            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            deadline.CancelAfter(TimeSpan.FromSeconds(12));
-            try
-            {
-                using var response = await http.SendAsync(request, HttpCompletionOption.ResponseContentRead, deadline.Token);
-                if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-                    throw new InvalidOperationException(T("RenewSession"));
-                if (response.StatusCode == HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500)
-                {
-                    BackOff(response.Headers.RetryAfter);
-                    throw new InvalidOperationException(F("QuotaRejected", (int)response.StatusCode, NextAllowedAt.ToLocalTime()));
-                }
-                if (!response.IsSuccessStatusCode)
-                    throw new InvalidOperationException(F("QuotaHttpError", (int)response.StatusCode));
-                // Never follow a redirect manually. The default handler also disables redirects.
-                var bytes = await response.Content.ReadAsByteArrayAsync(deadline.Token);
-                if (bytes.Length > MaxBytes) throw new InvalidOperationException(T("QuotaTooLarge"));
-                using var doc = JsonDocument.Parse(bytes);
-                if (doc.RootElement.ValueKind != JsonValueKind.Object) throw new JsonException(T("QuotaInvalid"));
-                var latestCredentials = await ReadCredentials(path, deadline.Token);
-                if (latestCredentials != credentials)
-                    throw new InvalidOperationException(T("SessionChanged"));
-                transientFailures = 0;
-                return QuotaParser.Parse(doc.RootElement, clock.GetUtcNow(), "Online account", AccountIdentity.Key(credentials.Account));
-            }
-            catch (Exception ex) when (ex is HttpRequestException or JsonException || (ex is OperationCanceledException && !ct.IsCancellationRequested))
-            {
-                BackOff(null);
-                throw;
-            }
-        }
-        catch (FormatException) { throw new InvalidOperationException(T("AuthInvalidFormat")); }
-        finally { gate.Release(); }
-    }
-    private void BackOff(RetryConditionHeaderValue? retry)
-    {
-        transientFailures = Math.Min(transientFailures + 1, 6);
-        var now = clock.GetUtcNow();
-        var next = now.AddSeconds(Math.Min(3600, 60 * Math.Pow(2, transientFailures)));
-        if (retry?.Date is { } date && date > next) next = date;
-        if (retry?.Delta is { } delta && delta > TimeSpan.Zero && delta <= DateTimeOffset.MaxValue - now && now + delta > next) next = now + delta;
-        NextAllowedAt = next;
-    }
-    private sealed record Credentials(string Access, string? Account);
-    private static async Task<Credentials> ReadCredentials(string path, CancellationToken ct)
-    {
-        if (!File.Exists(path)) throw new InvalidOperationException(T("NoAuth"));
-        using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        byte[] bytes = new byte[MaxBytes + 1];
-        int count = await file.ReadAtLeastAsync(bytes, bytes.Length, throwOnEndOfStream: false, cancellationToken: ct);
-        if (count > MaxBytes) throw new InvalidOperationException(T("AuthTooLarge"));
-        using var auth = JsonDocument.Parse(bytes.AsMemory(0, count));
-        var tokens = auth.RootElement.Get("tokens");
-        string? access = tokens.Text("access_token");
-        string? account = tokens.Text("account_id");
-        // Validate before assigning headers; error messages never contain either value.
-        if (string.IsNullOrWhiteSpace(access)) throw new InvalidOperationException(T("NeedChatGPTSession"));
-        if (access.Length > 65536 || access.Any(c => c <= 32 || c >= 127) ||
-            (account is not null && (account.Length > 4096 || account.Any(c => c <= 32 || c >= 127))))
-            throw new InvalidOperationException(T("AuthInvalidCharacters"));
-        return new(access, string.IsNullOrEmpty(account) ? null : account);
-    }
-    public void Dispose() => http.Dispose();
 }

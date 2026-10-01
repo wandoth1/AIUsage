@@ -1,11 +1,11 @@
-# Security
+# Security policy
 
-AIUsage releases are currently **unsigned**. Releases include SHA-256 hashes; verify both origin and integrity. Do not globally disable SmartScreen, antivirus or other protections. A normal 1.0 release does not imply signing or independent security certification.
+AIUsage 1.1.0 is a local-only desktop utility, not a credential manager or an official OpenAI product. It parses only resident local logs and never contacts an AI service, reads authentication, launches an external program, modifies Codex or disables OS controls. Older releases had an optional authenticated integration; exit those versions and use the new executable for this boundary.
 
-Never publish `auth.json`, API keys, OAuth tokens, cookies, full session logs or screenshots with personal data. For a defect report, include the AIUsage version, Windows version/architecture, native or WSL use, selected language and a minimal **synthetic** example of the failing format.
+Report a vulnerability through a private maintainer contact where available. Otherwise open an issue stating only that a private security contact is needed. Do not publish exploit-sensitive details, credentials, auth.json, private conversations, identifying paths or unreviewed usage caches. Prefer minimal synthetic reproductions and include the application version/commit.
 
-Quota endpoints and rollout formats are not stable contracts. The application warns when data is missing, incomplete or cannot be priced. Estimated costs must not be used as billing controls or exact measures of subscription quota.
+The files in AIUsage's own local cache/export folders can reveal activity even without prompts. Review before sharing. Local metadata is not anonymous or encrypted by the application. Process only logs you are authorized to access.
 
-AIUsage is read-only with respect to Codex. It does not claim resets, refresh credentials or send conversations. Review [privacy](docs/PRIVACY.md) and the code before enabling online access. Settings and cached activity remain private even without conversations or raw account identifiers.
+Network paths, drive mappings, links and remote-recall attributes are rejected or skipped, but the app is not an operating-system sandbox and does not defend against a compromised machine or every same-user filesystem race. Keep logs and app data outside network/cloud-sync locations for offline use. OS/security/storage services may communicate independently.
 
-Use GitHub private vulnerability reporting if enabled for sensitive reports. Otherwise open an issue without secrets to arrange a suitable channel; do not publish a proof of concept containing real credentials.
+Only user-triggered local exports and custom-price edits are written, besides the app's own settings/cache and explicit synthetic-test output. Test/build tooling can use public networks for dependencies and artifact distribution; it is not run by the installed app. Released binaries are unsigned: keep antivirus and SmartScreen enabled and check source and integrity. See [local-only design](docs/LOCAL-ONLY.md) and [privacy](docs/PRIVACY.md). No legal certification or ban-proof promise is made.

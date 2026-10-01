@@ -54,7 +54,6 @@ public static class L10n
     public static string SourceName(string source) => source switch
     {
         "Local log" or "Registro local" => T("LocalLog"),
-        "Online account" or "Cuenta · consulta online" => T("OnlineAccount"),
         _ => source // External provider names and user content are never translated.
     };
     public static string CreditValue(string value) => value is "Unlimited" or "Sin límite" ? T("Unlimited") : value;

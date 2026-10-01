@@ -1,7 +1,6 @@
 using static AIUsage.Core.L10n;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -16,7 +15,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using AIUsage.Core;
-using Forms = System.Windows.Forms;
 
 namespace AIUsage.Windows;
 
@@ -25,14 +23,12 @@ public sealed partial class MainWindow : Window
     private readonly bool demo;
     private readonly Action exit;
     private readonly string dataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AIUsage");
-    private readonly CodexUsageClient client = new();
     private readonly CancellationTokenSource cancellation = new();
     private readonly DispatcherTimer timer = new();
     private AppSettings settings = new();
     private PriceCatalog prices = PriceCatalog.Load();
     private LogScanner scanner;
     private ScanResult scan = new([], [], 0, 0, DateTimeOffset.Now);
-    private QuotaSnapshot? live;
     private DashboardData dashboard = new(new(), new());
     private ScrollViewer? currentScroll;
     private int lastBuiltPeriod;
@@ -46,9 +42,10 @@ public sealed partial class MainWindow : Window
     private string SettingsPath => Path.Combine(dataDir, "settings.json");
     private string PricesPath => Path.Combine(dataDir, "price-overrides.json");
 
-    public MainWindow(bool demo, Action exit, string? languageOverride = null)
+    public MainWindow(bool demo, Action exit, string? languageOverride = null, string? syntheticDataDirectory = null)
     {
         this.demo = demo; this.exit = exit;
+        if (syntheticDataDirectory is not null) dataDir = LocalPaths.Require(syntheticDataDirectory);
         Title = "AIUsage · Codex"; Width = 560; Height = 820; MinWidth = 460; MinHeight = 380;
         MaxHeight = SystemParameters.WorkArea.Height - 24;
         WindowStyle = WindowStyle.None; ResizeMode = ResizeMode.CanResizeWithGrip; ShowInTaskbar = false;
@@ -82,7 +79,7 @@ public sealed partial class MainWindow : Window
     public void Stop()
     {
         if (stopped) return;
-        stopped = true; timer.Stop(); cancellation.Cancel(); client.Dispose();
+        stopped = true; timer.Stop(); cancellation.Cancel();
     }
     public async Task RefreshAsync()
     {
@@ -99,21 +96,12 @@ public sealed partial class MainWindow : Window
             scan = await Task.Run(() => scanner.Scan(home, cancellation.Token), cancellation.Token);
             dashboard = await Task.Run(() => DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)), cancellation.Token);
             error = "";
-            if (settings.OnlineQuota && DateTimeOffset.UtcNow >= client.NextAllowedAt)
-            {
-                live = null; // A failed request must not keep limits from a former account.
-                try { live = await client.ReadAsync(home, cancellation.Token); }
-                catch (InvalidOperationException ex) { error = ex.Message; }
-                catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { error = T("OnlineTimeout"); }
-                catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or IOException or UnauthorizedAccessException or JsonException or FormatException)
-                { error = F("OnlineFailed", ex.GetType().Name); }
-            }
-            if (!settings.OnlineQuota) live = null;
             var rows = dashboard.ForPeriod(1);
             string amount = rows.Any(r => r.Unpriced > 0) ? T("PartialCost") : UsageSummary.Dollars(rows.Sum(r => r.KnownCost), L10n.Culture);
             UsageChanged?.Invoke(rows.Sum(r => r.Events) == 0 ? T("TrayNoData") : F("TrayUsage", amount, UsageSummary.Compact(rows.Sum(r => r.Total), L10n.Culture)));
         }
         catch (OperationCanceledException) { }
+        catch (LocalPathException ex) { error = ex.Message; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { error = F("ReadFolderFailed", ex.GetType().Name); }
         finally { busy = false; if (!stopped && !settingsView) Build(); }
@@ -141,7 +129,7 @@ public sealed partial class MainWindow : Window
         actions.Children.Add(Button("×", Hide));
         DockPanel.SetDock(actions, Dock.Right); header.Children.Add(actions);
         var title = new StackPanel(); title.Children.Add(Text("AIUsage", 25, true));
-        title.Children.Add(Text(demo ? T("DemoBadge") : "CODEX · WINDOWS", 10, false, "Accent"));
+        title.Children.Add(Text(demo ? T("DemoBadge") : T("LocalOnlyBadge"), 10, false, "Accent"));
         header.Children.Add(title);
         header.MouseLeftButtonDown += (_, e) => { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); };
         grid.Children.Add(header);
@@ -162,7 +150,6 @@ public sealed partial class MainWindow : Window
         var tools = new StackPanel { Orientation = Orientation.Horizontal };
         tools.Children.Add(Button(T("Refresh"), async () => await RefreshAsync()));
         tools.Children.Add(Button(T("ExportCsv"), Export));
-        tools.Children.Add(Button("GitHub", () => Open("https://github.com/wandoth1/AIUsage")));
         tools.Children.Add(Button(T("Exit"), exit)); footer.Children.Add(tools);
         status = Text(demo ? T("DemoStatus") :
             F("LocalStatus", scan.At, scan.Files), 10, false, "Muted");
@@ -256,14 +243,9 @@ public sealed partial class MainWindow : Window
         var home = new TextBox { Text = settings.CodexHome, ToolTip = T("FolderHelp") };
         body.Children.Add(home);
         body.Children.Add(Text(T("DefaultFolder"), 11, false, "Muted"));
-        var folders = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 8, 0, 0) };
-        folders.Children.Add(Button(T("ChooseFolder"), () =>
-        {
-            using var dialog = new Forms.FolderBrowserDialog { Description = T("ChooseFolderTitle"), ShowNewFolderButton = false, UseDescriptionForTitle = true };
-            if (dialog.ShowDialog() == Forms.DialogResult.OK) home.Text = dialog.SelectedPath;
-        }));
-        folders.Children.Add(Button(T("AppData"), () => { if (!demo) { Directory.CreateDirectory(dataDir); Open(dataDir); } }));
-        body.Children.Add(folders);
+        body.Children.Add(Text(T("LocalFolderHelp"), 11, false, "Muted"));
+        body.Children.Add(Label(T("AppData")));
+        body.Children.Add(new TextBox { Text = dataDir, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
         body.Children.Add(Button(T("RebuildCache"), async () =>
         {
             if (demo || busy) return;
@@ -275,28 +257,11 @@ public sealed partial class MainWindow : Window
         body.Children.Add(Label(T("RefreshInterval")));
         var interval = new TextBox { Text = settings.RefreshSeconds.ToString(CultureInfo.InvariantCulture), MaxLength = 4 }; body.Children.Add(interval);
         var light = new CheckBox { Content = T("LightTheme"), IsChecked = settings.LightTheme }; body.Children.Add(light);
-        var online = new CheckBox { Content = T("OnlineOption"), IsChecked = settings.OnlineQuota };
-        online.Checked += (_, _) =>
-        {
-            if (!settings.OnlineQuota && MessageBox.Show(this,
-                T("OnlineConsent"),
-                T("OnlineTitle"), MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) online.IsChecked = false;
-        };
-        body.Children.Add(online);
-        body.Children.Add(Text(T("OnlineHelp"), 11, false, "Muted"));
+        body.Children.Add(Text(T("LocalOnlyHelp"), 11, false, "Accent"));
         body.Children.Add(Label(T("NewPrices")));
         body.Children.Add(Text(T("NewPricesHelp"), 12, false, "Muted"));
-        var editPrices = Button(T("EditPrices"), () =>
-        {
-            if (demo) return;
-            try
-            {
-                Directory.CreateDirectory(dataDir);
-                if (!File.Exists(PricesPath)) File.WriteAllText(PricesPath, "{}\n");
-                var p = new ProcessStartInfo("notepad.exe") { UseShellExecute = false }; p.ArgumentList.Add(PricesPath); Process.Start(p);
-            }
-            catch (Exception ex) { MessageBox.Show(this, F("EditorFailed", ex.GetType().Name), "AIUsage"); }
-        }); editPrices.Margin = new Thickness(0, 10, 0, 10); body.Children.Add(editPrices);
+        var editPrices = Button(T("EditPrices"), EditPrices);
+        editPrices.Margin = new Thickness(0, 10, 0, 10); body.Children.Add(editPrices);
         body.Children.Add(Text(T("PriceExample"), 11, false, "Muted"));
         var save = Button(T("SaveRefresh"), async () =>
         {
@@ -304,11 +269,14 @@ public sealed partial class MainWindow : Window
             {
                 if (busy) throw new InvalidOperationException(T("WaitForRefresh"));
                 if (!int.TryParse(interval.Text, out int seconds) || seconds is < 15 or > 3600) throw new InvalidOperationException(T("InvalidInterval"));
-                var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, OnlineQuota = online.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string) };
-                string resolved = next.ResolveHome();
-                if (next.CodexHome.Length > 0 && !Directory.Exists(resolved)) throw new InvalidOperationException(T("MissingFolder"));
+                var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string) };
+                if (!demo)
+                {
+                    string resolved = next.ResolveHome();
+                    if (next.CodexHome.Length > 0 && !Directory.Exists(resolved)) throw new InvalidOperationException(T("MissingFolder"));
+                }
                 if (!demo) AtomicJson.Write(SettingsPath, next);
-                settings = next; live = null; settingsError = ""; pricingError = ""; error = "";
+                settings = next; settingsError = ""; pricingError = ""; error = "";
                 ApplyLanguage();
                 scan = new([], [], 0, 0, DateTimeOffset.Now); dashboard = new(new(), new());
                 if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
@@ -324,17 +292,60 @@ public sealed partial class MainWindow : Window
     }
     private void Export()
     {
+        if (demo) return;
         try
         {
-            var dialog = new Microsoft.Win32.SaveFileDialog { FileName = "AIUsage-" + DateTime.Today.ToString("yyyy-MM-dd") + ".csv", Filter = "CSV (*.csv)|*.csv", AddExtension = true };
-            if (dialog.ShowDialog(this) == true) File.WriteAllText(dialog.FileName, CsvExport.Build(Selected(), prices, TimeZoneInfo.Local), new UTF8Encoding(true));
+            string path = LocalStorage.ExportCsv(dataDir, CsvExport.Build(Selected(), prices, TimeZoneInfo.Local));
+            MessageBox.Show(this, F("ExportSaved", path), "AIUsage");
         }
         catch (Exception ex) { MessageBox.Show(this, F("ExportFailed", ex.GetType().Name), "AIUsage"); }
     }
-    private static void Open(string target)
+    private void EditPrices()
     {
-        try { Process.Start(new ProcessStartInfo(target) { UseShellExecute = true }); }
-        catch (Exception ex) { MessageBox.Show(F("OpenFailed", ex.GetType().Name), "AIUsage"); }
+        if (demo || busy) return;
+        try
+        {
+            LocalPaths.Require(PricesPath);
+            string value = File.Exists(PricesPath) ? LocalStorage.ReadText(PricesPath, 256 * 1024) : "{}";
+            var editor = new TextBox { Text = value, AcceptsReturn = true, AcceptsTab = true, MaxLength = 256 * 1024,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                FontFamily = new FontFamily("Consolas"), MinHeight = 180 };
+            var window = new Window { Title = T("EditPrices"), Owner = this, Width = 520, Height = 430,
+                MinWidth = 380, MinHeight = 300, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Theme.Brush("Page"), Foreground = Theme.Brush("Ink"), ShowInTaskbar = false };
+            var layout = new DockPanel { Margin = new Thickness(16) };
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 10, 0, 0) };
+            buttons.Children.Add(Button(T("SavePrices"), () =>
+            {
+                try
+                {
+                    LocalStorage.SavePrices(PricesPath, editor.Text);
+                    window.DialogResult = true;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
+                { MessageBox.Show(window, T("PricesNotSaved"), "AIUsage", MessageBoxButton.OK, MessageBoxImage.Warning); }
+            }));
+            buttons.Children.Add(Button(T("Cancel"), () => window.DialogResult = false));
+            DockPanel.SetDock(buttons, Dock.Bottom); layout.Children.Add(buttons);
+            var help = Text(T("PriceEditorHelp"), 11, false, "Muted"); help.Margin = new Thickness(0, 0, 0, 10);
+            DockPanel.SetDock(help, Dock.Top); layout.Children.Add(help); layout.Children.Add(editor);
+            window.Content = layout; window.ShowDialog();
+        }
+        catch (Exception ex) { MessageBox.Show(this, F("EditorFailed", ex.GetType().Name), "AIUsage"); }
+    }
+    internal async Task VerifyLocalOnlyAsync()
+    {
+        if (demo) throw new InvalidOperationException("The local workflow check requires the synthetic normal-mode instance.");
+        await RefreshAsync(); await RefreshAsync();
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        if (error.Length > 0 || settingsError.Length > 0 || scan.Events.Sum(e => e.Tokens.Total) != 1100)
+            throw new InvalidOperationException("The normal local workflow failed with inaccessible synthetic credentials.");
+        if (Descendants((DependencyObject)Content).OfType<Button>().Any(b => Equals(b.Content, "GitHub")))
+            throw new InvalidOperationException("External navigation must not be available.");
+        settingsView = true; Build();
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 1)
+            throw new InvalidOperationException("Unexpected option in local-only settings.");
     }
     private static TextBlock Text(string text, double size = 13, bool bold = false, string color = "Ink") => new()
     { Text = text, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, Foreground = Theme.Brush(color), TextWrapping = TextWrapping.Wrap };
@@ -371,7 +382,7 @@ public sealed partial class MainWindow : Window
                 var at = new DateTimeOffset(DateTime.Today.AddDays(-day).AddHours(10).AddMinutes(i));
                 events.Add(new(at, i % 9 == 0 ? "gpt-6-astra" : "gpt-6.1-sol", new Tokens(96000, 84000, 2500, 1800, 98500)));
             }
-        live = new(DateTimeOffset.Now, "DEMO", "Pro", [new("Codex · Session", 34, DateTimeOffset.Now.AddHours(2.5), 18000), new("Codex · Weekly", 62, DateTimeOffset.Now.AddDays(3), 604800)]);
-        scan = new(events, [], 38, 0, DateTimeOffset.Now);
+        var limits = new QuotaSnapshot(DateTimeOffset.Now, "Local log", null, [new("Codex · Session", 34, DateTimeOffset.Now.AddHours(2.5), 18000), new("Codex · Weekly", 62, DateTimeOffset.Now.AddDays(3), 604800)]);
+        scan = new(events, [limits], 38, 0, DateTimeOffset.Now);
     }
 }

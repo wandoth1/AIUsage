@@ -9,7 +9,6 @@ public sealed class AppSettings
 {
     public string CodexHome { get; set; } = "";
     public int RefreshSeconds { get; set; } = 60;
-    public bool OnlineQuota { get; set; }
     public bool LightTheme { get; set; }
     public string Language { get; set; } = "auto";
     public string ResolveHome()
@@ -20,15 +19,20 @@ public sealed class AppSettings
         if (path == "~") path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (path.StartsWith("~/", StringComparison.Ordinal) || path.StartsWith("~\\", StringComparison.Ordinal))
             path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
-        return Path.GetFullPath(Environment.ExpandEnvironmentVariables(path.Trim().Trim('"')));
+        return LocalPaths.Require(Environment.ExpandEnvironmentVariables(path.Trim().Trim('"')));
     }
     public static AppSettings Load(string path)
     {
+        path = LocalPaths.Require(path);
         if (!File.Exists(path)) return new();
         if (new FileInfo(path).Length > 65536) throw new InvalidOperationException(T("SettingsTooLarge"));
-        var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? throw new InvalidOperationException(T("SettingsEmpty"));
+        using var document = JsonDocument.Parse(LocalStorage.ReadText(path, 65536));
+        var settings = document.RootElement.Deserialize<AppSettings>() ?? throw new InvalidOperationException(T("SettingsEmpty"));
         settings.Language = L10n.NormalizeSetting(settings.Language);
         settings.RefreshSeconds = Math.Clamp(settings.RefreshSeconds, 15, 3600);
+        // Drop the obsolete property on disk; no runtime property can enable networking.
+        if (document.RootElement.EnumerateObject().Any(p => p.Name.Equals("OnlineQuota", StringComparison.OrdinalIgnoreCase)))
+            AtomicJson.Write(path, settings);
         return settings;
     }
 }
@@ -38,16 +42,19 @@ public static class AtomicJson
     // Windows replacement renames can conflict even with distinct temporary files.
     // Serialize in-process writers; unique temp names also avoid cross-process temp collisions.
     private static readonly object WriteGate = new();
-    public static void Write<T>(string path, T value)
+    public static void Write<T>(string path, T value) =>
+        WriteText(path, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }));
+    public static void WriteText(string path, string text)
     {
         lock (WriteGate)
         {
-            path = Path.GetFullPath(path);
+            path = LocalPaths.Require(path);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
-                File.WriteAllText(temp, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
+                File.WriteAllText(LocalPaths.Require(temp), text, new UTF8Encoding(false));
+                LocalPaths.Require(path);
                 File.Move(temp, path, true);
             }
             finally { if (File.Exists(temp)) File.Delete(temp); }
