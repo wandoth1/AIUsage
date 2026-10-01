@@ -28,6 +28,11 @@ jobs:
           New-Item -ItemType Directory -Force artifacts | Out-Null
           dotnet run --project tests/AIUsage.Tests/AIUsage.Tests.csproj -c Release 2>&1 | Tee-Object artifacts/regression-tests.txt
           if ($LASTEXITCODE -ne 0) { throw 'Regression tests failed.' }
+      - name: Independent audit regression tests
+        shell: pwsh
+        run: |
+          dotnet run --project tests/AIUsage.AuditTests -c Release 2>&1 | Tee-Object artifacts/audit-tests.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Audit regression tests failed.' }
       - name: Build native Windows UI
         shell: pwsh
         run: |
@@ -84,6 +89,7 @@ jobs:
           name: test-diagnostics
           path: |
             artifacts/regression-tests.txt
+            artifacts/audit-tests.txt
             artifacts/screenshots/*
           if-no-files-found: ignore
           retention-days: 14
