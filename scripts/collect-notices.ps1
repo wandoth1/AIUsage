@@ -4,19 +4,22 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$assetsPath = Join-Path $root 'src/AIUsage.Windows/obj/project.assets.json'
-$assets = Get-Content $assetsPath -Raw | ConvertFrom-Json
-$version = $null
-$pattern = '^(?:runtimepack\.)?Microsoft\.NETCore\.App\.Runtime\.' + [regex]::Escape($Runtime) + '/(\d+\.\d+\.\d+)$'
-foreach ($name in $assets.libraries.PSObject.Properties.Name) {
-    if ($name -match $pattern) { $version = $Matches[1]; break }
+# Self-contained runtime packs are download dependencies, not necessarily libraries in
+# project.assets.json. Read the runtime versions recorded in the built executable's config.
+$configPath = Join-Path $root "src/AIUsage.Windows/bin/Release/net10.0-windows/$Runtime/AIUsage.runtimeconfig.json"
+$config = Get-Content $configPath -Raw | ConvertFrom-Json
+$frameworks = @($config.runtimeOptions.includedFrameworks)
+$coreVersion = ($frameworks | Where-Object { $_.name -eq 'Microsoft.NETCore.App' } | Select-Object -First 1).version
+$desktopVersion = ($frameworks | Where-Object { $_.name -eq 'Microsoft.WindowsDesktop.App' } | Select-Object -First 1).version
+if ($coreVersion -notmatch '^\d+\.\d+\.\d+$' -or $desktopVersion -notmatch '^\d+\.\d+\.\d+$') {
+    throw "Cannot determine the exact included runtime versions from $configPath."
 }
-if (-not $version) { throw "Cannot determine the resolved .NET runtime version for $Runtime from project.assets.json." }
 $destination = Join-Path $PublishDirectory 'runtime-notices'
 New-Item -ItemType Directory -Force $destination | Out-Null
 $manifest = @()
-# Fetch license text, never executable code. Tags match the runtime actually selected by restore.
+# Fetch license text, never executable code. Tags match the frameworks actually bundled.
 foreach ($component in @('runtime', 'wpf', 'winforms')) {
+    $version = if ($component -eq 'runtime') { $coreVersion } else { $desktopVersion }
     foreach ($file in @('LICENSE.TXT', 'THIRD-PARTY-NOTICES.TXT')) {
         $url = "https://raw.githubusercontent.com/dotnet/$component/v$version/$file"
         $output = Join-Path $destination "dotnet-$component-$version-$file"
@@ -33,4 +36,4 @@ foreach ($component in @('runtime', 'wpf', 'winforms')) {
 }
 $manifest | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $destination 'sources.json') -Encoding utf8
 if ($manifest.Count -ne 6) { throw 'Incomplete runtime license set.' }
-Write-Host "Included all six runtime/WPF/WinForms license and notice files for .NET $version ($Runtime)."
+Write-Host "Included six notice files: .NET $coreVersion / Windows Desktop $desktopVersion ($Runtime)."
