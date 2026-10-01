@@ -21,6 +21,8 @@ T AIUsage.Core.AccountIdentity
 T AIUsage.Core.AppSettings
 T AIUsage.Core.AppVersion
 T AIUsage.Core.AtomicJson
+T AIUsage.Core.CodexFolder
+T AIUsage.Core.CodexFolderCheck
 T AIUsage.Core.CsvExport
 T AIUsage.Core.DashboardData
 T AIUsage.Core.InstancePolicy
@@ -115,6 +117,7 @@ T System.Reflection.AssemblyTitleAttribute
 T System.Reflection.MemberInfo
 T System.Runtime.CompilerServices.AsyncStateMachineAttribute
 T System.Runtime.CompilerServices.AsyncTaskMethodBuilder
+T System.Runtime.CompilerServices.AsyncTaskMethodBuilder`1
 T System.Runtime.CompilerServices.AsyncVoidMethodBuilder
 T System.Runtime.CompilerServices.CompilationRelaxationsAttribute
 T System.Runtime.CompilerServices.CompilerGeneratedAttribute

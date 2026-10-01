@@ -1,4 +1,4 @@
-# Privacy and local data — 1.1.1
+# Privacy and local data — 1.2.0
 
 AIUsage is local-only. The authenticated client was deleted in 1.1.0; there is no OAuth, API-key, app-server, cookie or credential-store integration. No analytics, upload, automatic update check or model call is implemented. It does not read auth.json, launch Codex or modify original Codex logs/configuration.
 
@@ -14,7 +14,7 @@ CSV exports occur only on command in the local exports subfolder. They contain d
 
 ## Settings and upgrade
 
-Supported settings are read before attempting to remove the legacy OnlineQuota field. That migration can write AIUsage's settings automatically. A write failure preserves the selected folder and supported in-memory preferences with a warning. Unreadable/corrupt settings pause scanning until explicit folder confirmation; no default source is silently substituted. A missing file on first use still permits the documented default source.
+Supported settings are read before attempting to remove the legacy OnlineQuota field. That migration can write AIUsage's settings automatically. A write failure preserves the selected folder and supported in-memory preferences with a warning. Unreadable/corrupt settings pause scanning until explicit folder confirmation; no default source is silently substituted. A missing file on first use still permits the documented default source. Automatic Codex-folder detection resolves the same documented default and lists only rollout file names and modification dates to report how many recent sessions it holds; it opens no log contents, and while scanning is paused after a settings error it runs only when you choose **Use detected folder**. A setting that points to the Codex application install folder (which never holds logs) is cleared at startup with a visible notice.
 
 The new local-only mutex namespace never silently activates a program holding the legacy namespace. It shows a warning and exits without signalling or killing that program. A previously running older executable is not changed by downloading a new release. Exit it and update shortcuts.
 

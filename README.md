@@ -1,6 +1,6 @@
 # AIUsage for Windows
 
-**Your Codex usage, entirely local.** AIUsage 1.1.1 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
+**Your Codex usage, entirely local.** AIUsage 1.2.0 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
 
 **No account access. No credential reader. No network client.** The optional online integration from 1.0.0 and earlier was removed, not merely disabled. There is no switch, token, app-server integration or undocumented endpoint that can re-enable it. The app does not launch Codex, another AI, a browser or an external editor.
 
@@ -12,17 +12,17 @@ AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robin
 
 | Package | Platform |
 |---|---|
-| `AIUsage-1.1.1-win-x64.zip` | Windows on Intel / AMD |
-| `AIUsage-1.1.1-win-arm64.zip` | Windows on ARM |
+| `AIUsage-1.2.0-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.2.0-win-arm64.zip` | Windows on ARM |
 
-**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.1.1 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
+**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.2.0 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
 
-Closing a window only hides it. Starting 1.1.1 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
+Closing a window only hides it. Starting 1.2.0 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
 
 **Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus or SmartScreen. Check the repository and the ZIP's SHA-256 against `SHA256SUMS.txt`, or build from source. `PAYLOAD-SHA256.json` additionally lists files inside each extracted package. These hashes verify integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-1.1.1-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.2.0-win-x64.zip -Algorithm SHA256
 ```
 
 Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the published x64 Windows app. ARM64 is cross-compiled and its application metadata inspected, not executed on ARM hardware. No services or startup registration are installed.
@@ -39,7 +39,7 @@ This is an application boundary, not a network sandbox for Windows. Operating-sy
 
 ## Select a source and interpret the results
 
-On first use with no settings file, AIUsage uses `CODEX_HOME`, otherwise `%USERPROFILE%\.codex`. Set another local folder in **Settings → Codex folder**. The footer identifies the current reading folder. It reads `sessions/**/*.jsonl` and `archived_sessions/**/*.jsonl`; `history.jsonl` is always excluded. For a directly selected folder without those session directories, only `rollout-*.jsonl` candidates are considered. Arbitrary JSONL/history files are not a fallback input.
+On first use with no settings file, AIUsage uses `CODEX_HOME`, otherwise `%USERPROFILE%\.codex`. **Leave Settings → Codex folder empty for automatic detection**; enter a folder only when your logs live elsewhere. Settings shows the detected folder and how many recent sessions it holds, with **Use detected folder** to apply it. If a selected folder contains no Codex logs, saving it offers the detected folder instead, and the dashboard shows the same one-click suggestion; AIUsage never switches folders silently. A folder where the Codex *application* is installed (for example under `C:\Program Files\WindowsApps`) never contains logs: it is rejected when saved, and an existing setting pointing there is cleared on startup so automatic detection applies, with a notice. Detection only lists rollout file names and modification dates; it never opens log contents, and it does not run while scanning is paused after a settings error unless you request it. The footer identifies the current reading folder. It reads `sessions/**/*.jsonl` and `archived_sessions/**/*.jsonl`; `history.jsonl` is always excluded. For a directly selected folder without those session directories, only `rollout-*.jsonl` candidates are considered. Arbitrary JSONL/history files are not a fallback input.
 
 Today, yesterday, last 7/30 days, model breakdowns, input/cache/output details, estimated costs, a seven-day activity chart, local CSV, tray integration, dark/light themes and periodic disk refresh are retained.
 

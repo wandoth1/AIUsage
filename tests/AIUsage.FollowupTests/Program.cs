@@ -38,6 +38,7 @@ internal static partial class Program
             var r = new LogScanner(t.Cache).Scan(t.Root); Equal(0, r.Events.Count); Require(r.Warnings > 0, "Missing warning");
         });
         MoreCases();
+        FolderCases();
         Console.WriteLine($"RESULT: {passed} passed; {failed} failed."); return failed == 0 ? 0 : 1;
     }
     private static string Row(string type, object payload) => JsonSerializer.Serialize(new { timestamp = At.ToString("O"), type, payload }) + "\n";

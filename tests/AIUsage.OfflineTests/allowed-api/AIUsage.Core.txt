@@ -78,6 +78,7 @@ T System.IO.FileSystemInfo
 T System.IO.IOException
 T System.IO.MemoryStream
 T System.IO.Path
+T System.IO.PathTooLongException
 T System.IO.SearchOption
 T System.IO.SeekOrigin
 T System.IO.Stream

@@ -11,4 +11,15 @@
   <data name="ActiveFolder" xml:space="preserve"><value>Reading folder: {0}</value></data>
   <data name="NoFolderRead" xml:space="preserve"><value>No log folder has been read in this session.</value></data>
   <data name="SettingsReadFailed" xml:space="preserve"><value>The settings could not be read. Scanning is paused until you explicitly confirm a folder.</value></data>
+  <data name="InstallFolderCorrected" xml:space="preserve"><value>The configured folder {0} is where the Codex app is installed, not where it stores usage logs. AIUsage switched to automatic detection; you can change it in Settings.</value></data>
+  <data name="InstallFolderRejected" xml:space="preserve"><value>{0} is where the Codex application is installed; it never contains usage logs. Leave the field empty to use automatic detection.</value></data>
+  <data name="NoLogsUseDetected" xml:space="preserve"><value>No Codex logs were found in {0}.
+
+Your Codex data appears to be in {1} (recent sessions in the last 32 days: {2}). Use the detected folder?</value></data>
+  <data name="NoLogsSaveAnyway" xml:space="preserve"><value>No Codex logs were found in {0}. Save this folder anyway?</value></data>
+  <data name="FolderSuggestion" xml:space="preserve"><value>No Codex logs were found in {0}. Your Codex data appears to be in {1} (recent sessions in the last 32 days: {2}).</value></data>
+  <data name="UseDetectedFolder" xml:space="preserve"><value>Use detected folder</value></data>
+  <data name="DetectedFolder" xml:space="preserve"><value>Detected automatically: {0} · recent sessions: {1}</value></data>
+  <data name="NothingDetected" xml:space="preserve"><value>No Codex data folder was detected automatically. Enter the local folder that contains sessions or archived_sessions.</value></data>
+  <data name="DetectingFolder" xml:space="preserve"><value>Detecting the Codex data folder…</value></data>
 </root>
