@@ -1,42 +1,43 @@
-# Local-only architecture and compliance boundaries
+# Local-only architecture and boundaries — 1.1.1
 
-AIUsage 1.1.0 replaces the optional authenticated integration of 1.0.0 and earlier. This is a technical risk reduction, not a legal certification, OpenAI approval or guarantee about account enforcement.
+The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserves that boundary and addresses the subsequent local-security audit. This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
 
-## Removed, rather than disabled
+## Absent capabilities
 
-- `CodexUsageClient`, its endpoint, HTTP client, credential parser, retry logic and authentication headers.
-- The OnlineQuota runtime property, consent dialog, account refresh and live/local quota merging.
-- Browser links, shell file pickers, file-manager/editor launchers and all application subprocess creation.
+The application has no authenticated quota client, endpoint, credential parser, retry logic, account headers, OnlineQuota property or consent flow. It does not use Codex CLI, App Server, OAuth, API keys, browser automation or another provider as a substitute. Browser/file-shell buttons, shell pickers, external editors and subprocess creation remain removed. Old settings cannot restore deleted code.
 
-There is no fallback via the Codex CLI, app server, OAuth, API keys, browser automation or any other provider. Older settings cannot turn the feature back on. AIUsage's previous releases remain identifiable historical versions, not silently replaced binaries.
+Local features remain: read-only rollout accounting, deduplication, conservative subagent replay, historical limits, costs, charts, English/Spanish, themes, tray and local CSV. Missing or ambiguous data is visibly incomplete. Original Codex files are never repaired, rewritten or removed.
 
-## Local features retained
+## Recovery and local paths
 
-Read-only parsing, the two accounting-audit fixes, deduplication, local log quota snapshots, totals, pricing, diagrams, English/Spanish, themes, tray refresh and local CSV remain. The app never repairs or rewrites a Codex log. Missing/ambiguous data remains visibly incomplete.
+Legacy instance names are checked without signalling. A conflict produces a visible warning and exit code 2; the app neither activates nor kills that older process. Its new local-only identity is stable across subsequent maintenance releases.
 
-The former HTTP-related tests are retired **with the deleted capability** rather than counted as passing tests for a new product. Eleven online-client/online-merge tests are removed from the 45-case audit suite; the 34 local audit cases remain. The 48 accounting tests and 17 follow-up regressions remain. The 22 localization cases now validate local-only help and migration instead of the old consent strings. New offline tests cover removal, migration, locked credentials, source immutability, filesystem boundaries, export, inline prices and application metadata. Exact execution counts are in release artifacts.
+Settings are decoded separately from migration writes. An unsuccessful rewrite preserves valid selected preferences. An unreadable/corrupt file pauses scanning until explicit folder confirmation; a genuinely absent first-use file retains the documented default. The active path is displayed.
 
-## Local filesystem policy
+LocalPaths validates resident local drives and path ancestors. UNC/WSL shares, mapped network drives, device/relative paths, reparse points and remote-recall placeholders are rejected or skipped. Source, settings, cache, price and export paths are checked. Direct rollout folders accept only rollout-*.jsonl, and history.jsonl is excluded. These are safeguards against unintended access, not a sandbox against malicious same-user races, arbitrary storage drivers or OS compromise.
 
-`LocalPaths` rejects remote/device/relative paths before content access, checks Windows drive type, and checks ancestors for reparse/offline/recall flags. `LogScanner` guards the home, individual rollouts and cache paths. `AtomicJson`, price loading and export guard their own destinations. WSL UNC access is intentionally removed despite some WSL distributions running on the same machine. Make a separate local rollout copy yourself where necessary; the app does not transfer credentials.
+## Runtime and caches
 
-This is best-effort application enforcement against unintended network-backed files, not protection against a compromised OS, malicious same-user path races or every storage driver. Do not use synchronized/virtualized storage for a strict offline workflow. The executable does not install firewall rules, services or certificates, or change security controls.
+1.1.1 is a self-contained folder deployment; native libraries do not use the former single-file extraction mechanism. Keep the entire package together. Existing TEMP extraction remnants from old versions are documented separately. Standard .NET local diagnostics IPC remains subject to OS permissions and is NOT disabled. StartupHookSupport is disabled in the shipped configuration, without changing machine-wide settings. A user able to replace that configuration or executable is outside this protection.
 
-## Policies, licenses and remaining legal uncertainty
+Schema 5 caches are streamed compact JSON. Large histories use immutable event pages and a manifest committed last, sharing a 32 MiB per-file read/write limit. An incomplete generation is discarded, never presented as partial successful accounting. Total history still uses proportional memory/storage; this is not a global resource quota. Cache rebuilding changes only AIUsage files.
 
-Reviewed on 2026-10-01:
+## Evidence
 
-- OpenAI's [Europe Terms of Use](https://openai.com/policies/eu-terms-of-use/) include restrictions on automated extraction and circumventing restrictions/protective measures. This application does not connect to those services, scrape a website or bypass service limits. The terms do not explicitly approve AIUsage; absence of a service connection is not an official compliance opinion.
-- OpenAI's [Codex authentication guidance](https://developers.openai.com/codex/auth/) says to treat auth.json like a password. The application no longer accesses it at all.
-- The AEPD's [privacy by design/default guidance](https://www.aepd.es/preguntas-frecuentes/2-tus-obligaciones-como-responsable-del-tratamiento/9-analisis-de-riesgos/FAQ-0224-que-es-la-proteccion-de-datos-desde-el-diseno-y-por-defecto) informs data minimization and a local-only default. It is not a certification and does not eliminate obligations for an employer or user processing someone else's records.
-- OpenUsage's MIT copyright/license notice remains in LICENSE and THIRD-PARTY-NOTICES.md. Independently versioned does not mean unattributed. Full runtime/WPF/Windows Forms notices still accompany each package. Product names identify compatibility; no endorsement is claimed.
+Source and actual-published own assembly policies reject network/credential/process APIs, unexpected references, dynamic activation and unapproved native imports. The theme loader is an explicitly pinned, fixed embedded stylesheet with a Parse-only exception, not external XAML. Broader framework capabilities are not automatically capabilities exercised by our code.
 
-Technical review cannot certify compliance with every law, contractual interpretation or future policy. Process only logs you are authorized to use. Obtain jurisdiction-specific professional advice before commercialization or organizational deployments where a legal assurance is required. Do not advertise this release as "ban-proof", "OpenAI-approved" or "legally certified".
+Synthetic tests cover migration, locked files, source hashes, paths, exports and prices. Independent Windows UI Automation starts the published x64 EXE through its ordinary entry point, checks conflicts/settings/timers and a harmless hook with positive/negative controls. Separate demo/smoke checks cover language/theme rendering.
 
-## Evidence and boundaries
+A test runner's .NET network events are not an external trace of WPF. Successful operation with locked files is not proof of zero failed file-open attempts. This maintenance release does not claim a new ETW/packet-capture audit. Historical 1.1.0 observations are not relabelled as new executions. ARM64 is compiled and inspected, not executed.
 
-`scripts/verify-local-runtime.ps1` creates only synthetic data, sets legacy OnlineQuota=true, locks fake authentication/configuration against access, and launches the published x64 executable. Its normal-mode fixture must retain 1,100 tokens without errors and migrate settings. Source hashes must remain unchanged. Bilingual demo tests then check both themes, Settings and tray labels. No real account or conversation is used.
+## License and legal scope
 
-`AIUsage.OfflineTests` inspects application-owned Core/x64/ARM64 assemblies for network/credential/process/dynamic-load APIs and unexpected native imports, rejects runtime credential/endpoint strings, validates local operations and records whether .NET network start events occurred in its process. These guardrails are not a full proof against all possible egress mechanisms or a packet capture. No claim is made about independent operating-system or third-party network activity. ARM64 is not executed by the x64 runner.
+MIT copyright and permission notices for OpenUsage remain, with runtime/WPF/Windows Forms notices in every package. Independent versioning does not remove attribution. Compatibility names do not imply endorsement. Only process records you are authorized to use; local storage does not waive obligations concerning other people's data or organizational deployments.
 
-Build, restore and GitHub publication download dependencies/licenses and upload artifacts. They are development/distribution activities, separate from the local-only installed app.
+Relevant sources include OpenAI's Europe Terms of Use, Codex authentication guidance, and the AEPD's privacy-by-design guidance. They are references, not approval of AIUsage:
+
+- https://openai.com/policies/eu-terms-of-use/
+- https://developers.openai.com/codex/auth/
+- https://www.aepd.es/preguntas-frecuentes/2-tus-obligaciones-como-responsable-del-tratamiento/9-analisis-de-riesgos/FAQ-0224-que-es-la-proteccion-de-datos-desde-el-diseno-y-por-defecto
+
+No blanket legal-compliance, ban-proof, vendor-approved or anonymity claim is made. Obtain appropriate jurisdiction-specific advice when a legal assurance is needed. Build/restore/publication use the internet separately from installed runtime behavior. Windows, security and synchronization software can communicate independently; avoid network-backed/synchronized locations for an offline workflow.

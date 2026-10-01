@@ -13,6 +13,7 @@ public static class L10n
     private sealed record Locale(string Code, CultureInfo Culture);
     private static readonly CultureInfo SystemCulture = CultureInfo.CurrentUICulture;
     private static readonly ResourceManager Resources = new("AIUsage.Core.Resources.Strings", typeof(L10n).Assembly);
+    private static readonly ResourceManager SafetyResources = new("AIUsage.Core.Resources.SafetyStrings", typeof(L10n).Assembly);
     private static Locale current = Create(ResolveLanguage("auto", SystemCulture));
     public static string Code => Volatile.Read(ref current).Code;
     public static CultureInfo Culture => Volatile.Read(ref current).Culture;
@@ -28,7 +29,7 @@ public static class L10n
         var locale = Volatile.Read(ref current);
         return string.Format(locale.Culture, Get(key, locale.Culture), args);
     }
-    private static string Get(string key, CultureInfo culture) => Resources.GetString(key, culture)
+    private static string Get(string key, CultureInfo culture) => SafetyResources.GetString(key, culture) ?? Resources.GetString(key, culture)
         ?? throw new InvalidOperationException("Missing localization key: " + key);
 
     // Used by regression tests to verify the actual embedded resources, including the satellite.
@@ -36,7 +37,10 @@ public static class L10n
     {
         var culture = language == "es" ? CultureInfo.GetCultureInfo("es") : CultureInfo.InvariantCulture;
         var set = Resources.GetResourceSet(culture, true, false) ?? throw new InvalidOperationException("Missing resource set: " + language);
-        return set.Cast<DictionaryEntry>().ToDictionary(x => (string)x.Key, x => (string)x.Value!, StringComparer.Ordinal);
+        var result = set.Cast<DictionaryEntry>().ToDictionary(x => (string)x.Key, x => (string)x.Value!, StringComparer.Ordinal);
+        var safety = SafetyResources.GetResourceSet(culture, true, false) ?? throw new InvalidOperationException("Missing safety resource set: " + language);
+        foreach (DictionaryEntry item in safety) result[(string)item.Key] = (string)item.Value!;
+        return result;
     }
     public static string WindowName(LimitWindow window)
     {

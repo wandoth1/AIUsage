@@ -70,17 +70,33 @@ public sealed record ModelSummary(string Model, long Input, long Cached, long Ou
 public static class UsageSummary
 {
     public static DateOnly Day(DateTimeOffset at, TimeZoneInfo zone) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(at, zone).DateTime);
-    public static List<ModelSummary> Group(IEnumerable<UsageEvent> source, PriceCatalog prices) => source
-        .GroupBy(e => e.Model, StringComparer.Ordinal)
-        .Select(g =>
+    public static List<ModelSummary> Group(IEnumerable<UsageEvent> source, PriceCatalog prices)
+    {
+        // Avoid retaining a PriceQuote array for every event (large histories can contain millions).
+        var rows = new Dictionary<string, SummaryBuilder>(StringComparer.Ordinal);
+        foreach (var e in source)
         {
-            var quotes = g.Select(prices.Quote).ToArray();
-            return new ModelSummary(g.Key, g.Sum(e => e.Tokens.Input), g.Sum(e => e.Tokens.Cached),
-                g.Sum(e => e.Tokens.Output), g.Sum(e => e.Tokens.Total), quotes.Sum(q => q.Cost ?? 0),
-                quotes.Count(q => q.Cost is null), g.Count(), quotes.Count(q => q.Note.Length > 0),
-                string.Join(" | ", quotes.Select(q => q.Note).Where(n => n.Length > 0).Distinct()));
-        })
-        .OrderByDescending(g => g.KnownCost).ThenByDescending(g => g.Total).ToList();
+            if (!rows.TryGetValue(e.Model, out var row)) rows[e.Model] = row = new();
+            var quote = prices.Quote(e);
+            checked
+            {
+                row.Input += e.Tokens.Input; row.Cached += e.Tokens.Cached; row.Output += e.Tokens.Output;
+                row.Total += e.Tokens.Total; row.Cost += quote.Cost ?? 0; row.Events++;
+            }
+            if (quote.Cost is null) row.Unpriced++;
+            if (quote.Note.Length > 0) { row.Qualified++; row.Notes.Add(quote.Note); }
+        }
+        return rows.Select(x => new ModelSummary(x.Key, x.Value.Input, x.Value.Cached, x.Value.Output,
+            x.Value.Total, x.Value.Cost, x.Value.Unpriced, x.Value.Events, x.Value.Qualified, string.Join(" | ", x.Value.Notes)))
+            .OrderByDescending(x => x.KnownCost).ThenByDescending(x => x.Total).ToList();
+    }
+    private sealed class SummaryBuilder
+    {
+        public long Input, Cached, Output, Total;
+        public decimal Cost;
+        public int Events, Unpriced, Qualified;
+        public HashSet<string> Notes { get; } = new(StringComparer.Ordinal);
+    }
     public static List<UsageEvent> Between(IEnumerable<UsageEvent> events, DateOnly from, DateOnly to, TimeZoneInfo zone) =>
         events.Where(e => IsBetween(e.At, from, to, zone)).ToList();
     private static bool IsBetween(DateTimeOffset at, DateOnly from, DateOnly to, TimeZoneInfo zone)
