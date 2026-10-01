@@ -63,7 +63,7 @@ internal static class Program
                 {
                     WaitUntil(() => Text(process).Contains("Scanning is paused"), 20000, "Missing paused state");
                     // Leave Settings so that the ordinary settings-view pause cannot hide a broken safety guard.
-                    Button(process, "Back to usage");
+                    Button(process, "← Back to usage");
                     Button(process, "Refresh");
                     Thread.Sleep(65000);
                     Assert(!Directory.Exists(Path.Combine(profile, "cache")), "Corrupt settings triggered a scan");
