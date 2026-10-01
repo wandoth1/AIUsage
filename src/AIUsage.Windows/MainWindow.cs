@@ -29,6 +29,12 @@ public sealed partial class MainWindow : Window
     private PriceCatalog prices = PriceCatalog.Load();
     private LogScanner scanner;
     private ScanResult scan = new([], [], 0, 0, DateTimeOffset.Now);
+    // Claude Code: opt-in second source read from its local transcripts only (see ClaudeLogScanner).
+    private const string AllSources = "all", CodexSource = "codex", ClaudeSource = "claude";
+    private ClaudeLogScanner claudeScanner;
+    private ScanResult claudeScan = new([], [], 0, 0, DateTimeOffset.Now);
+    private string source = AllSources, lastBuiltSource = AllSources, claudeHome = "", claudeError = "";
+    private Dictionary<string, DashboardData> dashboards = new();
     private DashboardData dashboard = new(new(), new());
     private ScrollViewer? currentScroll;
     private int lastBuiltPeriod;
@@ -78,8 +84,9 @@ public sealed partial class MainWindow : Window
         if (settingsWarningKey.Length > 0) settingsError = T(settingsWarningKey);
         if (correctedInstallFolder.Length > 0) folderNotice = F("InstallFolderCorrected", correctedInstallFolder);
         scanner = new LogScanner(Path.Combine(dataDir, "cache"));
+        claudeScanner = new ClaudeLogScanner(Path.Combine(dataDir, "cache-claude"));
         Theme.Apply(settings.LightTheme);
-        if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
+        if (demo) { CreateDemo(); SetDashboards(BuildDashboards()); }
         Build();
         Closing += (_, e) => { if (!stopped) { e.Cancel = true; Hide(); } };
         KeyDown += (_, e) => { if (e.Key == Key.Escape) Hide(); };
@@ -110,15 +117,16 @@ public sealed partial class MainWindow : Window
             try { prices = PriceCatalog.Load(PricesPath); pricingError = ""; }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
             { pricingError = T("CustomPricesFailed"); }
+            await ScanClaudeAsync();
             string home = settings.ResolveHome();
             activeHome = home;
             scan = await Task.Run(() => scanner.Scan(home, cancellation.Token), cancellation.Token);
-            dashboard = await Task.Run(() => DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)), cancellation.Token);
+            SetDashboards(await Task.Run(BuildDashboards, cancellation.Token));
             // Only when an explicit folder yields nothing: offer the detected folder, never switch silently.
             folderSuggestion = scan.Files == 0 && settings.CodexHome.Length > 0
                 ? await Task.Run(() => CodexFolder.Suggest(home, DateTimeOffset.Now, cancellation.Token), cancellation.Token) : null;
             error = "";
-            var rows = dashboard.ForPeriod(1);
+            var rows = dashboards.GetValueOrDefault(settings.ClaudeCode ? AllSources : CodexSource)?.ForPeriod(1) ?? [];
             string amount = rows.Any(r => r.Unpriced > 0) ? T("PartialCost") : UsageSummary.Dollars(rows.Sum(r => r.KnownCost), L10n.Culture);
             UsageChanged?.Invoke(rows.Sum(r => r.Events) == 0 ? T("TrayNoData") : F("TrayUsage", amount, UsageSummary.Compact(rows.Sum(r => r.Total), L10n.Culture)));
         }
@@ -128,19 +136,52 @@ public sealed partial class MainWindow : Window
         { error = F("ReadFolderFailed", ex.GetType().Name); }
         finally { busy = false; if (!stopped && !settingsView) Build(); }
     }
+    /// Claude Code failures are reported separately so they never hide Codex usage (and vice versa).
+    private async Task ScanClaudeAsync()
+    {
+        claudeError = "";
+        if (!settings.ClaudeCode) { claudeScan = new([], [], 0, 0, DateTimeOffset.Now); claudeHome = ""; return; }
+        try
+        {
+            string home = ClaudeLogScanner.ResolveHome();
+            claudeHome = home;
+            claudeScan = await Task.Run(() => claudeScanner.Scan(home, cancellation.Token), cancellation.Token);
+        }
+        catch (LocalPathException ex) { claudeError = F("ClaudeScanFailed", ex.Message); claudeScan = new([], [], 0, 0, DateTimeOffset.Now); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { claudeError = F("ClaudeScanFailed", ex.GetType().Name); claudeScan = new([], [], 0, 0, DateTimeOffset.Now); }
+    }
+    private string ActiveSource => settings.ClaudeCode ? source : CodexSource;
+    private IEnumerable<UsageEvent> SourceEvents(string name) => name switch
+    {
+        CodexSource => scan.Events,
+        ClaudeSource => claudeScan.Events,
+        _ => scan.Events.Concat(claudeScan.Events)
+    };
+    private Dictionary<string, DashboardData> BuildDashboards()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var names = settings.ClaudeCode ? new[] { AllSources, CodexSource, ClaudeSource } : new[] { CodexSource };
+        return names.ToDictionary(n => n, n => DashboardData.Create(SourceEvents(n), prices, TimeZoneInfo.Local, today));
+    }
+    private void SetDashboards(Dictionary<string, DashboardData> next)
+    {
+        dashboards = next;
+        dashboard = dashboards.TryGetValue(ActiveSource, out var current) ? current : new(new(), new());
+    }
     private List<UsageEvent> Selected()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
         var end = period == -1 ? today.AddDays(-1) : today;
         var start = period <= 1 ? end : end.AddDays(1 - period);
-        return UsageSummary.Between(scan.Events, start, end, TimeZoneInfo.Local);
+        return UsageSummary.Between(SourceEvents(ActiveSource), start, end, TimeZoneInfo.Local);
     }
     private void Build()
     {
-        bool sameView = lastBuiltPeriod == period && lastBuiltSettings == settingsView;
+        bool sameView = lastBuiltPeriod == period && lastBuiltSettings == settingsView && lastBuiltSource == ActiveSource;
         double offset = sameView ? currentScroll?.VerticalOffset ?? 0 : 0;
         string? focusedButton = sameView && Keyboard.FocusedElement is Button oldButton ? oldButton.Content as string : null;
-        lastBuiltPeriod = period; lastBuiltSettings = settingsView;
+        lastBuiltPeriod = period; lastBuiltSettings = settingsView; lastBuiltSource = ActiveSource;
         Background = Theme.Brush("Page"); Foreground = Theme.Brush("Ink");
         var grid = new Grid();
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) grid.RowDefinitions.Add(new RowDefinition { Height = h });
@@ -152,7 +193,7 @@ public sealed partial class MainWindow : Window
         actions.Children.Add(Button("×", Hide));
         DockPanel.SetDock(actions, Dock.Right); header.Children.Add(actions);
         var title = new StackPanel(); title.Children.Add(Text("AIUsage", 25, true));
-        title.Children.Add(Text(demo ? T("DemoBadge") : T("LocalOnlyBadge"), 10, false, "Accent"));
+        title.Children.Add(Text(demo ? T("DemoBadge") : settings.ClaudeCode ? T("LocalOnlyBadgeClaude") : T("LocalOnlyBadge"), 10, false, "Accent"));
         header.Children.Add(title);
         header.MouseLeftButtonDown += (_, e) => { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); };
         grid.Children.Add(header);
@@ -164,7 +205,19 @@ public sealed partial class MainWindow : Window
             if (period == value) { button.Background = Theme.Brush("Tint"); button.Foreground = Theme.Brush("Accent"); }
             nav.Children.Add(button);
         }
-        Grid.SetRow(nav, 1); grid.Children.Add(nav);
+        var navigation = new StackPanel(); navigation.Children.Add(nav);
+        if (!settingsView && settings.ClaudeCode)
+        {
+            var sources = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(22, 0, 16, 14) };
+            foreach (var (label, value) in new[] { (T("SourceAll"), AllSources), ("Codex", CodexSource), ("Claude Code", ClaudeSource) })
+            {
+                var button = Button(label, () => { source = value; SetDashboards(dashboards); Build(); });
+                if (ActiveSource == value) { button.Background = Theme.Brush("Tint"); button.Foreground = Theme.Brush("Accent"); }
+                sources.Children.Add(button);
+            }
+            navigation.Children.Add(sources);
+        }
+        Grid.SetRow(navigation, 1); grid.Children.Add(navigation);
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Padding = new Thickness(22, 0, 16, 12) };
         currentScroll = scroll;
         scroll.Content = settingsView ? SettingsPanel() : Dashboard();
@@ -174,13 +227,18 @@ public sealed partial class MainWindow : Window
         tools.Children.Add(Button(T("Refresh"), async () => await RefreshAsync()));
         tools.Children.Add(Button(T("ExportCsv"), Export));
         tools.Children.Add(Button(T("Exit"), exit)); footer.Children.Add(tools);
-        status = Text(demo ? T("DemoStatus") : F("LocalStatus", scan.At, scan.Files), 10, false, "Muted");
+        status = Text(demo ? T("DemoStatus") : F("LocalStatus", scan.At, scan.Files + claudeScan.Files), 10, false, "Muted");
         status.Margin = new Thickness(0, 10, 0, 0); footer.Children.Add(status);
         if (!demo)
         {
             var folderStatus = Text(settingsConfirmed && activeHome.Length > 0 ? F("ActiveFolder", activeHome) : T("NoFolderRead"), 10, false, "Muted");
             folderStatus.ToolTip = activeHome;
             footer.Children.Add(folderStatus);
+            if (settings.ClaudeCode && claudeHome.Length > 0)
+            {
+                var claudeStatus = Text(F("ClaudeActiveFolder", Path.Combine(claudeHome, "projects")), 10, false, "Muted");
+                claudeStatus.ToolTip = claudeHome; footer.Children.Add(claudeStatus);
+            }
         }
         Grid.SetRow(footer, 3); grid.Children.Add(footer);
         Content = new Border { BorderBrush = Theme.Brush("Line"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Child = grid };
@@ -284,12 +342,20 @@ public sealed partial class MainWindow : Window
         useDetectedButton.IsEnabled = DetectedButtonEnabled();
         body.Children.Add(useDetectedButton);
         body.Children.Add(Text(T("LocalFolderHelp"), 11, false, "Muted"));
+        body.Children.Add(Label("Claude Code"));
+        var claude = new CheckBox { Content = T("ClaudeCodeOption"), IsChecked = settings.ClaudeCode, Margin = new Thickness(0, 0, 0, 6) };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(claude, "ClaudeCodeOption");
+        body.Children.Add(claude);
+        string claudeFolder;
+        try { claudeFolder = ClaudeLogScanner.ResolveHome(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { claudeFolder = @"%USERPROFILE%\.claude"; }
+        body.Children.Add(Text(F("ClaudeCodeHelp", claudeFolder), 11, false, "Muted"));
         body.Children.Add(Label(T("AppData")));
         body.Children.Add(new TextBox { Text = dataDir, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
         body.Children.Add(Button(T("RebuildCache"), async () =>
         {
             if (demo || busy) return;
-            try { scanner.ClearCache(); settingsView = false; await RefreshAsync(); }
+            try { scanner.ClearCache(); claudeScanner.ClearCache(); settingsView = false; await RefreshAsync(); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { MessageBox.Show(this, T("RebuildFailed"), "AIUsage"); }
         }));
         body.Children.Add(Text(T("RebuildHelp"), 10, false, "Muted"));
@@ -308,7 +374,7 @@ public sealed partial class MainWindow : Window
             {
                 if (busy) throw new InvalidOperationException(T("WaitForRefresh"));
                 if (!int.TryParse(interval.Text, out int seconds) || seconds is < 15 or > 3600) throw new InvalidOperationException(T("InvalidInterval"));
-                var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string) };
+                var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string), ClaudeCode = claude.IsChecked == true };
                 if (!demo)
                 {
                     if (!settingsConfirmed && next.CodexHome.Length == 0) throw new InvalidOperationException(T("ChooseExplicitFolder"));
@@ -320,9 +386,11 @@ public sealed partial class MainWindow : Window
                 settings = next; settingsConfirmed = true; settingsWarningKey = ""; activeHome = ""; settingsError = ""; pricingError = ""; error = "";
                 folderNotice = ""; folderSuggestion = null;
                 ApplyLanguage();
-                scan = new([], [], 0, 0, DateTimeOffset.Now); dashboard = new(new(), new());
-                if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
+                scan = new([], [], 0, 0, DateTimeOffset.Now); claudeScan = new([], [], 0, 0, DateTimeOffset.Now); claudeError = ""; claudeHome = "";
+                SetDashboards(new());
+                if (demo) { CreateDemo(); SetDashboards(BuildDashboards()); }
                 scanner = new LogScanner(Path.Combine(dataDir, "cache"));
+                claudeScanner = new ClaudeLogScanner(Path.Combine(dataDir, "cache-claude"));
                 timer.Interval = TimeSpan.FromSeconds(seconds); settingsView = false;
                 ChangeTheme(settings.LightTheme); await RefreshAsync();
             }
@@ -374,12 +442,12 @@ public sealed partial class MainWindow : Window
     private async Task UseDetectedFolderAsync()
     {
         if (demo || busy) return;
-        var next = new AppSettings { CodexHome = "", RefreshSeconds = settings.RefreshSeconds, LightTheme = settings.LightTheme, Language = settings.Language };
+        var next = new AppSettings { CodexHome = "", RefreshSeconds = settings.RefreshSeconds, LightTheme = settings.LightTheme, Language = settings.Language, ClaudeCode = settings.ClaudeCode };
         try { AtomicJson.Write(SettingsPath, next); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         { MessageBox.Show(this, T("SettingsNotApplied"), "AIUsage", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
         settings = next; folderSuggestion = null; folderNotice = ""; activeHome = "";
-        scan = new([], [], 0, 0, DateTimeOffset.Now); dashboard = new(new(), new());
+        scan = new([], [], 0, 0, DateTimeOffset.Now); SetDashboards(new());
         scanner = new LogScanner(Path.Combine(dataDir, "cache"));
         await RefreshAsync();
     }
@@ -431,7 +499,7 @@ public sealed partial class MainWindow : Window
         if (Descendants((DependencyObject)Content).OfType<Button>().Any(b => Equals(b.Content, "GitHub"))) throw new InvalidOperationException("External navigation must not be available.");
         settingsView = true; Build();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 1) throw new InvalidOperationException("Unexpected option in local-only settings.");
+        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 2) throw new InvalidOperationException("Unexpected option in local-only settings.");
     }
     private static TextBlock Text(string text, double size = 13, bool bold = false, string color = "Ink") => new()
     { Text = text, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, Foreground = Theme.Brush(color), TextWrapping = TextWrapping.Wrap };

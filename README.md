@@ -1,35 +1,44 @@
 # AIUsage for Windows
 
-**Your Codex usage, entirely local.** AIUsage 1.2.0 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
+**Your Codex and Claude Code usage, entirely local.** AIUsage 1.3.0 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code usage is optional (Settings → Claude Code) and comes only from the transcripts Claude Code already keeps on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
 
 **No account access. No credential reader. No network client.** The optional online integration from 1.0.0 and earlier was removed, not merely disabled. There is no switch, token, app-server integration or undocumented endpoint that can re-enable it. The app does not launch Codex, another AI, a browser or an external editor.
 
-AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robinebers/openusage)** under MIT, not an OpenAI or official OpenUsage product. Our versions and roadmap are independent; selected upstream improvements may be ported after review. See [provenance](docs/UPSTREAM.md), [versioning](docs/VERSIONING.md), [local-only design](docs/LOCAL-ONLY.md) and [privacy](docs/PRIVACY.md). No affiliation, provider approval, legal certification or account-enforcement guarantee is implied.
+AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robinebers/openusage)** under MIT, not an OpenAI, Anthropic or official OpenUsage product. Our versions and roadmap are independent; selected upstream improvements may be ported after review. See [provenance](docs/UPSTREAM.md), [versioning](docs/VERSIONING.md), [local-only design](docs/LOCAL-ONLY.md) and [privacy](docs/PRIVACY.md). No affiliation, provider approval, legal certification or account-enforcement guarantee is implied.
 
 [Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Security](SECURITY.md)
+
+## What's new in 1.3.0
+
+- **Claude Code usage (optional, off by default).** Turn it on in **Settings → Claude Code → Include Claude Code usage**. AIUsage then reads the token counters from the transcripts Claude Code already keeps on this PC, including subagents.
+- **All / Codex / Claude Code selector** on the dashboard. The tray total covers both sources.
+- **Official Claude API prices** for every current Claude model, including 5-minute and 1-hour cache writes, cache reads, fast mode and US-only inference.
+- **No Claude credentials, ever.** Claude plan limits are not shown, because reading them would require your Claude account credentials and Anthropic does not allow third-party apps to use them. See [Claude Code](#claude-code-optional).
+
+Release notes: [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md). Previous: 1.2.0 added automatic Codex folder detection.
 
 ## Download and upgrade
 
 | Package | Platform |
 |---|---|
-| `AIUsage-1.2.0-win-x64.zip` | Windows on Intel / AMD |
-| `AIUsage-1.2.0-win-arm64.zip` | Windows on ARM |
+| `AIUsage-1.3.0-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.3.0-win-arm64.zip` | Windows on ARM |
 
-**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.2.0 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
+**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.3.0 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
 
-Closing a window only hides it. Starting 1.2.0 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
+Closing a window only hides it. Starting 1.3.0 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
 
 **Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus or SmartScreen. Check the repository and the ZIP's SHA-256 against `SHA256SUMS.txt`, or build from source. `PAYLOAD-SHA256.json` additionally lists files inside each extracted package. These hashes verify integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-1.2.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.3.0-win-x64.zip -Algorithm SHA256
 ```
 
 Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the published x64 Windows app. ARM64 is cross-compiled and its application metadata inspected, not executed on ARM hardware. No services or startup registration are installed.
 
 ## Local operation
 
-The app opens selected JSONL rollouts with **read-only access**, interprets accounting/session metadata and discards conversation messages. It does not open authentication, browser cookies or credential stores. It does not modify Codex's files, installation, configuration or credentials, call a model, spend resets or alter subscriptions. No provider connection, analytics, crash uploads, updater or live price download is implemented.
+The app opens selected JSONL rollouts (and, when enabled, Claude Code transcripts) with **read-only access**, interprets accounting/session metadata and discards conversation messages. It does not open authentication, browser cookies or credential stores. It does not modify Codex's files, installation, configuration or credentials, call a model, spend resets or alter subscriptions. No provider connection, analytics, crash uploads, updater or live price download is implemented.
 
 AIUsage's settings, prices and accounting cache live under `%LOCALAPPDATA%\AIUsage`. A user-triggered CSV export creates a unique file in its `exports` subfolder, displays the path and does not open or upload it. Custom prices use a built-in editor. There are no browser/file-shell buttons or shell-based file dialogs. Metadata and user notes remain private even without conversations: local does not mean anonymous.
 
@@ -37,9 +46,25 @@ Only **resident local-disk paths** are supported. UNC paths (including WSL share
 
 This is an application boundary, not a network sandbox for Windows. Operating-system services, security tools, storage drivers or cloud-sync agents may communicate independently. Keep app data outside synchronized/network-backed storage. Attribute checks cannot defeat malicious filesystem races or every third-party filesystem. Build/restore/release tooling uses the internet and is not executed by the installed app.
 
-## Select a source and interpret the results
+## Codex folder
 
 On first use with no settings file, AIUsage uses `CODEX_HOME`, otherwise `%USERPROFILE%\.codex`. **Leave Settings → Codex folder empty for automatic detection**; enter a folder only when your logs live elsewhere. Settings shows the detected folder and how many recent sessions it holds, with **Use detected folder** to apply it. If a selected folder contains no Codex logs, saving it offers the detected folder instead, and the dashboard shows the same one-click suggestion; AIUsage never switches folders silently. A folder where the Codex *application* is installed (for example under `C:\Program Files\WindowsApps`) never contains logs: it is rejected when saved, and an existing setting pointing there is cleared on startup so automatic detection applies, with a notice. Detection only lists rollout file names and modification dates; it never opens log contents, and it does not run while scanning is paused after a settings error unless you request it. The footer identifies the current reading folder. It reads `sessions/**/*.jsonl` and `archived_sessions/**/*.jsonl`; `history.jsonl` is always excluded. For a directly selected folder without those session directories, only `rollout-*.jsonl` candidates are considered. Arbitrary JSONL/history files are not a fallback input.
+
+## Claude Code (optional)
+
+Claude Code support is **off by default**. Enable **Settings → Claude Code → Include Claude Code usage** and press **Save and refresh** (Spanish: **Ajustes → Claude Code → Incluir el uso de Claude Code → Guardar y actualizar**). A row of buttons then switches the dashboard between **All**, **Codex** and **Claude Code**, and the footer shows the Claude folder being read.
+
+**What is read.** Only `*.jsonl` transcripts under `projects\` of `CLAUDE_CONFIG_DIR`, otherwise `%USERPROFILE%\.claude` (subagent transcripts included). Lines without a usage block, such as prompts and tool output, are skipped before parsing. From assistant records AIUsage keeps only the timestamp, model, token counters, `speed` and `inference_geo`; message and request ids are kept only as SHA-256 digests to avoid double counting. The cache lives in `%LOCALAPPDATA%\AIUsage\cache-claude`.
+
+**What is never done.** AIUsage does not open `.credentials.json`, `history.jsonl`, settings or any other file outside `projects\`. It does not sign in to Claude, use Claude credentials or OAuth, call Anthropic services, or launch or automate Claude Code. Claude Code's own files are never modified.
+
+**Counting.** Requests that Claude Code logs more than once (resumed sessions, subagent sidechains) are counted once, following the same rules as ccusage and OpenUsage. Advisor iterations are priced under their own model. Records generated locally by Claude Code (`<synthetic>`) are not API requests and are ignored.
+
+**Prices.** Estimates use Anthropic's published API list prices (platform.claude.com, checked 2026-10-01): uncached input, 5-minute and 1-hour cache writes, cache reads and output, fast mode on Opus 5.5 / 5 / 4.8, and the 1.1x US-only inference multiplier. **With a Pro or Max subscription this is not what you pay**; it shows what the same usage would cost on the API. Web-search charges and private discounts are not included.
+
+**Limits.** Claude plan limits are not shown: they are only available through your Claude account credentials, which Anthropic does not allow third-party applications to use. Check them inside Claude Code with `/usage`. Claude Code deletes old transcripts after its retention period (30 days by default), so older usage also disappears from AIUsage.
+
+## Dashboard and Codex limits
 
 Today, yesterday, last 7/30 days, model breakdowns, input/cache/output details, estimated costs, a seven-day activity chart, local CSV, tray integration, dark/light themes and periodic disk refresh are retained.
 
@@ -73,7 +98,7 @@ Startup hooks are disabled in the shipped runtime configuration. Folder deployme
 
 .NET's standard **local diagnostics IPC remains available** subject to OS permissions. It is documented, not misrepresented as disabled or as an Internet connection. Windows/security software may create independent caches. These controls are not protection against same-user binary/configuration replacement or a compromised OS.
 
-To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex data must not be deleted. See [privacy](docs/PRIVACY.md).
+To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex (`.codex`) and Claude Code (`.claude`) data must not be deleted. See [privacy](docs/PRIVACY.md).
 
 ## Build and evidence
 
@@ -83,4 +108,4 @@ CI validates accounting, local audit, localization, follow-up, security/stress a
 
 [First audit response](docs/AUDIT-REMEDIATION.md) · [Second audit](docs/AUDIT-FOLLOWUP.md) · [Local-security remediation](docs/AUDIT-SECURITY-REMEDIATION.md)
 
-Codex remains the only implemented provider. No installer, updater, publisher signature, comprehensive multimonitor/RDP/accessibility validation or legal certification is included. Only process logs you are authorized to use.
+Codex and Claude Code (local transcripts only) are the implemented sources. No installer, updater, publisher signature, comprehensive multimonitor/RDP/accessibility validation or legal certification is included. Only process logs you are authorized to use.

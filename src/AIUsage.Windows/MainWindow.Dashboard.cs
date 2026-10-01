@@ -31,20 +31,24 @@ public sealed partial class MainWindow
         var hero = new StackPanel();
         hero.Children.Add(Text(label + T("EstimatedSuffix"), 10, false, "Muted"));
         hero.Children.Add(Text(records == 0 ? T("NoData") : (unpriced > 0 ? "≥ " : "") + UsageSummary.Dollars(cost, L10n.Culture), 40, true));
-        hero.Children.Add(Text(records == 0 ? T("NoDataHelp") :
+        bool codex = ActiveSource != ClaudeSource, claude = ActiveSource != CodexSource;
+        hero.Children.Add(Text(records == 0 ? (codex ? T("NoDataHelp") : F("ClaudeNoDataHelp", claudeHome)) :
             F("UsageRecords", UsageSummary.Compact(total, L10n.Culture), records), 13, false, "Muted"));
         if (input > 0)
         {
             var cache = Text(F("CacheReuse", 100d * cached / input), 12, false, "Accent");
             cache.Margin = new Thickness(0, 12, 0, 0); hero.Children.Add(cache);
         }
-        var note = Text(T("NotBill"), 11, false, "Muted"); note.Margin = new Thickness(0, 12, 0, 0); hero.Children.Add(note);
+        string notBill = codex && claude ? T("NotBill") + " " + T("ClaudeNotBill") : codex ? T("NotBill") : T("ClaudeNotBill");
+        var note = Text(notBill, 11, false, "Muted"); note.Margin = new Thickness(0, 12, 0, 0); hero.Children.Add(note);
         body.Children.Add(Card(hero));
         if (unpriced > 0) body.Children.Add(Notice(F("PartialCostNotice", unpriced)));
-        if (scan.Warnings > 0) body.Children.Add(Notice(F("ScanWarning", scan.Warnings)));
+        int warnings = (codex ? scan.Warnings : 0) + (claude ? claudeScan.Warnings : 0);
+        if (warnings > 0) body.Children.Add(Notice(F("ScanWarning", warnings)));
         if (rows.Any(r => r.Qualified > 0 && r.KnownCost > 0)) body.Children.Add(Notice(T("QualifiedNotice")));
-        if (folderNotice.Length > 0) body.Children.Add(Notice(folderNotice));
-        if (folderSuggestion is { } suggestion)
+        if (claude && claudeError.Length > 0) body.Children.Add(Notice(claudeError));
+        if (codex && folderNotice.Length > 0) body.Children.Add(Notice(folderNotice));
+        if (codex && folderSuggestion is { } suggestion)
         {
             var offer = new StackPanel();
             offer.Children.Add(Text(F("FolderSuggestion", activeHome, suggestion.Path, suggestion.RecentRollouts), 12, false, "Warning"));
@@ -54,7 +58,7 @@ public sealed partial class MainWindow
             body.Children.Add(Card(offer));
         }
         if (settingsError.Length > 0) body.Children.Add(Notice(settingsError));
-        if (error.Length > 0) body.Children.Add(Notice(error));
+        if (codex && error.Length > 0) body.Children.Add(Notice(error));
         if (pricingError.Length > 0) body.Children.Add(Notice(pricingError));
         body.Children.Add(QuotaCard());
         var models = new StackPanel();
@@ -85,6 +89,13 @@ public sealed partial class MainWindow
     private Border QuotaCard()
     {
         var content = new StackPanel();
+        // Claude plan limits are only available through the user's Claude credentials, which third-party apps must not use.
+        if (ActiveSource == ClaudeSource)
+        {
+            content.Children.Add(Heading(T("ClaudeLimitsTitle"), "Claude Code"));
+            content.Children.Add(Text(T("ClaudeLimits"), 12, false, "Muted"));
+            return Card(content);
+        }
         content.Children.Add(Heading(T("LimitsTitle"), T("LocalLogs")));
         var windows = QuotaSelection.Select(scan.Quotas);
         content.Children.Add(Text(T("HistoricalLimits"), 10, false, "Muted"));
@@ -110,6 +121,11 @@ public sealed partial class MainWindow
             var stamp = Text(reset + "  ·  " + L10n.SourceName(q.Source) + ", " + q.At.ToLocalTime().ToString("g", L10n.Culture), 10, false, "Muted");
             stamp.ToolTip = w.ResetAt?.ToLocalTime().ToString("F", L10n.Culture); stamp.Margin = new Thickness(0, 5, 0, 0); row.Children.Add(stamp);
             content.Children.Add(row);
+        }
+        if (ActiveSource == AllSources)
+        {
+            var claudeLimits = Text(T("ClaudeLimits"), 11, false, "Muted"); claudeLimits.Margin = new Thickness(0, 12, 0, 0);
+            content.Children.Add(claudeLimits);
         }
         return Card(content);
     }

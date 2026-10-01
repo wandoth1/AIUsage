@@ -13,10 +13,16 @@ public sealed class AppSettings
     public int RefreshSeconds { get; set; } = 60;
     public bool LightTheme { get; set; }
     public string Language { get; set; } = "auto";
+    // Opt-in: Claude Code transcripts are a second local source and are never read unless enabled.
+    public bool ClaudeCode { get; set; }
     public string ResolveHome()
     {
         string path = string.IsNullOrWhiteSpace(CodexHome) ? Environment.GetEnvironmentVariable("CODEX_HOME") ?? "" : CodexHome;
         if (string.IsNullOrWhiteSpace(path)) path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".codex");
+        return ExpandFolder(path);
+    }
+    internal static string ExpandFolder(string path)
+    {
         path = path.Trim().Trim('"');
         if (path == "~") path = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (path.StartsWith("~/", StringComparison.Ordinal) || path.StartsWith("~\\", StringComparison.Ordinal)) path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);

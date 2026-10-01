@@ -39,7 +39,8 @@ public static class J
 }
 
 // Output already includes reasoning tokens. Cached input is a subset of input, not extra input.
-public sealed record Tokens(long Input, long Cached, long Output, long Reasoning, long Total, long CacheWrite = 0)
+// CacheWrite is also a subset of input; CacheWrite1h is the part of CacheWrite kept for one hour (Claude).
+public sealed record Tokens(long Input, long Cached, long Output, long Reasoning, long Total, long CacheWrite = 0, long CacheWrite1h = 0)
 {
     public static Tokens Read(JsonElement e)
     {
@@ -55,7 +56,8 @@ public sealed record Tokens(long Input, long Cached, long Output, long Reasoning
         if (previous is null) return this;
         return new(Math.Max(0, Input - previous.Input), Math.Max(0, Cached - previous.Cached),
             Math.Max(0, Output - previous.Output), Math.Max(0, Reasoning - previous.Reasoning),
-            Math.Max(0, Total - previous.Total), Math.Max(0, CacheWrite - previous.CacheWrite));
+            Math.Max(0, Total - previous.Total), Math.Max(0, CacheWrite - previous.CacheWrite),
+            Math.Max(0, CacheWrite1h - previous.CacheWrite1h));
     }
 }
 

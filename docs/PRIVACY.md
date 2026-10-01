@@ -1,4 +1,4 @@
-# Privacy and local data — 1.2.0
+# Privacy and local data — 1.3.0
 
 AIUsage is local-only. The authenticated client was deleted in 1.1.0; there is no OAuth, API-key, app-server, cookie or credential-store integration. No analytics, upload, automatic update check or model call is implemented. It does not read auth.json, launch Codex or modify original Codex logs/configuration.
 
@@ -11,6 +11,12 @@ Settings, optional price overrides and metadata cache live under `%LOCALAPPDATA%
 Schema 5 checkpoints use compact streamed JSON manifests and immutable event pages. Every file shares a 32 MiB read/write limit; a missing/corrupt page invalidates the entire checkpoint and triggers reconstruction from accessible originals. Events and total cache storage remain proportional to the history. Cache housekeeping does not promise a precise legal retention deadline.
 
 CSV exports occur only on command in the local exports subfolder. They contain day/model aggregates and pricing qualifications, not conversations or credentials. Text cells are formula-escaped. User notes are preserved and may contain personal data; inspect before sharing. No export is automatically opened or uploaded. Prices are edited and validated inside AIUsage; no external editor or shell dialog is launched.
+
+## Claude Code (optional, off by default)
+
+When **Settings → Claude Code → Include Claude Code usage** is enabled, AIUsage reads the transcripts Claude Code already writes on this PC: `*.jsonl` files under `projects\` of `CLAUDE_CONFIG_DIR`, otherwise `%USERPROFILE%\.claude`. Nothing else in that folder is opened: not `.credentials.json`, `history.jsonl`, settings, todos or any other file. Lines without a usage block (prompts, tool output) are skipped before parsing; from assistant records only the timestamp, model, token counters, `speed` and `inference_geo` are used, and message/request ids are kept only as SHA-256 digests for deduplication. The cache in `%LOCALAPPDATA%\AIUsage\cache-claude` holds those values and nothing else.
+
+AIUsage never uses Claude credentials, never signs in to Claude, never calls Anthropic services and never automates Claude Code. Claude plan limits are therefore not shown: they are only available through the user's own credentials, which Anthropic does not permit third-party applications to use. Costs are estimates at Anthropic's published API list prices (platform.claude.com pricing, checked 2026-10-01); with a Pro or Max subscription they are not what you pay. Server-tool charges such as web search are not included. Claude Code deletes its own transcripts after its retention period (30 days by default), so older usage disappears from AIUsage too.
 
 ## Settings and upgrade
 
