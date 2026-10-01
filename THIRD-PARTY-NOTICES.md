@@ -30,8 +30,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-## Microsoft .NET
+## Microsoft .NET, WPF and Windows Forms
 
-The self-contained Windows packages include the Microsoft .NET runtime and Windows Desktop runtime. .NET is distributed under the MIT license with third-party notices. The release workflow copies `LICENSE.txt` and `ThirdPartyNotices.txt` from the matching Microsoft runtime packs into the download when provided by those packs. Upstream sources: https://github.com/dotnet/runtime/blob/main/LICENSE.TXT and https://github.com/dotnet/wpf/blob/main/LICENSE.TXT.
+The self-contained downloads include Microsoft .NET and Windows Desktop components. The `runtime-notices` directory contains the full `LICENSE.TXT` and `THIRD-PARTY-NOTICES.TXT` from each of the official `dotnet/runtime`, `dotnet/wpf` and `dotnet/winforms` repositories, pinned to the runtime version selected by restore. `runtime-notices/sources.json` records source URLs and SHA-256 checksums.
+
+`scripts/collect-notices.ps1` downloads this license text during packaging, not when the installed application runs. Packaging fails if the complete set cannot be retrieved. The r1 packaging revision adds this complete notice set; application behavior is unchanged from 0.1.0.
 
 OpenAI, Codex, Windows and other product names belong to their respective owners. No affiliation or endorsement is implied.
