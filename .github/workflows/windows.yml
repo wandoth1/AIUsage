@@ -1,0 +1,125 @@
+name: Windows build, tests and release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Synthetic regression tests
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts | Out-Null
+          dotnet run --project tests/AIUsage.Tests/AIUsage.Tests.csproj -c Release 2>&1 | Tee-Object artifacts/regression-tests.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Regression tests failed.' }
+      - name: Build native Windows UI
+        shell: pwsh
+        run: |
+          dotnet build src/AIUsage.Windows/AIUsage.Windows.csproj -c Release -p:PublishSingleFile=false -p:ContinuousIntegrationBuild=true
+          if ($LASTEXITCODE -ne 0) { throw 'Windows build failed.' }
+      - name: Publish portable x64 and ARM64
+        shell: pwsh
+        run: |
+          foreach ($rid in @('win-x64', 'win-arm64')) {
+            dotnet publish src/AIUsage.Windows/AIUsage.Windows.csproj -c Release -r $rid --self-contained true -o "artifacts/publish/$rid" -p:ContinuousIntegrationBuild=true
+            if ($LASTEXITCODE -ne 0) { throw "Publish failed for $rid" }
+            Copy-Item README.md, LICENSE, THIRD-PARTY-NOTICES.md "artifacts/publish/$rid"
+            Copy-Item docs "artifacts/publish/$rid/docs" -Recurse -Force
+            $notices = "artifacts/publish/$rid/runtime-notices"
+            New-Item -ItemType Directory -Force $notices | Out-Null
+            foreach ($pack in @("microsoft.netcore.app.runtime.$rid", "microsoft.windowsdesktop.app.runtime.$rid")) {
+              $packRoot = Join-Path $env:USERPROFILE ".nuget/packages/$pack"
+              if (Test-Path $packRoot) {
+                $versionRoot = Get-ChildItem $packRoot -Directory | Sort-Object Name -Descending | Select-Object -First 1
+                Get-ChildItem $versionRoot.FullName -File -Recurse | Where-Object { $_.Name -match '^(LICENSE|ThirdPartyNotices)\.(txt|TXT)$' } | ForEach-Object {
+                  Copy-Item $_.FullName (Join-Path $notices "$pack-$($_.Name)") -Force
+                }
+              }
+            }
+          }
+      - name: Execute x64 WPF smoke test and capture both themes
+        shell: pwsh
+        run: |
+          $destination = Join-Path $env:GITHUB_WORKSPACE 'artifacts/screenshots'
+          New-Item -ItemType Directory -Force $destination | Out-Null
+          $exe = Join-Path $env:GITHUB_WORKSPACE 'artifacts/publish/win-x64/AIUsage.exe'
+          $p = Start-Process -FilePath $exe -ArgumentList @('--smoke-test', ('"' + $destination + '"')) -PassThru
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); throw 'WPF smoke test timed out.' }
+          if ($p.ExitCode -ne 0) { throw "WPF smoke test exit code $($p.ExitCode)" }
+          if (-not (Test-Path "$destination/ui-smoke-ok.txt")) { throw 'Missing smoke-test success marker.' }
+      - name: Package and hash
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version.' }
+          New-Item -ItemType Directory -Force artifacts/release | Out-Null
+          foreach ($rid in @('win-x64', 'win-arm64')) {
+            Compress-Archive -Path "artifacts/publish/$rid/*" -DestinationPath "artifacts/release/AIUsage-$version-$rid.zip" -CompressionLevel Optimal
+          }
+          Copy-Item artifacts/screenshots/*.png artifacts/release
+          Copy-Item artifacts/regression-tests.txt artifacts/release
+          Get-ChildItem artifacts/release -File | Sort-Object Name | ForEach-Object {
+            $hash = Get-FileHash $_.FullName -Algorithm SHA256
+            "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
+          } | Set-Content artifacts/release/SHA256SUMS.txt -Encoding utf8NoBOM
+      - name: Upload release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: artifacts/release/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload diagnostics (synthetic only)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-diagnostics
+          path: |
+            artifacts/regression-tests.txt
+            artifacts/screenshots/*
+          if-no-files-found: ignore
+          retention-days: 14
+
+  release:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]'))
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: release-files
+      - name: Publish tested preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(tr -d '\r\n' < VERSION)
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          TAG="v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Bump VERSION and Directory.Build.props for another release."
+            exit 1
+          fi
+          gh release create "$TAG" release-files/* --target "$GITHUB_SHA" --prerelease --title "AIUsage $VERSION · Windows preview" --notes-file docs/RELEASE-NOTES.md
