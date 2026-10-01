@@ -37,6 +37,7 @@ T System.Collections.Generic.List`1
 T System.Collections.Generic.List`1/Enumerator
 T System.Collections.Generic.Stack`1
 T System.Collections.ICollection
+T System.Collections.IDictionaryEnumerator
 T System.Collections.IEnumerable
 T System.Collections.IEnumerator
 T System.Collections.IList

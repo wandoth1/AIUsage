@@ -62,8 +62,13 @@ internal static class Program
                 try
                 {
                     WaitUntil(() => Text(process).Contains("Scanning is paused"), 20000, "Missing paused state");
+                    // Leave Settings so that the ordinary settings-view pause cannot hide a broken safety guard.
+                    Button(process, "Back to usage");
+                    Button(process, "Refresh");
                     Thread.Sleep(65000);
                     Assert(!Directory.Exists(Path.Combine(profile, "cache")), "Corrupt settings triggered a scan");
+                    Assert(Text(process).Contains("No log folder has been read"), "A default source was selected");
+                    Button(process, "Settings");
                     var input = Window(process)!.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.AutomationIdProperty, "CodexFolderInput"));
                     Assert(input is not null, "Missing folder input"); ((ValuePattern)input!.GetCurrentPattern(ValuePattern.Pattern)).SetValue(home);
                     Button(process, "Save and refresh");
