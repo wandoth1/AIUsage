@@ -1,21 +1,13 @@
-# Independent versioning and upstream policy
+# Independent versioning
 
-AIUsage maintains its **own versions, releases and roadmap**. The independent Windows release line starts at **AIUsage 1.0.0**, following our own 0.1.x development previews. No version number is copied from OpenUsage.
+AIUsage is an independent Windows port of OpenUsage under MIT. The original reference was OpenUsage v0.7.12; that is provenance, not our release number or a continuing dependency. See UPSTREAM.md for attribution and adaptation history.
 
-`VERSION` and `Directory.Build.props` define the application version. `RELEASE_TAG` defines the GitHub tag. The executable manifest, About text and ZIP names must agree with that application version. CI validates this before release. Upstream tags belong in provenance documentation and source attribution, not AIUsage's display version.
+Our product line started with 0.1.x previews and AIUsage 1.0.0. AIUsage 1.1.0 removed online integration. AIUsage 1.1.1 is local-security maintenance. These numbers are independent of upstream releases and do not assert complete feature/provider parity.
 
-## Release conventions
+Patch releases fix existing behavior; minor releases introduce reviewed functionality or deliberate product changes; major releases indicate substantial compatibility changes. Where a protective restriction changes accepted input or packaging, release notes and upgrade instructions must call it out even in a maintenance release. The 1.1.1 folder package must be extracted in full, and direct folders now require rollout- filenames.
 
-Use `MAJOR.MINOR.PATCH`: patch releases correct defects; minor product releases introduce significant capabilities or explicitly documented retirements with migration steps; major releases identify deliberate breaking changes or a new compatibility baseline. Record changes and migration steps in English release notes. Version numbers do not imply support for every upstream provider or hardware configuration.
+Future upstream improvements may be selectively ported, independently reimplemented, deferred or omitted. There is no automatic synchronization obligation. Any imported code keeps its license/copyright notices and must pass our local-only, accounting and Windows tests.
 
-Version 1.0.0 is a normal Windows release, not an upstream prerelease. Existing AIUsage preview tags remain available for historical comparison and are not renamed or overwritten. Released assets are not silently replaced. Future development previews require an explicitly labelled prerelease process; the current verified workflow publishes normal releases from `main` only.
+VERSION, RELEASE_TAG, assembly metadata, app manifest and package filenames must agree. Existing tags and release files are retained for historical comparison; the pipeline refuses to overwrite them. Earlier online-capable versions are not described as local-only merely because a newer release is offline.
 
-## Relationship with OpenUsage
-
-OpenUsage supplied part of the initial design and code under MIT. The initial source reference is v0.7.12, documented in [UPSTREAM.md](UPSTREAM.md). This records provenance; it is not an automatically updated dependency.
-
-We may port selected improvements from a newer OpenUsage version, postpone them, or develop independently. There is no commitment to mirror all upstream releases or achieve feature parity. Review licensing and source changes, add regression tests, then record the selected upstream tag/commit and affected components. Publish under the next appropriate **AIUsage** version whether or not upstream has released anything.
-
-Original copyright and license notices remain required for adapted code. Independent versioning does not erase attribution or imply affiliation with OpenUsage or OpenAI.
-
-Version 1.1.0 intentionally retires the optional online integration for a local-only design. Existing supported local preferences migrate; local data formats and accounting are preserved. It is not an upstream version and not a provider certification.
+A normal release number is not a legal/security certification, publisher signature, provider endorsement or promise of zero defects. Known limitations and exact validation scope remain documented. Runtime remains local-only unless an explicit future product decision is separately authorized and clearly communicated; no upstream feature should silently restore account access.

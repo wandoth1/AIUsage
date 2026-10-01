@@ -164,6 +164,7 @@ T System.Threading.CancellationToken
 T System.Threading.Monitor
 T System.Threading.Mutex
 T System.Threading.Volatile
+T System.Threading.WaitHandle
 T System.TimeSpan
 T System.TimeZoneInfo
 T System.Type

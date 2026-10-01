@@ -1,19 +1,11 @@
 # English and Spanish localization
 
-AIUsage embeds `Strings.resx` (English neutral resources) and `Strings.es.resx` (Spanish satellite resources) in `AIUsage.Core/Resources`. `L10n` resolves explicit `en`/`es` choices or `auto`; automatic selection uses Spanish for Spanish system UI cultures and English otherwise. Old settings without a Language property migrate to auto while preserving supported options; 1.1.0 deliberately removes the obsolete online toggle.
+Application-owned labels, settings, tray items, warnings and pricing explanations use L10n and embedded RESX resources. Strings.resx is English; Strings.es.resx is Spanish. SafetyStrings.resx and SafetyStrings.es.resx add audited recovery/instance warnings and override specific historical labels. The regression suite checks the merged resources, nonempty values and matching format placeholders.
 
-Select a language in Settings, then choose **Save and refresh**. This saves the choice, rebuilds the dashboard and replaces the tray menu without restarting. The selector does not discard other unsaved settings immediately. Save is blocked during an active refresh, preventing a language change from racing an earlier dashboard calculation. Demo/smoke selection does not write real settings. The optional normal-workflow smoke fixture uses its own explicitly supplied synthetic directory.
+Settings.Language accepts auto, en or es. Auto uses Spanish for Spanish-language Windows and English otherwise. Unsupported or null values normalize to auto. Changes apply after Save and refresh, without restarting. Presentation uses en-US/es-ES; it does not change global parsing culture, recorded identities, token arithmetic, USD currency or Windows-zone day boundaries.
 
-`T(key)` retrieves text and `F(key, args)` formats a complete template. The latter captures one immutable locale before resource lookup and formatting. Presentation uses en-US/es-ES explicitly; global parsing culture, JSON and invariant CSV numbers are not changed. Windows still determines the time zone and day boundaries.
+Provider/model identifiers and user-supplied text are not translated. CSV columns and numerical fields are invariant; explanatory notes use the chosen language and preserve custom notes. Windows-owned controls/notifications can follow the OS language. Repository documentation and release notes are maintained in English.
 
-Add keys to both resource files and keep numeric placeholder indexes and formats identical. Translate complete messages, not sentence fragments. Use `L10n.Culture` explicitly for presentation dates/numbers. Do not translate model IDs, account/window identities, paths, JSON fields, CSV column names or user notes. Quota names/sources are stored neutrally and translated only for display. Cache schema 4 includes the language-neutral metadata migration and the second-audit accounting correction.
+The 1.1.1 safety messages explain legacy-instance conflicts, migration-write failures, paused scanning, required explicit folder confirmation and the active source. A failed migration write does not discard a saved language or folder. Corrupt settings cannot be trusted, so first-use/default display language is used while scanning remains paused.
 
-Built-in pricing explanations are translated; custom notes remain verbatim. Language does not affect costs or qualification flags. CSV explanations follow the selected language while its schema/numbers remain invariant. System-owned Windows dialogs may retain Windows' own language.
-
-## Verification
-
-Run `dotnet run --project tests/AIUsage.LocalizationTests -c Release`. Tests inspect the actual embedded English/Spanish resources, placeholder parity, fallback rules, settings migration/persistence, formatted values, neutral quota serialization, pricing/CSV invariants, user notes, independent version and concurrent reads.
-
-The published x64 executable runs `--smoke-test DIRECTORY`: it selects both languages through Settings radio buttons and Save, checks unchanged synthetic totals, verifies tray labels, checks refresh scroll/focus, and captures dashboards/settings in both themes. These are synthetic checks, not real-account or comprehensive accessibility validation.
-
-Microsoft documentation: https://learn.microsoft.com/en-us/dotnet/core/extensions/retrieve-resources and https://learn.microsoft.com/en-us/dotnet/core/extensions/create-satellite-assemblies .
+Testing covers resource parity, culture fallback/overrides, persistence, invariance of accounting and CSV, and language switching. Published x64 demo/smoke tests exercise Settings selections, both themes, tray text and scroll/focus. Actual-entry-point tests separately exercise recovery and timers. Generated screenshots contain synthetic data; they are not real account evidence.

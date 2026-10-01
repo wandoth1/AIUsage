@@ -24,31 +24,19 @@ internal static class Program
                 string[] Fields(string s) => Regex.Matches(s, @"\{\d+(?:[^{}]*)\}").Select(m => m.Value).Order().ToArray();
                 Require(Fields(value).SequenceEqual(Fields(es[key])), "Placeholder mismatch: " + key);
                 if (Fields(value).Length == 0) continue;
-                foreach (var language in new[] { "en", "es" })
-                {
-                    L10n.SetLanguage(language);
-                    // Parses the actual composite format, without guessing argument types.
-                    System.Text.CompositeFormat.Parse(L10n.T(key));
-                }
+                foreach (var language in new[] { "en", "es" }) { L10n.SetLanguage(language); System.Text.CompositeFormat.Parse(L10n.T(key)); }
             }
         });
         Test("Spanish regional system cultures select Spanish", () =>
-        {
-            foreach (var name in new[] { "es-ES", "es-MX", "es-AR" }) Equal("es", L10n.ResolveLanguage("auto", CultureInfo.GetCultureInfo(name)));
-        });
+        { foreach (var name in new[] { "es-ES", "es-MX", "es-AR" }) Equal("es", L10n.ResolveLanguage("auto", CultureInfo.GetCultureInfo(name))); });
         Test("Other system cultures fall back to English", () =>
-        {
-            foreach (var name in new[] { "en-GB", "fr-FR", "ja-JP", "" }) Equal("en", L10n.ResolveLanguage("auto", CultureInfo.GetCultureInfo(name)));
-        });
+        { foreach (var name in new[] { "en-GB", "fr-FR", "ja-JP", "" }) Equal("en", L10n.ResolveLanguage("auto", CultureInfo.GetCultureInfo(name))); });
         Test("Explicit language overrides the system language", () =>
         {
-            Equal("en", L10n.ResolveLanguage("en", CultureInfo.GetCultureInfo("es-ES")));
-            Equal("es", L10n.ResolveLanguage("es", CultureInfo.GetCultureInfo("en-US")));
+            Equal("en", L10n.ResolveLanguage("en", CultureInfo.GetCultureInfo("es-ES"))); Equal("es", L10n.ResolveLanguage("es", CultureInfo.GetCultureInfo("en-US")));
         });
         Test("Unknown and null preferences safely normalize", () =>
-        {
-            Equal("auto", L10n.NormalizeSetting(null)); Equal("auto", L10n.NormalizeSetting("../../fr")); Equal("es", L10n.NormalizeSetting(" ES "));
-        });
+        { Equal("auto", L10n.NormalizeSetting(null)); Equal("auto", L10n.NormalizeSetting("../../fr")); Equal("es", L10n.NormalizeSetting(" ES ")); });
         Test("Old settings migrate without discarding existing options", () => WithTemp(path =>
         {
             File.WriteAllText(path, "{\"RefreshSeconds\":120,\"OnlineQuota\":true,\"LightTheme\":true,\"CodexHome\":\"synthetic\"}");
@@ -56,19 +44,16 @@ internal static class Program
         }));
         Test("Language persists across settings reload", () => WithTemp(path =>
         {
-            foreach (var language in new[] { "en", "es", "auto" })
-            { AtomicJson.Write(path, new AppSettings { Language = language, RefreshSeconds = 45 }); var s = AppSettings.Load(path); Equal(language, s.Language); Equal(45, s.RefreshSeconds); }
+            foreach (var language in new[] { "en", "es", "auto" }) { AtomicJson.Write(path, new AppSettings { Language = language, RefreshSeconds = 45 }); var s = AppSettings.Load(path); Equal(language, s.Language); Equal(45, s.RefreshSeconds); }
         }));
         Test("Malformed language value cannot crash culture selection", () => WithTemp(path =>
         {
-            File.WriteAllText(path, "{\"Language\":null}"); Equal("auto", AppSettings.Load(path).Language);
-            File.WriteAllText(path, "{\"Language\":\"unknown-culture\"}"); Equal("auto", AppSettings.Load(path).Language);
+            File.WriteAllText(path, "{\"Language\":null}"); Equal("auto", AppSettings.Load(path).Language); File.WriteAllText(path, "{\"Language\":\"unknown-culture\"}"); Equal("auto", AppSettings.Load(path).Language);
         }));
         Test("English and Spanish UI strings switch without restart", () =>
         {
             L10n.SetLanguage("en"); Equal("Settings", L10n.T("Settings")); Equal("Save and refresh", L10n.T("SaveRefresh"));
-            L10n.SetLanguage("es"); Equal("Ajustes", L10n.T("Settings")); Equal("Guardar y actualizar", L10n.T("SaveRefresh"));
-            L10n.SetLanguage("en"); Equal("Settings", L10n.T("Settings"));
+            L10n.SetLanguage("es"); Equal("Ajustes", L10n.T("Settings")); Equal("Guardar y actualizar", L10n.T("SaveRefresh")); L10n.SetLanguage("en"); Equal("Settings", L10n.T("Settings"));
         });
         Test("Presentation uses chosen locale and always labels dollars", () =>
         {
@@ -77,8 +62,7 @@ internal static class Program
         });
         Test("Changing UI language does not mutate global parsing culture", () =>
         {
-            var current = CultureInfo.CurrentCulture; var ui = CultureInfo.CurrentUICulture;
-            L10n.SetLanguage("es"); Equal(current.Name, CultureInfo.CurrentCulture.Name); Equal(ui.Name, CultureInfo.CurrentUICulture.Name);
+            var current = CultureInfo.CurrentCulture; var ui = CultureInfo.CurrentUICulture; L10n.SetLanguage("es"); Equal(current.Name, CultureInfo.CurrentCulture.Name); Equal(ui.Name, CultureInfo.CurrentUICulture.Name);
         });
         Test("Localized placeholders format all arguments", () =>
         {
@@ -88,17 +72,14 @@ internal static class Program
         Test("Quota serialization and identities do not change with language", () =>
         {
             using var doc = JsonDocument.Parse("{\"primary\":{\"used_percent\":15,\"window_minutes\":300},\"secondary\":{\"used_percent\":25,\"window_minutes\":10080},\"credits\":{\"unlimited\":true}}");
-            L10n.SetLanguage("en"); var en = QuotaParser.Parse(doc.RootElement, Stamp, "Local log");
-            L10n.SetLanguage("es"); var es = QuotaParser.Parse(doc.RootElement, Stamp, "Local log");
+            L10n.SetLanguage("en"); var en = QuotaParser.Parse(doc.RootElement, Stamp, "Local log"); L10n.SetLanguage("es"); var es = QuotaParser.Parse(doc.RootElement, Stamp, "Local log");
             Equal(JsonSerializer.Serialize(en), JsonSerializer.Serialize(es)); Equal("Codex · Session", es.Windows[0].Name);
-            Equal("Codex · Sesión", L10n.WindowName(es.Windows[0])); Equal("Codex · Semanal", L10n.WindowName(es.Windows[1]));
-            L10n.SetLanguage("en"); Equal("Codex · Session", L10n.WindowName(es.Windows[0]));
+            Equal("Codex · Sesión", L10n.WindowName(es.Windows[0])); Equal("Codex · Semanal", L10n.WindowName(es.Windows[1])); L10n.SetLanguage("en"); Equal("Codex · Session", L10n.WindowName(es.Windows[0]));
         });
         Test("Legacy cached labels translate without changing provider identity", () =>
         {
             L10n.SetLanguage("en"); var window = new LimitWindow("Custom provider · Semanal", 32, null, 604800, "provider:604800");
-            Equal("Custom provider · Weekly", L10n.WindowName(window)); Equal("provider:604800", window.Id);
-            Equal("Local log", L10n.SourceName("Registro local"));
+            Equal("Custom provider · Weekly", L10n.WindowName(window)); Equal("provider:604800", window.Id); Equal("Local log", L10n.SourceName("Registro local"));
         });
         Test("External names and values remain untouched", () =>
         {
@@ -108,16 +89,14 @@ internal static class Program
         Test("Costs and token totals are invariant across languages", () =>
         {
             var e = new UsageEvent(Stamp, "gpt-5.6-sol", new(200000, 0, 100000, 0, 300000)); var catalog = PriceCatalog.Load();
-            L10n.SetLanguage("en"); var en = UsageSummary.Group([e], catalog).Single();
-            L10n.SetLanguage("es"); var es = UsageSummary.Group([e], catalog).Single();
+            L10n.SetLanguage("en"); var en = UsageSummary.Group([e], catalog).Single(); L10n.SetLanguage("es"); var es = UsageSummary.Group([e], catalog).Single();
             Equal(2.8m, en.KnownCost); Equal(en.KnownCost, es.KnownCost); Equal(300000L, es.Total); Equal(en.Qualified, es.Qualified);
             Require(en.PricingNotes.StartsWith("API promotion") && es.PricingNotes.StartsWith("Promoción API"), "Promotion not localized");
         });
         Test("CSV schema and numerical columns stay invariant", () =>
         {
             var e = new UsageEvent(Stamp, "gpt-reserve", new(1000, 0, 100, 0, 1100)); var c = PriceCatalog.Load();
-            L10n.SetLanguage("en"); string en = CsvExport.Build([e], c, TimeZoneInfo.Utc);
-            L10n.SetLanguage("es"); string es = CsvExport.Build([e], c, TimeZoneInfo.Utc);
+            L10n.SetLanguage("en"); string en = CsvExport.Build([e], c, TimeZoneInfo.Utc); L10n.SetLanguage("es"); string es = CsvExport.Build([e], c, TimeZoneInfo.Utc);
             Equal(en.Split('\n')[0], es.Split('\n')[0]); Equal(en.Split('\n')[1].Split(',')[6], es.Split('\n')[1].Split(',')[6]);
             Require(en.Contains("Inherited OpenUsage alias") && es.Contains("Equivalencia heredada"), "CSV notes not localized");
         });
@@ -138,28 +117,21 @@ internal static class Program
         });
         Test("Independent application version is used in About", () =>
         {
-            Equal("1.1.0", AppVersion.Value);
-            foreach (var code in new[] { "en", "es" }) { L10n.SetLanguage(code); var about = L10n.F("About", AppVersion.Value); Require(about.Contains("AIUsage 1.1.0") && about.Contains("OpenUsage") && !about.Contains("v0.7.12"), "About conflates versions"); }
+            Equal("1.1.1", AppVersion.Value);
+            foreach (var code in new[] { "en", "es" }) { L10n.SetLanguage(code); var about = L10n.F("About", AppVersion.Value); Require(about.Contains("AIUsage 1.1.1") && about.Contains("OpenUsage") && !about.Contains("v0.7.12"), "About conflates versions"); }
         });
         Test("Concurrent localized reads return complete strings", () =>
         {
-            Parallel.For(0, 1000, i =>
-            {
-                L10n.SetLanguage(i % 2 == 0 ? "en" : "es");
-                string text = L10n.F("ResetDays", 2, 5);
-                Require(text is "Resets in 2 d 5 h" or "Reinicio en 2 d 5 h", "Mixed locale template");
-            });
+            Parallel.For(0, 1000, i => { L10n.SetLanguage(i % 2 == 0 ? "en" : "es"); string text = L10n.F("ResetDays", 2, 5); Require(text is "Resets in 2 d 5 h" or "Reinicio en 2 d 5 h", "Mixed locale template"); });
         });
-        L10n.SetLanguage("en");
-        Console.WriteLine($"RESULT: {passed} passed; {failed} failed."); return failed == 0 ? 0 : 1;
+        L10n.SetLanguage("en"); Console.WriteLine($"RESULT: {passed} passed; {failed} failed."); return failed == 0 ? 0 : 1;
     }
     private static void WithTemp(Action<string> test)
     {
-        string root = Path.Combine(Path.GetTempPath(), "AIUsage-i18n-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(root); try { test(Path.Combine(root, "synthetic.json")); } finally { Directory.Delete(root, true); }
+        string root = Path.Combine(Path.GetTempPath(), "AIUsage-i18n-" + Guid.NewGuid().ToString("N")); Directory.CreateDirectory(root);
+        try { test(Path.Combine(root, "synthetic.json")); } finally { Directory.Delete(root, true); }
     }
-    private static void Test(string name, Action test)
-    { try { test(); passed++; Console.WriteLine("PASS " + name); } catch (Exception e) { failed++; Console.WriteLine("FAIL " + name + ": " + e.Message); } }
+    private static void Test(string name, Action test) { try { test(); passed++; Console.WriteLine("PASS " + name); } catch (Exception e) { failed++; Console.WriteLine("FAIL " + name + ": " + e.Message); } }
     private static void Require(bool ok, string message) { if (!ok) throw new InvalidOperationException(message); }
     private static void Equal<T>(T expected, T actual) { if (!EqualityComparer<T>.Default.Equals(expected, actual)) throw new InvalidOperationException($"Expected {expected}; got {actual}"); }
 }

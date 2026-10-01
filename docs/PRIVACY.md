@@ -1,31 +1,35 @@
-# Privacy and local data — 1.1.0
+# Privacy and local data — 1.1.1
 
-AIUsage is local-only. The authenticated client from older versions was removed from source; it is not hidden behind a default-off checkbox. There is no API, OAuth, app-server, cookie or credential-store integration, no analytics, no uploads and no automatic update check. It does not read `auth.json`, launch Codex or call another AI. It never changes the original Codex files or configuration.
+AIUsage is local-only. The authenticated client was deleted in 1.1.0; there is no OAuth, API-key, app-server, cookie or credential-store integration. No analytics, upload, automatic update check or model call is implemented. It does not read auth.json, launch Codex or modify original Codex logs/configuration.
 
 ## Inputs and storage
 
-Only user-accessible, resident local JSONL logs are read. Content is transiently processed to identify accounting/session metadata; conversation, image and tool-result content is not persisted. Keep logs from other people out of the selected folder unless you have the necessary authority to process them.
+Resident local JSONL rollouts are read to identify usage/session metadata. Conversation, image and tool-result content is transient, not cached. Direct-folder fallback accepts only rollout-*.jsonl; history.jsonl is excluded even inside sessions directories. Use only records you are authorized to process.
 
-AIUsage stores its own settings, optional price overrides and metadata cache in `%LOCALAPPDATA%\AIUsage`. Cache data includes timestamps, model names, tokens, service tiers, counters, parser/session state and recorded limits. Recognized account identifiers from log metadata are hashed to separate local quotas; these are correlatable pseudonyms, **not anonymity**. Activity history is private even without conversation text. Users control local files and should protect them with appropriate OS access controls.
+Settings, optional price overrides and metadata cache live under `%LOCALAPPDATA%\AIUsage`. The cache includes timestamps, models, tokens, tiers, counters, parser/session state, plain session IDs and recorded limits. Recognized account identifiers are hashed into correlatable pseudonyms, **not guaranteed anonymity**. Protect activity data with suitable OS controls. No collection server or AIUsage account exists.
 
-There is no application account or collection server. This does not make every use of local data exempt from privacy law. Workplace deployment, shared logs, redistribution or commercialization may require additional analysis of the actual processing and jurisdiction.
+Schema 5 checkpoints use compact streamed JSON manifests and immutable event pages. Every file shares a 32 MiB read/write limit; a missing/corrupt page invalidates the entire checkpoint and triggers reconstruction from accessible originals. Events and total cache storage remain proportional to the history. Cache housekeeping does not promise a precise legal retention deadline.
 
-The working history is bounded by the scanner's current time window; cache maintenance does not promise an exact legal retention deadline. A user can clear the reading cache in Settings. To remove all AIUsage activity/settings/exports, exit the app and delete `%LOCALAPPDATA%\AIUsage`. To uninstall, also delete the extracted app folder. No original Codex file needs to be deleted.
+CSV exports occur only on command in the local exports subfolder. They contain day/model aggregates and pricing qualifications, not conversations or credentials. Text cells are formula-escaped. User notes are preserved and may contain personal data; inspect before sharing. No export is automatically opened or uploaded. Prices are edited and validated inside AIUsage; no external editor or shell dialog is launched.
 
-## User actions
+## Settings and upgrade
 
-CSV exports are created only on command, under AIUsage's local `exports` subfolder with a unique filename. They contain day/model aggregates and pricing qualifications, not conversations or credentials. Text cells are escaped against spreadsheet formulas. Notes supplied by the user are preserved and may themselves contain personal data: review before sharing an export. No file is opened or uploaded automatically.
+Supported settings are read before attempting to remove the legacy OnlineQuota field. That migration can write AIUsage's settings automatically. A write failure preserves the selected folder and supported in-memory preferences with a warning. Unreadable/corrupt settings pause scanning until explicit folder confirmation; no default source is silently substituted. A missing file on first use still permits the documented default source.
 
-The built-in price editor validates JSON before replacing the local overrides file. There are no browser links, external editor/file-manager launchers or shell file pickers in the application. URLs in bundled pricing, license and documentation files are source references only; opening them separately is the user's action.
+The new local-only mutex namespace never silently activates a program holding the legacy namespace. It shows a warning and exits without signalling or killing that program. A previously running older executable is not changed by downloading a new release. Exit it and update shortcuts.
 
-Migration discards the former OnlineQuota setting, including true values, and preserves supported preferences. If settings cannot be read or rewritten, safe local-only defaults are used. The removed client cannot be restored by any old setting. Exit the old executable before starting the new one; an already-running older version is not changed by downloading this release.
+## Runtime-owned and OS behavior
 
-## Filesystem and operating-system boundary
+The self-contained folder loads native libraries beside the app rather than self-extracting a bundle to `%TEMP%\.net\AIUsage`. Older releases can have left that AIUsage-specific cache. After exiting all versions, it may be deleted separately; do not remove other applications' `.net` directories.
 
-Network/UNC/WSL paths, mapped network drives, device paths, reparse points (including links/junctions) and nonresident remote-storage files are rejected or skipped. Source files are opened with FileAccess.Read; AIUsage writes only its own settings/cache/prices/exports and explicit synthetic-test output. Do not place these locations inside cloud-sync or network-backed storage for an offline workflow.
+The standard .NET local diagnostics IPC channel can exist subject to OS permissions. It is not disabled by this release and is not an Internet client. `System.StartupHookProvider.IsSupported` is false in the shipped runtimeconfig. These settings do not stop an attacker who can replace binaries/configuration or control the OS. No system-wide security/environment setting is modified.
 
-These checks are not an OS firewall or hostile-filesystem sandbox. Storage drivers, Windows, antivirus, SmartScreen, backups or cloud-sync software may communicate independently. Attribute checks cannot defeat all filesystem races or detect every third-party virtualization scheme. No zero-network guarantee is made for the entire computer.
+Network/UNC/WSL paths, mapped drives, device paths, links/junctions and nonresident remote-storage files are rejected or skipped. This is best-effort application enforcement, not a firewall or hostile-filesystem sandbox. Windows, antivirus, storage drivers, backup and cloud-sync programs may create files or communicate independently. Avoid cloud-sync/network-backed locations for strict offline use. Not every filesystem race or virtualization scheme is detected.
 
-## Verification limits
+## Verification and removal
 
-Source and application-owned assembly guards reject network APIs, credential readers, subprocesses, dynamic assembly loading and non-allowlisted native imports. Tests use only synthetic fixtures, including inaccessible credentials/configuration. The offline test runner observes .NET HTTP/socket/DNS start events during its own synthetic operations; it is not an external packet capture. Bundled .NET/WPF libraries contain framework functionality that the app does not invoke. Build/restore/license/release scripts use the internet but are not run by the installed application.
+Tests inspect our actual published assemblies and source, exercise synthetic locked credentials, original-file hashes, settings recovery, export and pricing, and operate the x64 executable through its ordinary entry point and timers. The offline runner observes .NET network-start events in its own process; it is not external tracing of WPF or proof that no failed file open was attempted. The fixed, source-pinned theme stylesheet is parsed from an embedded constant, never external XAML. Build/restore/license/publication tools use the internet, separately from the installed app.
+
+Choose Exit, remove the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage` to uninstall and remove its activity metadata. Settings → Rebuild reading cache removes only AIUsage cache JSON. Original Codex data must not be deleted. OS/security caches and previous runtime extraction remnants require separate consideration.
+
+Local processing does not remove every legal or contractual obligation, particularly for workplace/shared logs or commercialization. No provider approval, anonymity guarantee, legal certification or account-enforcement guarantee is made.
