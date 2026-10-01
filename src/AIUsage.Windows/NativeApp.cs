@@ -29,7 +29,15 @@ public sealed class NativeApp : Application
         app.DispatcherUnhandledException += (_, e) =>
         {
             e.Handled = true;
-            if (!args.Contains("--smoke-test")) MessageBox.Show("AIUsage no pudo continuar (" + e.Exception.GetType().Name + "). No se han enviado datos.", "AIUsage");
+            if (!args.Contains("--smoke-test")) MessageBox.Show("AIUsage no pudo continuar (" + e.Exception.GetType().Name + ").", "AIUsage");
+            else
+            {
+                int index = Array.IndexOf(args, "--smoke-test");
+                string folder = index + 1 < args.Length ? args[index + 1] : "artifacts";
+                try { Directory.CreateDirectory(folder); File.WriteAllText(Path.Combine(folder, "ui-smoke-error.txt"), e.Exception.ToString()); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
             app.Shutdown(1);
         };
         return app.Run();
@@ -38,16 +46,18 @@ public sealed class NativeApp : Application
     {
         bool smoke = args.Contains("--smoke-test");
         bool demo = smoke || args.Contains("--demo");
+        string instanceName = demo ? @"Local\AIUsage.Windows.Demo.Instance" : @"Local\AIUsage.Windows.Instance";
+        string eventName = demo ? @"Local\AIUsage.Windows.Demo.Show" : @"Local\AIUsage.Windows.Show";
         if (!smoke)
         {
-            instance = new Mutex(true, @"Local\AIUsage.Windows.Instance", out bool first);
+            instance = new Mutex(true, instanceName, out bool first);
             if (!first)
             {
-                try { using var signal = EventWaitHandle.OpenExisting(@"Local\AIUsage.Windows.Show"); signal.Set(); }
+                try { using var signal = EventWaitHandle.OpenExisting(eventName); signal.Set(); }
                 catch (WaitHandleCannotBeOpenedException) { MessageBox.Show("AIUsage ya está abierto. Busca su icono junto al reloj.", "AIUsage"); }
                 Shutdown(); return;
             }
-            showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, @"Local\AIUsage.Windows.Show");
+            showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, eventName);
         }
         Theme.Apply(false);
         panel = new MainWindow(demo, () => Shutdown());
@@ -60,11 +70,12 @@ public sealed class NativeApp : Application
             panel.Width = 560; panel.Height = 940; panel.MaxHeight = double.PositiveInfinity;
             panel.Show();
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+            await panel.VerifyDemoRefreshAsync();
             Capture(panel, Path.Combine(folder, "AIUsage-dark-demo.png"));
             panel.ChangeTheme(true);
             await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
             Capture(panel, Path.Combine(folder, "AIUsage-light-demo.png"));
-            File.WriteAllText(Path.Combine(folder, "ui-smoke-ok.txt"), "WPF window, dark/light layouts and synthetic dashboard rendered successfully. No credentials read.\n");
+            File.WriteAllText(Path.Combine(folder, "ui-smoke-ok.txt"), "WPF window, dark/light layouts, scroll/focus preservation and synthetic dashboard rendered successfully. No credentials read.\n");
             Shutdown(); return;
         }
         icon = MakeIcon();

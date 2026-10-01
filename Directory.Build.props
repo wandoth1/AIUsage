@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>14.0</LangVersion>
     <Deterministic>true</Deterministic>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>AIUsage contributors</Authors>
     <RepositoryUrl>https://github.com/wandoth1/AIUsage</RepositoryUrl>
     <DebugType>embedded</DebugType>

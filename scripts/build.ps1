@@ -8,6 +8,8 @@ Push-Location $root
 try {
     dotnet run --project tests/AIUsage.Tests/AIUsage.Tests.csproj -c Release
     if ($LASTEXITCODE -ne 0) { throw 'Regression tests failed.' }
+    dotnet run --project tests/AIUsage.AuditTests -c Release
+    if ($LASTEXITCODE -ne 0) { throw 'Audit regression tests failed.' }
     $out = Join-Path $root "artifacts/publish/$Runtime"
     dotnet publish src/AIUsage.Windows/AIUsage.Windows.csproj -c Release -r $Runtime --self-contained true -o $out -p:ContinuousIntegrationBuild=true
     if ($LASTEXITCODE -ne 0) { throw 'Publish failed.' }

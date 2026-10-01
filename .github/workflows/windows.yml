@@ -11,15 +11,17 @@ permissions:
 
 concurrency:
   group: windows-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '10.0.x'
       - name: Synthetic regression tests
@@ -33,6 +35,16 @@ jobs:
         run: |
           dotnet run --project tests/AIUsage.AuditTests -c Release 2>&1 | Tee-Object artifacts/audit-tests.txt
           if ($LASTEXITCODE -ne 0) { throw 'Audit regression tests failed.' }
+      - name: Reject silent dotnet test success
+        shell: pwsh
+        run: |
+          foreach ($project in @('AIUsage.Tests', 'AIUsage.AuditTests')) {
+            $output = & dotnet test "tests/$project" -c Release 2>&1 | Out-String
+            $code = $LASTEXITCODE
+            $output | Add-Content artifacts/test-runner-guard.txt
+            if ($code -eq 0 -or $output -notmatch 'AIU0001') { throw "Missing executable-runner guard for $project" }
+          }
+          $global:LASTEXITCODE = 0
       - name: Build native Windows UI
         shell: pwsh
         run: |
@@ -63,20 +75,35 @@ jobs:
         run: |
           $version = (Get-Content VERSION -Raw).Trim()
           if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version.' }
+          $tag = (Get-Content RELEASE_TAG -Raw).Trim()
+          if ($tag -notmatch ('^v' + [regex]::Escape($version) + '(-r[0-9]+)?$')) { throw 'Tag/version mismatch.' }
+          $packageVersion = $tag.Substring(1)
+          $sourceVersion = ([xml](Get-Content Directory.Build.props -Raw)).Project.PropertyGroup.Version
+          if ($sourceVersion -ne $version) { throw 'Assembly/package version mismatch.' }
           New-Item -ItemType Directory -Force artifacts/release | Out-Null
           foreach ($rid in @('win-x64', 'win-arm64')) {
             $notices = Get-ChildItem "artifacts/publish/$rid/runtime-notices" -File -Filter '*.TXT'
             if ($notices.Count -ne 6) { throw "Runtime notices missing for $rid" }
-            Compress-Archive -Path "artifacts/publish/$rid/*" -DestinationPath "artifacts/release/AIUsage-$version-$rid.zip" -CompressionLevel Optimal
+            Compress-Archive -Path "artifacts/publish/$rid/*" -DestinationPath "artifacts/release/AIUsage-$packageVersion-$rid.zip" -CompressionLevel Optimal
           }
           Copy-Item artifacts/screenshots/*.png artifacts/release
-          Copy-Item artifacts/regression-tests.txt artifacts/release
+          Copy-Item artifacts/regression-tests.txt, artifacts/audit-tests.txt, artifacts/test-runner-guard.txt artifacts/release
+          @{
+            repository = $env:GITHUB_REPOSITORY
+            commit = $env:GITHUB_SHA
+            run_id = $env:GITHUB_RUN_ID
+            version = $version
+            release_tag = $tag
+            dotnet_sdk = (& dotnet --version)
+            runner_os = $env:RUNNER_OS
+            runtime_validation = 'x64 WPF synthetic smoke; ARM64 cross-compiled only'
+          } | ConvertTo-Json | Set-Content artifacts/release/BUILD-INFO.json -Encoding utf8NoBOM
           Get-ChildItem artifacts/release -File | Sort-Object Name | ForEach-Object {
             $hash = Get-FileHash $_.FullName -Algorithm SHA256
             "$($hash.Hash.ToLowerInvariant())  $($_.Name)"
           } | Set-Content artifacts/release/SHA256SUMS.txt -Encoding utf8NoBOM
       - name: Upload release files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: windows-release
           path: artifacts/release/*
@@ -84,12 +111,13 @@ jobs:
           retention-days: 30
       - name: Upload diagnostics (synthetic only)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-diagnostics
           path: |
             artifacts/regression-tests.txt
             artifacts/audit-tests.txt
+            artifacts/test-runner-guard.txt
             artifacts/screenshots/*
           if-no-files-found: ignore
           retention-days: 14
@@ -102,8 +130,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: windows-release
           path: release-files

@@ -32,17 +32,23 @@ public sealed class AppSettings
 
 public static class AtomicJson
 {
+    // Windows replacement renames can conflict even with distinct temporary files.
+    // Serialize in-process writers; unique temp names also avoid cross-process temp collisions.
+    private static readonly object WriteGate = new();
     public static void Write<T>(string path, T value)
     {
-        path = Path.GetFullPath(path);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
-        try
+        lock (WriteGate)
         {
-            File.WriteAllText(temp, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
-            File.Move(temp, path, true);
+            path = Path.GetFullPath(path);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            string temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(temp, JsonSerializer.Serialize(value, new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
+                File.Move(temp, path, true);
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
         }
-        finally { if (File.Exists(temp)) File.Delete(temp); }
     }
 }
 

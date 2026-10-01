@@ -19,7 +19,7 @@ using Forms = System.Windows.Forms;
 
 namespace AIUsage.Windows;
 
-public sealed class MainWindow : Window
+public sealed partial class MainWindow : Window
 {
     private readonly bool demo;
     private readonly Action exit;
@@ -32,8 +32,11 @@ public sealed class MainWindow : Window
     private LogScanner scanner;
     private ScanResult scan = new([], [], 0, 0, DateTimeOffset.Now);
     private QuotaSnapshot? live;
-    private DateTimeOffset lastOnlineAttempt = DateTimeOffset.MinValue;
-    private string error = "", pricingError = "";
+    private DashboardData dashboard = new(new(), new());
+    private ScrollViewer? currentScroll;
+    private int lastBuiltPeriod;
+    private bool lastBuiltSettings;
+    private string error = "", pricingError = "", settingsError = "";
     private bool busy, settingsView, stopped;
     private int period = 1;
     private TextBlock? status;
@@ -52,11 +55,11 @@ public sealed class MainWindow : Window
         {
             try { settings = AppSettings.Load(SettingsPath); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException)
-            { error = "No se pudieron leer los ajustes. Se usan los valores por defecto; el archivo original no se ha sobrescrito."; }
+            { settingsError = "No se pudieron leer los ajustes. Se usan los valores por defecto; el archivo original no se ha sobrescrito."; }
         }
         scanner = new LogScanner(Path.Combine(dataDir, "cache"));
         Theme.Apply(settings.LightTheme);
-        if (demo) CreateDemo();
+        if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
         Build();
         Closing += (_, e) => { if (!stopped) { e.Cancel = true; Hide(); } };
         KeyDown += (_, e) => { if (e.Key == Key.Escape) Hide(); };
@@ -83,20 +86,21 @@ public sealed class MainWindow : Window
             { pricingError = "No se han aplicado los precios personalizados: revisa price-overrides.json. Se mantiene el último catálogo válido."; }
             string home = settings.ResolveHome();
             scan = await Task.Run(() => scanner.Scan(home, cancellation.Token), cancellation.Token);
+            dashboard = await Task.Run(() => DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)), cancellation.Token);
             error = "";
-            if (settings.OnlineQuota && DateTimeOffset.Now - lastOnlineAttempt >= TimeSpan.FromSeconds(60))
+            if (settings.OnlineQuota && DateTimeOffset.UtcNow >= client.NextAllowedAt)
             {
-                lastOnlineAttempt = DateTimeOffset.Now;
+                live = null; // A failed request must not keep limits from a former account.
                 try { live = await client.ReadAsync(home, cancellation.Token); }
                 catch (InvalidOperationException ex) { error = ex.Message; }
                 catch (OperationCanceledException) when (!cancellation.IsCancellationRequested) { error = "La consulta online ha agotado el tiempo de espera. Los datos locales siguen disponibles."; }
-                catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or IOException or UnauthorizedAccessException or JsonException)
-                { error = "No se pudieron consultar los límites de la cuenta (" + ex.GetType().Name + "). Se conservan los datos anteriores con su fecha."; }
+                catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or IOException or UnauthorizedAccessException or JsonException or FormatException)
+                { error = "No se pudieron consultar los límites de la cuenta (" + ex.GetType().Name + "). No se reutilizan cuotas online anteriores; los registros locales conservan su origen y fecha."; }
             }
-            var today = UsageSummary.Between(scan.Events, DateOnly.FromDateTime(DateTime.Today), DateOnly.FromDateTime(DateTime.Today), TimeZoneInfo.Local);
-            var rows = UsageSummary.Group(today, prices);
+            if (!settings.OnlineQuota) live = null;
+            var rows = dashboard.ForPeriod(1);
             string amount = rows.Any(r => r.Unpriced > 0) ? "coste parcial" : UsageSummary.Dollars(rows.Sum(r => r.KnownCost));
-            UsageChanged?.Invoke(today.Count == 0 ? "AIUsage · Hoy: sin datos locales" : $"AIUsage · Hoy {amount} · {UsageSummary.Compact(rows.Sum(r => r.Total))} tokens");
+            UsageChanged?.Invoke(rows.Sum(r => r.Events) == 0 ? "AIUsage · Hoy: sin datos locales" : $"AIUsage · Hoy {amount} · {UsageSummary.Compact(rows.Sum(r => r.Total))} tokens");
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
@@ -112,6 +116,10 @@ public sealed class MainWindow : Window
     }
     private void Build()
     {
+        bool sameView = lastBuiltPeriod == period && lastBuiltSettings == settingsView;
+        double offset = sameView ? currentScroll?.VerticalOffset ?? 0 : 0;
+        string? focusedButton = sameView && Keyboard.FocusedElement is Button oldButton ? oldButton.Content as string : null;
+        lastBuiltPeriod = period; lastBuiltSettings = settingsView;
         Background = Theme.Brush("Page"); Foreground = Theme.Brush("Ink");
         var grid = new Grid();
         foreach (var h in new[] { GridLength.Auto, GridLength.Auto, new GridLength(1, GridUnitType.Star), GridLength.Auto }) grid.RowDefinitions.Add(new RowDefinition { Height = h });
@@ -136,6 +144,7 @@ public sealed class MainWindow : Window
         }
         Grid.SetRow(nav, 1); grid.Children.Add(nav);
         var scroll = new ScrollViewer { VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, Padding = new Thickness(22, 0, 16, 12) };
+        currentScroll = scroll;
         scroll.Content = settingsView ? SettingsPanel() : Dashboard();
         Grid.SetRow(scroll, 2); grid.Children.Add(scroll);
         var footer = new StackPanel { Margin = new Thickness(22, 10, 22, 15) };
@@ -149,106 +158,41 @@ public sealed class MainWindow : Window
         status.Margin = new Thickness(0, 10, 0, 0); footer.Children.Add(status);
         Grid.SetRow(footer, 3); grid.Children.Add(footer);
         Content = new Border { BorderBrush = Theme.Brush("Line"), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Child = grid };
+        // Rebuilding the visual tree must not throw the reader back to the top on every refresh.
+        scroll.Loaded += (_, _) =>
+        {
+            scroll.ScrollToVerticalOffset(offset);
+            if (focusedButton is not null) FindButton(grid, focusedButton)?.Focus();
+        };
     }
-    private StackPanel Dashboard()
+    internal async Task VerifyDemoRefreshAsync()
     {
-        var body = new StackPanel();
-        var selected = Selected(); var rows = UsageSummary.Group(selected, prices);
-        decimal cost = rows.Sum(r => r.KnownCost);
-        int unpriced = rows.Sum(r => r.Unpriced);
-        long total = rows.Sum(r => r.Total), input = rows.Sum(r => r.Input), cached = rows.Sum(r => r.Cached);
-        string label = period switch { -1 => "AYER", 7 => "ÚLTIMOS 7 DÍAS", 30 => "ÚLTIMOS 30 DÍAS", _ => "HOY" };
-        var hero = new StackPanel();
-        hero.Children.Add(Text(label + " · COSTE API ESTIMADO", 10, false, "Muted"));
-        hero.Children.Add(Text(selected.Count == 0 ? "Sin datos" : (unpriced > 0 ? "≥ " : "") + UsageSummary.Dollars(cost), 40, true));
-        hero.Children.Add(Text(selected.Count == 0 ? "Abre Codex y realiza una petición, o revisa la carpeta en Ajustes." :
-            $"{UsageSummary.Compact(total)} tokens  ·  {selected.Count:N0} registros de uso", 13, false, "Muted"));
-        if (input > 0)
-        {
-            var cache = Text($"{100d * cached / input:0.#}% de la entrada reutilizada desde caché", 12, false, "Accent");
-            cache.Margin = new Thickness(0, 12, 0, 0); hero.Children.Add(cache);
-        }
-        var note = Text("No es un cargo de tu suscripción ni una factura de OpenAI.", 11, false, "Muted"); note.Margin = new Thickness(0, 12, 0, 0); hero.Children.Add(note);
-        body.Children.Add(Card(hero));
-        if (unpriced > 0) body.Children.Add(Notice($"Coste parcial: {unpriced} registros sin tarifa conocida. Sus tokens sí están incluidos; no se les asigna un precio inventado."));
-        if (scan.Warnings > 0) body.Children.Add(Notice($"Lectura posiblemente incompleta: {scan.Warnings} incidencias en archivos, registros o carpetas. No se han sustituido por consumo cero."));
-        if (error.Length > 0) body.Children.Add(Notice(error));
-        if (pricingError.Length > 0) body.Children.Add(Notice(pricingError));
-        body.Children.Add(QuotaCard());
-        var models = new StackPanel();
-        bool byCost = unpriced == 0 && cost > 0;
-        models.Children.Add(Heading("POR MODELO", byCost ? "% del coste estimado" : "% de tokens"));
-        if (rows.Count == 0) models.Children.Add(Text("Todavía no hay registros en este periodo.", 12, false, "Muted"));
-        foreach (var row in rows)
-        {
-            var item = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
-            var line = new DockPanel();
-            var amount = Text(row.Unpriced > 0 ? (row.KnownCost > 0 ? "≥ " + UsageSummary.Dollars(row.KnownCost) : "Sin tarifa") : UsageSummary.Dollars(row.KnownCost), 15, true);
-            DockPanel.SetDock(amount, Dock.Right); line.Children.Add(amount);
-            var model = Text(row.Model, 15, true); model.TextTrimming = TextTrimming.CharacterEllipsis; model.TextWrapping = TextWrapping.NoWrap;
-            model.ToolTip = row.Model; model.Margin = new Thickness(0, 0, 12, 0); line.Children.Add(model); item.Children.Add(line);
-            double share = byCost ? (double)(row.KnownCost / cost * 100) : total > 0 ? (double)row.Total / total * 100 : 0;
-            item.Children.Add(Heading($"{share:0.#}%", $"{UsageSummary.Compact(row.Total)} tokens"));
-            var bar = Progress(share, "Accent");
-            bar.ToolTip = $"Entrada: {row.Input:N0}\nCaché (incluida en entrada): {row.Cached:N0}\nSalida: {row.Output:N0}\nRegistros: {row.Events:N0}";
-            item.Children.Add(bar); models.Children.Add(item);
-        }
-        body.Children.Add(Card(models));
-        body.Children.Add(Trend());
-        body.Children.Add(Text($"Tarifas: {PriceCatalog.SnapshotDate}{(prices.HasOverrides ? " + personalizadas" : "")}. Costes teóricos con ese catálogo; no reconstruyen promociones, cargos por herramientas ni recargos regionales. Días en {TimeZoneInfo.Local.DisplayName}.", 10, false, "Muted"));
-        return body;
+        if (!demo) throw new InvalidOperationException("UI regression checks require synthetic demo mode.");
+        double originalHeight = Height; Height = 420;
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        currentScroll!.ScrollToEnd();
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        double expected = currentScroll.VerticalOffset;
+        if (expected <= 0) throw new InvalidOperationException("The UI test did not create scrollable content.");
+        FindButton((DependencyObject)Content, "Actualizar")!.Focus();
+        Build();
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+        if (Math.Abs(currentScroll!.VerticalOffset - expected) > 1)
+            throw new InvalidOperationException("Refresh lost the scroll position.");
+        if (Keyboard.FocusedElement is not Button b || !Equals(b.Content, "Actualizar"))
+            throw new InvalidOperationException("Refresh lost keyboard focus.");
+        Height = originalHeight; currentScroll.ScrollToTop();
+        await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
     }
-    private Border QuotaCard()
+    private static Button? FindButton(DependencyObject parent, string text)
     {
-        var content = new StackPanel();
-        content.Children.Add(Heading("LÍMITES DE CODEX", live?.Plan ?? (settings.OnlineQuota ? "Cuenta + registros" : "Registros locales")));
-        var snapshots = scan.Quotas.ToList(); if (live is not null) snapshots.Add(live);
-        var windows = snapshots.SelectMany(q => q.Windows.Select(w => (Snapshot: q, Window: w)))
-            .GroupBy(x => x.Window.Name).Select(g => g.OrderByDescending(x => x.Snapshot.At).First()).OrderBy(x => x.Window.Name).ToList();
-        if (windows.Count == 0)
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
         {
-            content.Children.Add(Text("Sin información de límites todavía.", 13, false, "Muted"));
-            content.Children.Add(Text("Los logs pueden incluirlos. La consulta online se activa por separado en Ajustes.", 11, false, "Muted"));
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is Button button && Equals(button.Content, text)) return button;
+            var nested = FindButton(child, text); if (nested is not null) return nested;
         }
-        foreach (var item in windows.Take(8))
-        {
-            var w = item.Window; var q = item.Snapshot;
-            var row = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
-            row.Children.Add(Heading(w.Name, $"{w.UsedPercent:0.#}% usado"));
-            row.Children.Add(Progress(w.UsedPercent, w.UsedPercent >= 85 ? "Warning" : "Accent"));
-            string reset;
-            if (w.ResetAt is null) reset = "Reinicio no informado";
-            else if (w.ResetAt <= DateTimeOffset.Now) reset = "Reinicio vencido · pendiente de actualizar";
-            else
-            {
-                var remaining = w.ResetAt.Value - DateTimeOffset.Now;
-                reset = remaining.TotalDays >= 1 ? $"Reinicio en {(int)remaining.TotalDays} d {remaining.Hours} h" : $"Reinicio en {(int)remaining.TotalHours} h {remaining.Minutes} min";
-            }
-            var stamp = Text($"{reset}  ·  {q.Source}, {q.At.ToLocalTime():dd/MM HH:mm}", 10, false, "Muted");
-            stamp.ToolTip = w.ResetAt?.ToLocalTime().ToString("F"); stamp.Margin = new Thickness(0, 5, 0, 0); row.Children.Add(stamp);
-            content.Children.Add(row);
-        }
-        if (live?.Credits is not null) content.Children.Add(Text("Créditos informados: " + live.Credits, 11, false, "Muted"));
-        if (live?.ResetCredits is not null) content.Children.Add(Text("Reinicios disponibles: " + live.ResetCredits, 11, false, "Muted"));
-        return Card(content);
-    }
-    private Border Trend()
-    {
-        var panel = new StackPanel(); panel.Children.Add(Heading("ACTIVIDAD · 7 DÍAS", "tokens"));
-        var bars = new UniformGrid { Columns = 7, Margin = new Thickness(0, 10, 0, 0) };
-        var days = Enumerable.Range(0, 7).Select(i => DateOnly.FromDateTime(DateTime.Today).AddDays(i - 6)).ToArray();
-        long[] counts = days.Select(d => scan.Events.Where(e => UsageSummary.Day(e.At, TimeZoneInfo.Local) == d).Sum(e => e.Tokens.Total)).ToArray();
-        long max = Math.Max(1, counts.Max());
-        for (int i = 0; i < 7; i++)
-        {
-            var slot = new StackPanel { Margin = new Thickness(3, 0, 3, 0) };
-            var frame = new Grid { Height = 55 };
-            frame.Children.Add(new Border { Height = Math.Max(2, (double)counts[i] / max * 55), Background = Theme.Brush(i == 6 ? "Accent" : "Tint"), CornerRadius = new CornerRadius(3), VerticalAlignment = VerticalAlignment.Bottom, ToolTip = $"{days[i]:dd/MM}: {UsageSummary.Compact(counts[i])} tokens" });
-            slot.Children.Add(frame);
-            var day = Text(days[i].ToString("ddd", CultureInfo.GetCultureInfo("es-ES")), 10, false, "Muted"); day.HorizontalAlignment = HorizontalAlignment.Center;
-            slot.Children.Add(day); bars.Children.Add(slot);
-        }
-        panel.Children.Add(bars); return Card(panel);
+        return null;
     }
     private StackPanel SettingsPanel()
     {
@@ -267,6 +211,14 @@ public sealed class MainWindow : Window
         }));
         folders.Children.Add(Button("Datos de AIUsage", () => { if (!demo) { Directory.CreateDirectory(dataDir); Open(dataDir); } }));
         body.Children.Add(folders);
+        body.Children.Add(Button("Reconstruir caché de lectura", async () =>
+        {
+            if (demo || busy) return;
+            try { scanner.ClearCache(); settingsView = false; await RefreshAsync(); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            { MessageBox.Show(this, "No se pudo reconstruir la caché. Los registros originales no se han modificado.", "AIUsage"); }
+        }));
+        body.Children.Add(Text("Úsalo tras editar registros antiguos. Elimina solo la caché de AIUsage, no tus sesiones ni credenciales.", 10, false, "Muted"));
         body.Children.Add(Label("Actualizar cada N segundos (15–3600)"));
         var interval = new TextBox { Text = settings.RefreshSeconds.ToString(CultureInfo.InvariantCulture), MaxLength = 4 }; body.Children.Add(interval);
         var light = new CheckBox { Content = "Tema claro", IsChecked = settings.LightTheme }; body.Children.Add(light);
@@ -303,7 +255,9 @@ public sealed class MainWindow : Window
                 string resolved = next.ResolveHome();
                 if (next.CodexHome.Length > 0 && !Directory.Exists(resolved)) throw new InvalidOperationException("La carpeta indicada no existe o no es accesible.");
                 if (!demo) AtomicJson.Write(SettingsPath, next);
-                settings = next; live = null; lastOnlineAttempt = DateTimeOffset.MinValue;
+                settings = next; live = null; settingsError = "";
+                scan = new([], [], 0, 0, DateTimeOffset.Now); dashboard = new(new(), new());
+                if (demo) { CreateDemo(); dashboard = DashboardData.Create(scan.Events, prices, TimeZoneInfo.Local, DateOnly.FromDateTime(DateTime.Today)); }
                 scanner = new LogScanner(Path.Combine(dataDir, "cache"));
                 timer.Interval = TimeSpan.FromSeconds(seconds); settingsView = false;
                 ChangeTheme(settings.LightTheme); await RefreshAsync();
@@ -311,7 +265,7 @@ public sealed class MainWindow : Window
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "No se han aplicado los ajustes", MessageBoxButton.OK, MessageBoxImage.Warning); }
         });
         save.Background = Theme.Brush("Tint"); save.Foreground = Theme.Brush("Accent"); save.Margin = new Thickness(0, 20, 0, 14); body.Children.Add(save);
-        body.Children.Add(Text("AIUsage 0.1.0 · Port funcional parcial de OpenUsage v0.7.12, MIT. Esta versión integra Codex; no incluye los demás proveedores, pi ni OpenCode. Lee el historial accesible de la carpeta seleccionada, no todo el consumo cloud ni de otros equipos. No se añade al inicio de Windows.", 11, false, "Muted"));
+        body.Children.Add(Text("AIUsage 0.1.1 · Port funcional parcial de OpenUsage v0.7.12, MIT. Esta versión integra Codex; no incluye los demás proveedores, pi ni OpenCode. Lee el historial accesible de la carpeta seleccionada, no todo el consumo cloud ni de otros equipos. No se añade al inicio de Windows.", 11, false, "Muted"));
         return body;
     }
     private void Export()
