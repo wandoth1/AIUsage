@@ -1,4 +1,4 @@
-# Build and verification — 1.5.1
+# Build and verification — 1.5.2
 
 ## Requirements
 

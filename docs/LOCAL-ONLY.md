@@ -1,4 +1,4 @@
-# Local-only architecture and boundaries — 1.5.1
+# Local-only architecture and boundaries — 1.5.2
 
 The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserved that boundary and addressed the subsequent local-security audit; 1.2.0 kept it unchanged while adding metadata-only detection of the Codex data folder; 1.3.0 kept it unchanged while adding an optional, read-only Claude Code source; 1.4.0 keeps it unchanged while accepting Claude plan limits from Claude Code's documented status line, which Claude Code runs locally as `AIUsage.exe --claude-statusline` when the user configures it (see PRIVACY.md). AIUsage itself still creates no subprocess and has no network client. This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
 
