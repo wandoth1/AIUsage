@@ -17,7 +17,8 @@ public sealed record DashboardData(Dictionary<int, List<ModelSummary>> Periods, 
                 .GroupBy(r => r.Model, StringComparer.Ordinal).Select(g => new ModelSummary(g.Key,
                     g.Sum(r => r.Input), g.Sum(r => r.Cached), g.Sum(r => r.Output), g.Sum(r => r.Total),
                     g.Sum(r => r.KnownCost), g.Sum(r => r.Unpriced), g.Sum(r => r.Events), g.Sum(r => r.Qualified),
-                    string.Join(" | ", g.Select(r => r.PricingNotes).Where(n => n.Length > 0).Distinct())))
+                    string.Join(" | ", g.Select(r => r.PricingNotes).Where(n => n.Length > 0).Distinct()),
+                    EffortSummary.Merge(g.SelectMany(r => r.EffortRows))))
                 .OrderByDescending(r => r.KnownCost).ThenByDescending(r => r.Total).ToList();
         }
         return new(periods, totals);

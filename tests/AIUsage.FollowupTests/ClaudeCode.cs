@@ -164,7 +164,7 @@ internal static partial class Program
     private static UsageEvent Single(ScanResult scan) { Equal(1, scan.Events.Count); return scan.Events[0]; }
     private static string Claude(string id, string? request, string model, long input, long output, long read = 0, long w5 = 0, long w1 = 0,
         long? legacyWrite = null, string? speed = "standard", string? geo = null, bool sidechain = false, string version = "2.1.0",
-        object? iterations = null, string text = "synthetic answer", string session = "synthetic-session")
+        object? iterations = null, string text = "synthetic answer", string session = "synthetic-session", string? effort = null)
     {
         var usage = new Dictionary<string, object?> { ["input_tokens"] = input, ["output_tokens"] = output, ["cache_read_input_tokens"] = read, ["service_tier"] = "standard", ["inference_geo"] = geo ?? "not_available" };
         if (legacyWrite is { } write) usage["cache_creation_input_tokens"] = write;
@@ -179,6 +179,7 @@ internal static partial class Program
             ["type"] = "assistant", ["uuid"] = Guid.NewGuid().ToString(), ["timestamp"] = At.ToString("O")
         };
         if (request is not null) row["requestId"] = request;
+        if (effort is not null) row["effort"] = effort;
         return JsonSerializer.Serialize(row) + "\n";
     }
     private sealed class ClaudeHome : IDisposable

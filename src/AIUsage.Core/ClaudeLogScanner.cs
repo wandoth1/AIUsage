@@ -28,7 +28,7 @@ public sealed class ClaudeFileCache
 public sealed class ClaudeLogScanner(string cacheDirectory)
 {
     // Bump whenever parsing or deduplication semantics change.
-    public const int SchemaVersion = 2;
+    public const int SchemaVersion = 3;
     public const int MaxRecordBytes = 16 * 1024 * 1024;
     public const string UsInferenceSuffix = "@us";
     private readonly object sync = new();
@@ -209,7 +209,7 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
         {
             using var document = JsonDocument.Parse(bytes, new JsonDocumentOptions { MaxDepth = 256 });
             foreach (var entry in Parse(document.RootElement))
-                if (entry.Event.At >= since) cache.Entries.Add(entry with { Event = entry.Event with { Model = Reuse(entry.Event.Model), Tier = Reuse(entry.Event.Tier) } });
+                if (entry.Event.At >= since) cache.Entries.Add(entry with { Event = entry.Event with { Model = Reuse(entry.Event.Model), Tier = Reuse(entry.Event.Tier), Effort = entry.Event.Effort is { } effort ? Reuse(effort) : null } });
         }
         catch (JsonException) { cache.Warnings++; }
     }
@@ -236,7 +236,9 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
         if (!TryTokens(usage, usOnly, out var tokens, out var tier, out bool hasSpeed)) return result;
         bool sidechain = root.TryGetProperty("isSidechain", out var side) && side.ValueKind == JsonValueKind.True;
         string? digest = Digest(id), request = Digest(requestId), session = Digest(sessionId);
-        result.Add(new(digest, request, sidechain, hasSpeed, new UsageEvent(at, model, tokens, tier), session));
+        // Recent Claude Code versions record the reasoning effort of each response; advisor iterations do not.
+        string? effort = EffortSummary.Normalize(Text(root, "effort"));
+        result.Add(new(digest, request, sidechain, hasSpeed, new UsageEvent(at, model, tokens, tier, Effort: effort), session));
         if (!usage.TryGetProperty("iterations", out var iterations) || iterations.ValueKind != JsonValueKind.Array) return result;
         int advisor = 0;
         foreach (var iteration in iterations.EnumerateArray())
@@ -350,7 +352,7 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
     private void Intern(List<ClaudeEntry> entries)
     {
         for (int i = 0; i < entries.Count; i++)
-            entries[i] = entries[i] with { Event = entries[i].Event with { Model = Reuse(entries[i].Event.Model), Tier = Reuse(entries[i].Event.Tier) } };
+            entries[i] = entries[i] with { Event = entries[i].Event with { Model = Reuse(entries[i].Event.Model), Tier = Reuse(entries[i].Event.Tier), Effort = entries[i].Event.Effort is { } effort ? Reuse(effort) : null } };
     }
     private static readonly JsonSerializerOptions Compact = new() { WriteIndented = false };
     private static void Save(string path, ClaudeFileCache cache) =>
@@ -374,7 +376,7 @@ public sealed class ClaudeLogScanner(string cacheDirectory)
     {
         if (e?.Event?.Tokens is not { } t || e.Event.Model is not { Length: > 0 and <= 200 } model || model.Any(char.IsControl) ||
             e.Event.Tier is null || !Tiers.Contains(e.Event.Tier) || e.Event.SessionId is not null || e.Event.Cumulative is not null || e.Event.Sequence != 0 ||
-            !IsDigest(e.Id) || !IsDigest(e.Request) || !IsDigest(e.Session) || e.Event.At.Year < 2000 || e.Event.At > DateTimeOffset.Now.AddDays(1)) return false;
+            !IsDigest(e.Id) || !IsDigest(e.Request) || !IsDigest(e.Session) || (e.Event.Effort is { } effort && EffortSummary.Normalize(effort) != effort) || e.Event.At.Year < 2000 || e.Event.At > DateTimeOffset.Now.AddDays(1)) return false;
         if (t.Input < 0 || t.Cached < 0 || t.Output < 0 || t.Reasoning != 0 || t.CacheWrite < 0 || t.CacheWrite1h < 0 ||
             t.Cached > t.Input || t.CacheWrite > t.Input - t.Cached || t.CacheWrite1h > t.CacheWrite || t.Output > long.MaxValue - t.Input) return false;
         return t.Total == t.Input + t.Output;

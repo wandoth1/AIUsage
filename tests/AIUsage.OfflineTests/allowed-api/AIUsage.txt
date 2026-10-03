@@ -28,6 +28,7 @@ T AIUsage.Core.CodexFolder
 T AIUsage.Core.CodexFolderCheck
 T AIUsage.Core.CsvExport
 T AIUsage.Core.DashboardData
+T AIUsage.Core.EffortSummary
 T AIUsage.Core.InstancePolicy
 T AIUsage.Core.L10n
 T AIUsage.Core.LimitWindow

@@ -4,7 +4,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>14.0</LangVersion>
     <Deterministic>true</Deterministic>
-    <Version>1.4.1</Version>
+    <Version>1.5.0</Version>
     <Description>Local-only Windows port of OpenUsage for Codex token and estimated cost monitoring. No account access. English and Spanish UI.</Description>
     <Authors>AIUsage contributors</Authors>
     <RepositoryUrl>https://github.com/wandoth1/AIUsage</RepositoryUrl>
