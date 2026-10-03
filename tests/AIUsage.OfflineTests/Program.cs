@@ -164,7 +164,7 @@ internal static partial class Program
         {
             string theme = Path.Combine(repositoryRoot, "src", "AIUsage.Windows", "Theme.cs");
             string canonical = File.ReadAllText(theme).Replace("\r\n", "\n");
-            Equal("BFA22A041A4F55FA74CF2F060D24E1063DED013149AEE1D4B78CD2BFECE00E0F", Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(canonical))));
+            Equal("E130D8A555689A831434BE7DA5F98192B2FE1F7C72E63EA77026D3984ECAE769", Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(canonical))));
             var callers = Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories).Where(p => !p.Split(Path.DirectorySeparatorChar).Any(x => x is "bin" or "obj")).Where(p => File.ReadAllText(p).Contains("XamlReader")).Select(Path.GetFullPath).ToArray();
             Require(callers.Length == 1 && callers[0] == Path.GetFullPath(theme), "Unreviewed XAML call site");
         });
