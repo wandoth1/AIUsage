@@ -117,8 +117,8 @@ internal static class Program
         });
         Test("Independent application version is used in About", () =>
         {
-            Equal("1.5.1", AppVersion.Value);
-            foreach (var code in new[] { "en", "es" }) { L10n.SetLanguage(code); var about = L10n.F("About", AppVersion.Value); Require(about.Contains("AIUsage 1.5.1") && about.Contains("OpenUsage") && !about.Contains("v0.7.12"), "About conflates versions"); }
+            Equal("1.5.2", AppVersion.Value);
+            foreach (var code in new[] { "en", "es" }) { L10n.SetLanguage(code); var about = L10n.F("About", AppVersion.Value); Require(about.Contains("AIUsage 1.5.2") && about.Contains("OpenUsage") && !about.Contains("v0.7.12"), "About conflates versions"); }
         });
         Test("Concurrent localized reads return complete strings", () =>
         {

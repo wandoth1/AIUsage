@@ -9,6 +9,8 @@
     <AssemblyName>AIUsage</AssemblyName>
     <StartupObject>AIUsage.Windows.NativeApp</StartupObject>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Own artwork (scripts/make-icon.py): the same three bars the tray icon draws. -->
+    <ApplicationIcon>AIUsage.ico</ApplicationIcon>
     <PublishSingleFile>false</PublishSingleFile>
     <!-- Inspectable self-contained folder: no native-library extraction into TEMP. -->
     <StartupHookSupport>false</StartupHookSupport>
