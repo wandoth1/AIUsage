@@ -1,21 +1,31 @@
-# AIUsage 1.5.0 for Windows — cost by reasoning effort
+# AIUsage 1.5.1 for Windows — readable tooltips in the dark theme
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
+
+## Fixed
+
+- **Tooltips were unreadable in the dark theme** (light text on the light system tooltip background), most visibly the new cost-by-effort tooltip. Tooltips now use the theme's colours in both themes. The reviewed theme stylesheet gains one style; its pinned hash is updated accordingly.
+
+No accounting, privacy or security behaviour changed. Use `AIUsage-1.5.1-win-x64.zip` or `AIUsage-1.5.1-win-arm64.zip`; update the Claude Code status line path if it points to an older folder.
+
+## Included from 1.5.0: cost by reasoning effort
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged: no account client, credential reader, provider requests, model calls, updater or subprocess integration.
 
-## New
+### New
 
 - **Cost by reasoning effort.** Hovering over a model in the "By model" card shows its tokens, estimated cost and records per effort level, highest first (`max`, `ultra`, `xhigh`, `high`, `medium`, `low`), with "not recorded" for older logs. Works for Codex (effort from `turn_context` and thread settings, exactly like the model) and Claude Code (the `effort` recent versions write on each response).
 - Effort only changes how many tokens a request uses; prices per token are unchanged, and per-effort rows always add up to the model row.
 
-## Privacy
+### Privacy
 
 Effort is a setting already present in the same local records AIUsage reads; no new file, field of conversation content or network access is involved. Effort values are kept only if they are short lowercase identifiers.
 
-## Upgrade
+### Upgrade
 
 Use `AIUsage-1.5.0-win-x64.zip` or `AIUsage-1.5.0-win-arm64.zip`. The first start rebuilds the reading caches once so older events get their effort; this can take a little longer with large histories. If Claude Code's status line points to an older AIUsage folder, update its path.
 
-## Evidence and limits
+### Evidence and limits
 
 New regression tests cover Codex effort from turn_context, thread settings and collaboration mode, Claude effort with valid, invalid and missing values, cache validation, deduplication of identical copies and per-effort totals that add up to the model totals across a period. x64 execution uses synthetic data; ARM64 is compiled and inspected, not executed. Binaries remain unsigned.
 

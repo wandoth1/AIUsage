@@ -33,6 +33,7 @@ internal static class Theme
     </ControlTemplate></Setter.Value></Setter>
   </Style>
   <Style TargetType="TextBox"><Setter Property="Foreground" Value="{DynamicResource Ink}"/><Setter Property="Background" Value="{DynamicResource Raised}"/><Setter Property="BorderBrush" Value="{DynamicResource Line}"/><Setter Property="Padding" Value="10"/><Setter Property="FontSize" Value="13"/><Setter Property="CaretBrush" Value="{DynamicResource Ink}"/></Style>
+  <Style TargetType="ToolTip"><Setter Property="Background" Value="{DynamicResource Raised}"/><Setter Property="Foreground" Value="{DynamicResource Ink}"/><Setter Property="BorderBrush" Value="{DynamicResource Line}"/><Setter Property="Padding" Value="10,8"/><Setter Property="FontSize" Value="12"/></Style>
   <Style TargetType="CheckBox"><Setter Property="Foreground" Value="{DynamicResource Ink}"/><Setter Property="Margin" Value="0,10,0,8"/><Setter Property="FontSize" Value="13"/></Style>
 </ResourceDictionary>
 """;
