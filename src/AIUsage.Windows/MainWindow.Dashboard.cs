@@ -66,6 +66,7 @@ public sealed partial class MainWindow
         bool byCost = unpriced == 0 && cost > 0;
         models.Children.Add(Heading(T("ByModel"), byCost ? T("ShareCost") : T("ShareTokens")));
         if (rows.Count == 0) models.Children.Add(Text(T("NoPeriodRecords"), 12, false, "Muted"));
+        else if (rows.Any(r => r.EffortRows.Any(e => e.Effort is not null))) models.Children.Add(Text(T("EffortHint"), 10, false, "Muted"));
         foreach (var row in rows)
         {
             var item = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
@@ -80,6 +81,7 @@ public sealed partial class MainWindow
             bar.ToolTip = F("TokenDetails", row.Input, row.Cached, row.Output, row.Events);
             item.Children.Add(bar);
             if (row.PricingNotes.Length > 0) item.Children.Add(Text(row.PricingNotes, 10, false, "Warning"));
+            if (EffortTooltip(row) is { } efforts) { item.ToolTip = efforts; item.Background = Theme.Brush("Surface"); }
             models.Children.Add(item);
         }
         body.Children.Add(Card(models));
@@ -101,6 +103,19 @@ public sealed partial class MainWindow
         content.Children.Add(Text(T("ClaudeLimitsSource"), 10, false, "Muted"));
         foreach (var w in limits.Windows) content.Children.Add(LimitRow(limits, w, false));
         return Card(content);
+    }
+    /// Cost of one model per reasoning effort level, for the model row's tooltip; null when no effort was recorded.
+    private static string? EffortTooltip(ModelSummary row)
+    {
+        if (!row.EffortRows.Any(e => e.Effort is not null)) return null;
+        var lines = new List<string> { F("EffortTitle", row.Model) };
+        foreach (var e in row.EffortRows)
+        {
+            string cost = e.Unpriced > 0 ? (e.KnownCost > 0 ? "≥ " + UsageSummary.Dollars(e.KnownCost, L10n.Culture) : T("NoPrice")) : UsageSummary.Dollars(e.KnownCost, L10n.Culture);
+            lines.Add(F("EffortLine", e.Effort ?? T("EffortUnknown"), cost, UsageSummary.Compact(e.Total, L10n.Culture), e.Events));
+        }
+        lines.Add(T("EffortNote"));
+        return string.Join("\n", lines);
     }
     private Border QuotaCard()
     {

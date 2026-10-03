@@ -61,13 +61,40 @@ public sealed record Tokens(long Input, long Cached, long Output, long Reasoning
     }
 }
 
+// Effort is the reasoning effort the tool recorded for the request (low … max). It changes how many tokens a
+// request uses, never the per-token price.
 public sealed record UsageEvent(DateTimeOffset At, string Model, Tokens Tokens, string Tier = "standard",
-    string? SessionId = null, Tokens? Cumulative = null, long Sequence = 0);
+    string? SessionId = null, Tokens? Cumulative = null, long Sequence = 0, string? Effort = null);
 public sealed record LimitWindow(string Name, double UsedPercent, DateTimeOffset? ResetAt, long? Seconds, string Id = "");
 public sealed record QuotaSnapshot(DateTimeOffset At, string Source, string? Plan, List<LimitWindow> Windows,
     string? Credits = null, long? ResetCredits = null, string? AccountKey = null);
 public sealed record ScanResult(List<UsageEvent> Events, List<QuotaSnapshot> Quotas, int Files, int Warnings, DateTimeOffset At);
-public sealed record ModelSummary(string Model, long Input, long Cached, long Output, long Total, decimal KnownCost, int Unpriced, int Events, int Qualified = 0, string PricingNotes = "");
+public sealed record ModelSummary(string Model, long Input, long Cached, long Output, long Total, decimal KnownCost, int Unpriced, int Events, int Qualified = 0, string PricingNotes = "",
+    List<EffortSummary>? Efforts = null)
+{
+    public List<EffortSummary> EffortRows => Efforts ?? [];
+    // Value equality, including the per-effort rows (a list would otherwise compare by reference).
+    public bool Equals(ModelSummary? other) => other is not null && Model == other.Model && Input == other.Input && Cached == other.Cached &&
+        Output == other.Output && Total == other.Total && KnownCost == other.KnownCost && Unpriced == other.Unpriced && Events == other.Events &&
+        Qualified == other.Qualified && PricingNotes == other.PricingNotes && EffortRows.SequenceEqual(other.EffortRows);
+    public override int GetHashCode() => Model.GetHashCode() ^ Total.GetHashCode() ^ (Events * 31) ^ EffortRows.Count;
+}
+/// Usage of one model at one effort level; Effort is null when the log did not record it.
+public sealed record EffortSummary(string? Effort, long Total, decimal KnownCost, int Unpriced, int Events)
+{
+    private static readonly string[] Order = ["max", "ultra", "xhigh", "high", "medium", "low", "minimal", "none"];
+    public static string? Normalize(string? value)
+    {
+        string? effort = value?.Trim().ToLowerInvariant();
+        return effort is { Length: > 0 and <= 16 } && effort.All(c => c is (>= 'a' and <= 'z') or '_') ? effort : null;
+    }
+    /// Highest effort first, unknown levels after known ones, missing effort last.
+    public static int Rank(string? effort) => effort is null ? int.MaxValue : Array.IndexOf(Order, effort) is >= 0 and var i ? i : Order.Length;
+    public static List<EffortSummary> Merge(IEnumerable<EffortSummary> rows) => rows
+        .GroupBy(r => r.Effort ?? "", StringComparer.Ordinal)
+        .Select(g => new EffortSummary(g.First().Effort, g.Sum(r => r.Total), g.Sum(r => r.KnownCost), g.Sum(r => r.Unpriced), g.Sum(r => r.Events)))
+        .OrderBy(r => Rank(r.Effort)).ThenBy(r => r.Effort, StringComparer.Ordinal).ToList();
+}
 
 public static class UsageSummary
 {
@@ -87,9 +114,14 @@ public static class UsageSummary
             }
             if (quote.Cost is null) row.Unpriced++;
             if (quote.Note.Length > 0) { row.Qualified++; row.Notes.Add(quote.Note); }
+            string effort = e.Effort ?? "";
+            if (!row.Efforts.TryGetValue(effort, out var level)) row.Efforts[effort] = level = new();
+            checked { level.Total += e.Tokens.Total; level.Cost += quote.Cost ?? 0; level.Events++; }
+            if (quote.Cost is null) level.Unpriced++;
         }
         return rows.Select(x => new ModelSummary(x.Key, x.Value.Input, x.Value.Cached, x.Value.Output,
-            x.Value.Total, x.Value.Cost, x.Value.Unpriced, x.Value.Events, x.Value.Qualified, string.Join(" | ", x.Value.Notes)))
+            x.Value.Total, x.Value.Cost, x.Value.Unpriced, x.Value.Events, x.Value.Qualified, string.Join(" | ", x.Value.Notes),
+            EffortSummary.Merge(x.Value.Efforts.Select(l => new EffortSummary(l.Key.Length == 0 ? null : l.Key, l.Value.Total, l.Value.Cost, l.Value.Unpriced, l.Value.Events)))))
             .OrderByDescending(x => x.KnownCost).ThenByDescending(x => x.Total).ToList();
     }
     private sealed class SummaryBuilder
@@ -98,6 +130,13 @@ public static class UsageSummary
         public decimal Cost;
         public int Events, Unpriced, Qualified;
         public HashSet<string> Notes { get; } = new(StringComparer.Ordinal);
+        public Dictionary<string, EffortBuilder> Efforts { get; } = new(StringComparer.Ordinal);
+    }
+    private sealed class EffortBuilder
+    {
+        public long Total;
+        public decimal Cost;
+        public int Events, Unpriced;
     }
     public static List<UsageEvent> Between(IEnumerable<UsageEvent> events, DateOnly from, DateOnly to, TimeZoneInfo zone) =>
         events.Where(e => IsBetween(e.At, from, to, zone)).ToList();

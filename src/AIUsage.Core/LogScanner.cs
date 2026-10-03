@@ -29,7 +29,7 @@ public sealed class FileCache
 public sealed class LogScanner(string cacheDirectory)
 {
     // Bump whenever parser, quota or deduplication semantics change.
-    public const int ParserSchemaVersion = 5;
+    public const int ParserSchemaVersion = 6;
     private readonly object sync = new();
     public int PersistentCacheHits { get; private set; }
     private static FileCache EmptyCache() => new() { Schema = ParserSchemaVersion };

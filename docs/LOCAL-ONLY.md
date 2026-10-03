@@ -1,4 +1,4 @@
-# Local-only architecture and boundaries — 1.4.1
+# Local-only architecture and boundaries — 1.5.0
 
 The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserved that boundary and addressed the subsequent local-security audit; 1.2.0 kept it unchanged while adding metadata-only detection of the Codex data folder; 1.3.0 kept it unchanged while adding an optional, read-only Claude Code source; 1.4.0 keeps it unchanged while accepting Claude plan limits from Claude Code's documented status line, which Claude Code runs locally as `AIUsage.exe --claude-statusline` when the user configures it (see PRIVACY.md). AIUsage itself still creates no subprocess and has no network client. This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
 
@@ -20,7 +20,7 @@ LocalPaths validates resident local drives and path ancestors. UNC/WSL shares, m
 
 Since 1.1.1 the package is a self-contained folder deployment; native libraries do not use the former single-file extraction mechanism. Keep the entire package together. Existing TEMP extraction remnants from old versions are documented separately. Standard .NET local diagnostics IPC remains subject to OS permissions and is NOT disabled. StartupHookSupport is disabled in the shipped configuration, without changing machine-wide settings. A user able to replace that configuration or executable is outside this protection.
 
-Schema 5 caches are streamed compact JSON. Large histories use immutable event pages and a manifest committed last, sharing a 32 MiB per-file read/write limit. An incomplete generation is discarded, never presented as partial successful accounting. Total history still uses proportional memory/storage; this is not a global resource quota. Cache rebuilding changes only AIUsage files.
+Schema 6 caches are streamed compact JSON. Large histories use immutable event pages and a manifest committed last, sharing a 32 MiB per-file read/write limit. An incomplete generation is discarded, never presented as partial successful accounting. Total history still uses proportional memory/storage; this is not a global resource quota. Cache rebuilding changes only AIUsage files.
 
 ## Evidence
 

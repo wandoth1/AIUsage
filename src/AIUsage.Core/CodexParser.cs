@@ -9,6 +9,7 @@ public sealed class ParserState
     public Tokens? Previous { get; set; }
     public string Model { get; set; } = "unknown";
     public string Tier { get; set; } = "standard";
+    public string? Effort { get; set; }
     public bool SawMeta { get; set; }
     public bool ReplayGate { get; set; }
     public long? ChildCreated { get; set; }
@@ -47,6 +48,8 @@ public sealed class CodexParser(ParserState? state = null)
             if (type == "turn_context")
             {
                 State.Model = Model(p) ?? State.Model;
+                State.Effort = EffortSummary.Normalize(p.Text("effort")) ??
+                    EffortSummary.Normalize(p.Get("collaboration_mode").Get("settings").Text("reasoning_effort")) ?? State.Effort;
                 SetTier(p, completeSnapshot: false);
                 return null;
             }
@@ -58,7 +61,11 @@ public sealed class CodexParser(ParserState? state = null)
                 string? owner = Clean(p.Text("thread_id"));
                 if (owner is not null && State.SessionId is not null && owner != State.SessionId) return null;
                 var snapshot = p.Get("thread_settings");
-                if (snapshot.ValueKind == JsonValueKind.Object) State.Model = Model(snapshot) ?? State.Model;
+                if (snapshot.ValueKind == JsonValueKind.Object)
+                {
+                    State.Model = Model(snapshot) ?? State.Model;
+                    State.Effort = EffortSummary.Normalize(snapshot.Text("reasoning_effort")) ?? State.Effort;
+                }
                 SetTier(p, completeSnapshot: snapshot.ValueKind == JsonValueKind.Object);
                 return null;
             }
@@ -96,7 +103,7 @@ public sealed class CodexParser(ParserState? state = null)
             if (usage is null || (usage.Input == 0 && usage.Cached == 0 && usage.Output == 0 && usage.Reasoning == 0)) return null;
             State.Model = Model(p) ?? Model(info) ?? State.Model;
             usage = usage with { Cached = Math.Min(usage.Cached, usage.Input), CacheWrite = Math.Min(usage.CacheWrite, Math.Max(0, usage.Input - usage.Cached)) };
-            return new(at.Value, State.Model, usage, State.Tier, State.SessionId, total, total is null ? ++State.Sequence : 0);
+            return new(at.Value, State.Model, usage, State.Tier, State.SessionId, total, total is null ? ++State.Sequence : 0, State.Effort);
         }
         catch (JsonException) { InvalidRecord(line.Span); return null; }
         catch (ArgumentException) { InvalidRecord(line.Span); return null; }

@@ -46,4 +46,9 @@ La app de escritorio de Claude no ejecuta la barra de estado. Solo planes Pro y 
   <data name="SpendLimit" xml:space="preserve"><value>Límite de gasto</value></data>
   <data name="ClaudeStatusUnsafePath" xml:space="preserve"><value>No se ofrece entrada para esta ubicación: {0}
 Claude Code ejecuta el comando con Git Bash o PowerShell, y esta ruta contiene espacios o símbolos que esos intérpretes podrían interpretar. Mueve la carpeta de AIUsage a una ruta solo con letras, números, '.', '_' y '-' (por ejemplo C:\AIUsage) y vuelve a abrir Ajustes.</value></data>
+  <data name="EffortHint" xml:space="preserve"><value>Pasa el ratón por un modelo para ver su coste por nivel de esfuerzo.</value></data>
+  <data name="EffortTitle" xml:space="preserve"><value>{0} · coste por esfuerzo</value></data>
+  <data name="EffortLine" xml:space="preserve"><value>{0}: {1} · {2} tokens · {3:N0} registros</value></data>
+  <data name="EffortUnknown" xml:space="preserve"><value>sin dato</value></data>
+  <data name="EffortNote" xml:space="preserve"><value>El esfuerzo cambia cuántos tokens se usan, no el precio por token. Los registros antiguos pueden no indicarlo.</value></data>
 </root>

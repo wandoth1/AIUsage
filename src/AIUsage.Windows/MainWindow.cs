@@ -553,7 +553,7 @@ public sealed partial class MainWindow : Window
             for (int i = 0; i < 32 + day * 3; i++)
             {
                 var at = new DateTimeOffset(DateTime.Today.AddDays(-day).AddHours(10).AddMinutes(i));
-                events.Add(new(at, i % 9 == 0 ? "gpt-6-astra" : "gpt-6.1-sol", new Tokens(96000, 84000, 2500, 1800, 98500)));
+                events.Add(new(at, i % 9 == 0 ? "gpt-6-astra" : "gpt-6.1-sol", new Tokens(96000, 84000, 2500, 1800, 98500), Effort: i % 4 == 0 ? "max" : i % 4 == 1 ? "medium" : "high"));
             }
         var limits = new QuotaSnapshot(DateTimeOffset.Now, "Local log", null, [new("Codex · Session", 34, DateTimeOffset.Now.AddHours(2.5), 18000), new("Codex · Weekly", 62, DateTimeOffset.Now.AddDays(3), 604800)]);
         scan = new(events, [limits], 38, 0, DateTimeOffset.Now);

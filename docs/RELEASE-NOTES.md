@@ -1,8 +1,29 @@
-# AIUsage 1.4.1 for Windows — clearer Claude plan limits instructions
+# AIUsage 1.5.0 for Windows — cost by reasoning effort
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged: no account client, credential reader, provider requests, model calls, updater or subprocess integration.
+
+## New
+
+- **Cost by reasoning effort.** Hovering over a model in the "By model" card shows its tokens, estimated cost and records per effort level, highest first (`max`, `ultra`, `xhigh`, `high`, `medium`, `low`), with "not recorded" for older logs. Works for Codex (effort from `turn_context` and thread settings, exactly like the model) and Claude Code (the `effort` recent versions write on each response).
+- Effort only changes how many tokens a request uses; prices per token are unchanged, and per-effort rows always add up to the model row.
+
+## Privacy
+
+Effort is a setting already present in the same local records AIUsage reads; no new file, field of conversation content or network access is involved. Effort values are kept only if they are short lowercase identifiers.
+
+## Upgrade
+
+Use `AIUsage-1.5.0-win-x64.zip` or `AIUsage-1.5.0-win-arm64.zip`. The first start rebuilds the reading caches once so older events get their effort; this can take a little longer with large histories. If Claude Code's status line points to an older AIUsage folder, update its path.
+
+## Evidence and limits
+
+New regression tests cover Codex effort from turn_context, thread settings and collaboration mode, Claude effort with valid, invalid and missing values, cache validation, deduplication of identical copies and per-effort totals that add up to the model totals across a period. x64 execution uses synthetic data; ARM64 is compiled and inspected, not executed. Binaries remain unsigned.
+
+## Included from 1.4.1: clearer Claude plan limits instructions
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
 
-## Changed
+### Changed
 
 - **Step-by-step instructions in the Claude plan limits card.** When no limits have arrived yet, the card explains exactly how to enable them: copy the entry from Settings → Claude Code, paste it into the Claude Code settings file named there, and use Claude Code in a terminal.
 - **Terminal only.** Claude Code runs its status line only in a terminal (the `claude` command); the Claude desktop app does not run it. The card, Settings and README now say so: limits are updated only while you use Claude Code in a terminal.
@@ -39,4 +60,4 @@ Test logs, package checks, build information and hashes accompany this release. 
 
 ### Previous release
 
-1.4.0 and 1.3.0 remain available under their tags; their notes are in the repository history.
+1.4.1, 1.4.0 and 1.3.0 remain available under their tags; their notes are in the repository history.
