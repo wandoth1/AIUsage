@@ -8,14 +8,16 @@ namespace AIUsage.Core;
 public sealed record ModelRate(decimal Input, decimal Cached, decimal Output,
     decimal CacheWriteMultiplier = 1, long LongThreshold = 0, decimal FastMultiplier = 2, string Source = "",
     string Note = "", bool TierRulesVerified = true, bool LongCacheVerified = true, DateOnly? ReviewAfter = null,
-    decimal CacheWrite1hMultiplier = 2);
+    decimal CacheWrite1hMultiplier = 2,
+    // Applied to input/cache and to output when a request's total input exceeds LongThreshold.
+    decimal LongInputMultiplier = 2, decimal LongOutputMultiplier = 1.5m);
 public sealed record PriceQuote(decimal? Cost, string PricingModel, string Note = "");
 
 public sealed class PriceCatalog
 {
     private readonly Dictionary<string, ModelRate> rates;
     private readonly HashSet<string> customKeys = new(StringComparer.OrdinalIgnoreCase);
-    public const string SnapshotDate = "2026-10-01";
+    public const string SnapshotDate = "2026-10-08";
     public bool HasOverrides => customKeys.Count > 0;
     public PriceCatalog(Dictionary<string, ModelRate> rates) => this.rates = Normalize(rates);
     public static PriceCatalog Load(string? overridesPath = null)
@@ -85,6 +87,7 @@ public sealed class PriceCatalog
         if (r is null || string.IsNullOrWhiteSpace(key) || key.Length > 200 || key.Any(char.IsControl) ||
             r.Input is < 0 or > 1_000_000 || r.Cached is < 0 or > 1_000_000 || r.Output is < 0 or > 1_000_000 ||
             r.FastMultiplier is <= 0 or > 100 || r.CacheWriteMultiplier is <= 0 or > 100 || r.CacheWrite1hMultiplier is <= 0 or > 100 || r.LongThreshold < 0 ||
+            r.LongInputMultiplier is <= 0 or > 100 || r.LongOutputMultiplier is <= 0 or > 100 ||
             r.Source is null || r.Note is null || r.Source.Length > 2000 || r.Note.Length > 2000)
             throw new InvalidOperationException(T("InvalidPrice"));
     }
@@ -130,7 +133,7 @@ public sealed class PriceCatalog
         if (!rate.LongCacheVerified && large && e.Tokens.Cached > 0) notes.Add(T("LongCacheNote"));
         if (rate.ReviewAfter is { } review && DateOnly.FromDateTime(DateTime.UtcNow) >= review)
             notes.Add(T("PromoReviewNote"));
-        decimal inputFactor = large ? 2 : 1, outputFactor = large ? 1.5m : 1;
+        decimal inputFactor = large ? rate.LongInputMultiplier : 1, outputFactor = large ? rate.LongOutputMultiplier : 1;
         var t = e.Tokens;
         long cached = Math.Clamp(t.Cached, 0, t.Input);
         long write = Math.Clamp(t.CacheWrite, 0, t.Input - cached);
