@@ -78,7 +78,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-mythos-5-1": {
@@ -89,7 +89,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-fable-5": {
@@ -100,7 +100,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-mythos-5": {
@@ -111,7 +111,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-opus-5-5": {
@@ -122,7 +122,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 2,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01"
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08"
   },
   "claude-opus-5": {
     "Input": 5,
@@ -132,7 +132,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 2,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01"
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08"
   },
   "claude-opus-4-8": {
     "Input": 5,
@@ -142,7 +142,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 2,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01"
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08"
   },
   "claude-opus-4-7": {
     "Input": 5,
@@ -152,7 +152,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-opus-4-6": {
@@ -163,7 +163,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01"
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08"
   },
   "claude-opus-4-5": {
     "Input": 5,
@@ -173,7 +173,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-opus-4-1": {
@@ -184,7 +184,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-opus-4": {
@@ -195,18 +195,18 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-sonnet-5-5": {
     "Input": 2,
-    "Cached": 0.2,
+    "Cached": 0.1,
     "Output": 10,
     "CacheWriteMultiplier": 1.25,
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-sonnet-5": {
@@ -217,7 +217,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-sonnet-4-6": {
@@ -228,7 +228,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-sonnet-4-5": {
@@ -239,7 +239,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-sonnet-4": {
@@ -250,7 +250,20 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
+    "TierRulesVerified": false
+  },
+  "claude-haiku-5-5": {
+    "Input": 0.1,
+    "Cached": 0.01,
+    "Output": 0.5,
+    "CacheWriteMultiplier": 1.25,
+    "CacheWrite1hMultiplier": 2,
+    "LongThreshold": 100000,
+    "LongInputMultiplier": 5,
+    "LongOutputMultiplier": 5,
+    "FastMultiplier": 1,
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-haiku-4-5": {
@@ -261,7 +274,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   },
   "claude-3-5-haiku": {
@@ -272,7 +285,7 @@
     "CacheWrite1hMultiplier": 2,
     "LongThreshold": 0,
     "FastMultiplier": 1,
-    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-01",
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
   }
 }

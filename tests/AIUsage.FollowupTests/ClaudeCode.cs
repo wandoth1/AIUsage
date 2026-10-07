@@ -35,6 +35,25 @@ internal static partial class Program
             var events = t.Scan().Events;
             Equal(0.0042m, ClaudePrices.Cost(events[0])); Equal(1m, ClaudePrices.Cost(events[1]));
         });
+        Test("Claude: Haiku 5.5 is priced by prompt length (5x above 100,000 prompt tokens)", () =>
+        {
+            decimal? Cost(Tokens t) => ClaudePrices.Cost(new UsageEvent(At, "claude-haiku-5-5", t));
+            Equal(0.0055m, Cost(new Tokens(50_000, 0, 1_000, 0, 51_000)));              // 50K×$0.10 + 1K×$0.50
+            Equal(0.01m, Cost(new Tokens(100_000, 0, 0, 0, 100_000)));                  // exactly 100,000 is still the lower price
+            Equal(0.0575m, Cost(new Tokens(200_000, 150_000, 10_000, 0, 210_000)));     // 50K×$0.50 + 150K×$0.05 + 10K×$2.50
+            // 40K×$0.50 + 100K×$0.05 + 40K×$0.625 (5m write) + 20K×$1 (1h write)
+            Equal(0.07m, Cost(new Tokens(200_000, 100_000, 0, 0, 200_000, 60_000, 20_000)));
+        });
+        Test("Claude: Sonnet 5.5 cache reads cost 0.05x; default long-context multipliers are unchanged", () =>
+        {
+            Equal(0.10m, ClaudePrices.Cost(new UsageEvent(At, "claude-sonnet-5-5", new Tokens(1_000_000, 1_000_000, 0, 0, 1_000_000))));
+            Equal(1.2m, ClaudePrices.Cost(new UsageEvent(At, "gpt-6.1-sol", new Tokens(300_000, 0, 0, 0, 300_000))));   // 300K×$2×2
+            PriceCatalog.ValidateOverrides("{\"m\":{\"Input\":1,\"Cached\":0.1,\"Output\":2,\"LongThreshold\":1000,\"LongInputMultiplier\":3,\"LongOutputMultiplier\":4}}");
+            bool rejected = false;
+            try { PriceCatalog.ValidateOverrides("{\"m\":{\"Input\":1,\"Cached\":0.1,\"Output\":2,\"LongInputMultiplier\":0}}"); }
+            catch (InvalidOperationException) { rejected = true; }
+            Require(rejected, "A zero long multiplier was accepted");
+        });
         Test("Claude: replayed requests are counted once", () =>
         {
             using var t = new ClaudeHome();
