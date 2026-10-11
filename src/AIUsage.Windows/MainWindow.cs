@@ -184,7 +184,7 @@ public sealed partial class MainWindow : Window
         catch (LocalPathException ex) { devinError = F("DevinScanFailed", ex.Message); devinScan = new([], [], 0, 0, DateTimeOffset.Now); }
         // A busy or changing database keeps the previous totals; the next refresh reads it again.
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
-        { devinError = F("DevinScanFailed", ex.GetType().Name); }
+        { devinError = devinScan.Events.Count > 0 ? T("DevinBusy") : F("DevinScanFailed", ex.GetType().Name); }
     }
     private string ActiveSource => source switch
     {

@@ -60,4 +60,5 @@ Claude Code ejecuta el comando con Git Bash o PowerShell, y esta ruta contiene e
   <data name="DevinNotBill" xml:space="preserve"><value>Las cifras de Devin usan el precio de lista por token de cada modelo. Devin factura por cuota del plan y créditos, así que no es lo que pagas, y no se aplican promociones como SWE-2 gratis.</value></data>
   <data name="DevinLimitsTitle" xml:space="preserve"><value>CUOTA DEL PLAN DE DEVIN</value></data>
   <data name="DevinLimits" xml:space="preserve"><value>La cuota diaria y semanal de tu plan de Devin no se muestra: es un dato de la cuenta que no está en la base de datos local de sesiones, y AIUsage nunca usa tus credenciales de Devin. Consúltala en la página de uso de Devin, o ejecuta /session-stats en Devin CLI para ver los totales de una sesión.</value></data>
+  <data name="DevinBusy" xml:space="preserve"><value>La base de datos de Devin estaba ocupada o cambiando. Las cifras mostradas son de la última lectura correcta; se volverá a leer en la próxima actualización.</value></data>
 </root>

@@ -60,4 +60,5 @@ Claude Code runs the command through Git Bash or PowerShell, and this path conta
   <data name="DevinNotBill" xml:space="preserve"><value>Devin figures use each model's list price per token. Devin bills by plan quota and credits, so this is not what you pay, and promotions such as free SWE-2 are not applied.</value></data>
   <data name="DevinLimitsTitle" xml:space="preserve"><value>DEVIN PLAN QUOTA</value></data>
   <data name="DevinLimits" xml:space="preserve"><value>Devin's daily and weekly plan quota is not shown: it is account data that is not in the local session database, and AIUsage never uses your Devin credentials. Check it in Devin's own usage page, or run /session-stats in the Devin CLI for a session's totals.</value></data>
+  <data name="DevinBusy" xml:space="preserve"><value>Devin's database was busy or changing. The figures shown are from the last successful read; it is read again on the next refresh.</value></data>
 </root>
