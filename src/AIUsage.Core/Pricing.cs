@@ -86,7 +86,7 @@ public sealed class PriceCatalog
     {
         if (r is null || string.IsNullOrWhiteSpace(key) || key.Length > 200 || key.Any(char.IsControl) ||
             r.Input is < 0 or > 1_000_000 || r.Cached is < 0 or > 1_000_000 || r.Output is < 0 or > 1_000_000 ||
-            r.FastMultiplier is <= 0 or > 100 || r.CacheWriteMultiplier is <= 0 or > 100 || r.CacheWrite1hMultiplier is <= 0 or > 100 || r.LongThreshold < 0 ||
+            r.FastMultiplier is <= 0 or > 100 || r.CacheWriteMultiplier is < 0 or > 100 || r.CacheWrite1hMultiplier is <= 0 or > 100 || r.LongThreshold < 0 ||
             r.LongInputMultiplier is <= 0 or > 100 || r.LongOutputMultiplier is <= 0 or > 100 ||
             r.Source is null || r.Note is null || r.Source.Length > 2000 || r.Note.Length > 2000)
             throw new InvalidOperationException(T("InvalidPrice"));

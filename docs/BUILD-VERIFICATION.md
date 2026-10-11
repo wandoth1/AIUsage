@@ -1,4 +1,4 @@
-# Build and verification — 1.6.0
+# Build and verification — 1.6.1
 
 ## Requirements
 

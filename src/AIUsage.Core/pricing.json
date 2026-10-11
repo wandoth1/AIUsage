@@ -292,10 +292,260 @@
     "Input": 3,
     "Cached": 0.3,
     "Output": 15,
-    "CacheWriteMultiplier": 1,
+    "CacheWriteMultiplier": 0,
     "LongThreshold": 0,
     "FastMultiplier": 1,
     "Source": "https://docs.devin.ai/desktop/models ; Cognition list price, verified 2026-10-11. Devin plan promotions (free or discounted SWE-2) are not applied.",
+    "TierRulesVerified": false
+  },
+  "adaptive": {
+    "Input": 0.5,
+    "Cached": 0.1,
+    "Output": 2,
+    "CacheWriteMultiplier": 1.0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "deepseek-v4-1-flash": {
+    "Input": 0.22,
+    "Cached": 0.007,
+    "Output": 0.66,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "deepseek-v4-flash": {
+    "Input": 0.14,
+    "Cached": 0.028,
+    "Output": 0.28,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "deepseek-v4-pro": {
+    "Input": 1.32,
+    "Cached": 0.044,
+    "Output": 3.96,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-1-pro": {
+    "Input": 2,
+    "Cached": 0.2,
+    "Output": 12,
+    "CacheWriteMultiplier": 2.25,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-5-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 9,
+    "CacheWriteMultiplier": 0.6667,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-6-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 7.5,
+    "CacheWriteMultiplier": 1.0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-7-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 7.5,
+    "CacheWriteMultiplier": 1.0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-8-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 7.5,
+    "CacheWriteMultiplier": 1.0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "glm-5-2": {
+    "Input": 1.4,
+    "Cached": 0.26,
+    "Output": 4.4,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "glm-5-3": {
+    "Input": 1.4,
+    "Cached": 0.26,
+    "Output": 4.4,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "glm-5-3-flash": {
+    "Input": 0.15,
+    "Cached": 0.029,
+    "Output": 0.5,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "grok-4-5": {
+    "Input": 2,
+    "Cached": 0.3,
+    "Output": 6,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "grok-4-6": {
+    "Input": 2,
+    "Cached": 0.3,
+    "Output": 6,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "grok-4-7": {
+    "Input": 2,
+    "Cached": 0.5,
+    "Output": 6,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "inkling": {
+    "Input": 1.4,
+    "Cached": 0.26,
+    "Output": 4.4,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "kimi-k2-6": {
+    "Input": 0.95,
+    "Cached": 0.16,
+    "Output": 4,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "kimi-k2-7": {
+    "Input": 0.95,
+    "Cached": 0.19,
+    "Output": 4,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "kimi-k3": {
+    "Input": 3,
+    "Cached": 0.3,
+    "Output": 15,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "nemotron-3-ultra": {
+    "Input": 0.6,
+    "Cached": 0.12,
+    "Output": 2.4,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "penguin": {
+    "Input": 0.5,
+    "Cached": 0.2,
+    "Output": 2.5,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "swe-1-6": {
+    "Input": 0.5,
+    "Cached": 0.2,
+    "Output": 2.5,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "swe-1-7": {
+    "Input": 0.5,
+    "Cached": 0.2,
+    "Output": 2.5,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "swe-1-7-lightning": {
+    "Input": 2.5,
+    "Cached": 1,
+    "Output": 12.5,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "swe-check": {
+    "Input": 0,
+    "Cached": 0,
+    "Output": 0,
+    "CacheWriteMultiplier": 0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
     "TierRulesVerified": false
   }
 }

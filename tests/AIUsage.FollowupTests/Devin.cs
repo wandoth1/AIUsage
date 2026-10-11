@@ -95,11 +95,47 @@ internal static partial class Program
             t.Message("assistant", "ok", "swe-2-high", 1, 0, null, 1);
             var scan = new DevinLogScanner(t.Cache).Scan(t.Database); Equal(1, scan.Events.Count); Equal(1, scan.Warnings);
         });
-        Test("Devin: model names split into model and effort", () =>
+        Test("Devin: model ids split into catalog model, effort and tier", () =>
         {
-            Equal(("swe-2", "high"), DevinLogScanner.SplitModel("swe-2-high")); Equal(("claude-opus-5-5", "xhigh"), DevinLogScanner.SplitModel("Claude-Opus-5-5-XHigh"));
-            Equal(("gpt-6-astra", (string?)null), DevinLogScanner.SplitModel("gpt-6-astra")); Equal(("compactor", (string?)null), DevinLogScanner.SplitModel("compactor"));
-            Equal(("unknown", (string?)null), DevinLogScanner.SplitModel("bad model <script>")); Equal(("unknown", (string?)null), DevinLogScanner.SplitModel(new string('a', 81)));
+            Equal(("swe-2", "high", "standard"), DevinLogScanner.SplitModel("swe-2-high"));
+            Equal(("claude-opus-5-5", "xhigh", "standard"), DevinLogScanner.SplitModel("Claude-Opus-5-5-XHigh"));
+            Equal(("gpt-6.1-sol", "medium", "standard"), DevinLogScanner.SplitModel("gpt-6-1-sol-medium"));
+            Equal(("gpt-6.1-sol", "high", "priority"), DevinLogScanner.SplitModel("gpt-6-1-sol-high-priority"));
+            Equal(("gpt-5.6-luna", "none", "standard"), DevinLogScanner.SplitModel("gpt-5-6-luna-none"));
+            Equal(("gpt-6-astra", (string?)null, "standard"), DevinLogScanner.SplitModel("gpt-6-astra"));
+            Equal(("claude-opus-5-5", "high", "fast"), DevinLogScanner.SplitModel("claude-opus-5-5-high-fast"));
+            Equal(("claude-sonnet-4-6", (string?)null, "standard"), DevinLogScanner.SplitModel("claude-sonnet-4-6-thinking-1m"));
+            Equal(("glm-5-2", "max", "standard"), DevinLogScanner.SplitModel("glm-5-2-max-1m"));
+            Equal(("swe-1-7-lightning", "medium", "standard"), DevinLogScanner.SplitModel("swe-1-7-lightning-medium"));
+            Equal(("swe-1-6-fast", (string?)null, "standard"), DevinLogScanner.SplitModel("swe-1-6-fast"));   // a model variant, not a tier
+            Equal(("gemini-3-8-flash", "medium", "standard"), DevinLogScanner.SplitModel("gemini-3-8-flash-medium"));
+            Equal(("compactor", (string?)null, "standard"), DevinLogScanner.SplitModel("compactor"));
+            Equal(("unknown", (string?)null, "standard"), DevinLogScanner.SplitModel("bad model <script>")); Equal(("unknown", (string?)null, "standard"), DevinLogScanner.SplitModel(new string('a', 81)));
+        });
+        Test("Devin: every model it offers is priced; priority and fast variants cost double", () =>
+        {
+            using var t = new DevinHome();
+            t.Exec(DevinHome.Schema);
+            t.Message("assistant", "sol", "gpt-6-1-sol-high", 1000, 9000, null, 100);
+            t.Message("assistant", "sol-p", "gpt-6-1-sol-high-priority", 1000, 9000, null, 100);
+            t.Message("assistant", "opus-f", "claude-opus-5-5-high-fast", 0, 0, null, 1000);
+            t.Message("assistant", "kimi", "kimi-k3-high", 1000, 0, null, 1000);
+            t.Message("assistant", "glm", "glm-5-3-max", 1000, 1000, null, 1000);
+            t.Message("assistant", "gemini", "gemini-3-8-flash-medium", 1000, 0, 1000, 1000);
+            t.Message("assistant", "light", "swe-1-7-lightning-medium", 1000, 1000, null, 1000);
+            t.Message("assistant", "fast16", "swe-1-6-fast", 1000, 0, null, 1000);
+            var events = new DevinLogScanner(t.Cache).Scan(t.Database).Events;
+            decimal? Cost(string model, string tier = "standard") => ClaudePrices.Cost(events.Single(e => e.Model == model && e.Tier == tier));
+            Equal(0.0039m, Cost("gpt-6.1-sol"));               // 1K×$2 + 9K×$0.10 + 100×$10
+            Equal(0.0078m, Cost("gpt-6.1-sol", "priority"));   // priority processing ×2
+            Equal(0.04m, Cost("claude-opus-5-5", "fast"));     // 1K×$20 ×2
+            Equal(0.018m, Cost("kimi-k3"));                    // 1K×$3 + 1K×$15
+            Equal(0.00606m, Cost("glm-5-3"));                  // 1K×$1.40 + 1K×$0.26 + 1K×$4.40
+            Equal(0.0105m, Cost("gemini-3-8-flash"));          // 1K×$1.50 + 1K×$1.50 (cache write) + 1K×$7.50
+            Equal(0.016m, Cost("swe-1-7-lightning"));          // 1K×$2.50 + 1K×$1 + 1K×$12.50
+            Equal(0.003m, Cost("swe-1-6-fast"));               // 1K×$0.50 + 1K×$2.50: same price as SWE-1.6
+            foreach (string model in new[] { "swe-1-7", "glm-5-2", "glm-5-3-flash", "gemini-3-7-flash", "kimi-k2-7", "deepseek-v4-pro", "grok-4-7", "adaptive", "swe-check" })
+                Require(ClaudePrices.Cost(new UsageEvent(At, model, new Tokens(10, 0, 10, 0, 20))) is not null, "No price for " + model);
         });
         Test("Devin: settings keep the source opt-in and accept a database override", () =>
         {
