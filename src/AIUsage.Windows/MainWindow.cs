@@ -30,7 +30,12 @@ public sealed partial class MainWindow : Window
     private LogScanner scanner;
     private ScanResult scan = new([], [], 0, 0, DateTimeOffset.Now);
     // Claude Code: opt-in second source read from its local transcripts only (see ClaudeLogScanner).
-    private const string AllSources = "all", CodexSource = "codex", ClaudeSource = "claude";
+    private const string AllSources = "all", CodexSource = "codex", ClaudeSource = "claude", DevinSource = "devin";
+    // Devin: opt-in third source read from the Devin CLI/Desktop session database only (see DevinLogScanner).
+    private DevinLogScanner devinScanner;
+    private ScanResult devinScan = new([], [], 0, 0, DateTimeOffset.Now);
+    private string devinDatabase = "", devinError = "";
+    private bool MultipleSources => settings.ClaudeCode || settings.Devin;
     private ClaudeLogScanner claudeScanner;
     private ScanResult claudeScan = new([], [], 0, 0, DateTimeOffset.Now);
     private string source = AllSources, lastBuiltSource = AllSources, claudeHome = "", claudeError = "";
@@ -87,6 +92,7 @@ public sealed partial class MainWindow : Window
         if (correctedInstallFolder.Length > 0) folderNotice = F("InstallFolderCorrected", correctedInstallFolder);
         scanner = new LogScanner(Path.Combine(dataDir, "cache"));
         claudeScanner = new ClaudeLogScanner(Path.Combine(dataDir, "cache-claude"));
+        devinScanner = new DevinLogScanner(Path.Combine(dataDir, "cache-devin"));
         Theme.Apply(settings.LightTheme);
         if (demo) { CreateDemo(); SetDashboards(BuildDashboards()); }
         Build();
@@ -121,9 +127,10 @@ public sealed partial class MainWindow : Window
             { pricingError = T("CustomPricesFailed"); }
             // Each source records its own failure; the dashboards are always rebuilt from what was read.
             await ScanClaudeAsync();
+            await ScanDevinAsync();
             await ScanCodexAsync();
             SetDashboards(await Task.Run(BuildDashboards, cancellation.Token));
-            var rows = dashboards.GetValueOrDefault(settings.ClaudeCode ? AllSources : CodexSource)?.ForPeriod(1) ?? [];
+            var rows = dashboards.GetValueOrDefault(MultipleSources ? AllSources : CodexSource)?.ForPeriod(1) ?? [];
             string amount = rows.Any(r => r.Unpriced > 0) ? T("PartialCost") : UsageSummary.Dollars(rows.Sum(r => r.KnownCost), L10n.Culture);
             UsageChanged?.Invoke(rows.Sum(r => r.Events) == 0 ? T("TrayNoData") : F("TrayUsage", amount, UsageSummary.Compact(rows.Sum(r => r.Total), L10n.Culture)));
         }
@@ -164,17 +171,42 @@ public sealed partial class MainWindow : Window
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
         { claudeError = F("ClaudeScanFailed", ex.GetType().Name); claudeScan = new([], [], 0, 0, DateTimeOffset.Now); }
     }
-    private string ActiveSource => settings.ClaudeCode ? source : CodexSource;
+    private async Task ScanDevinAsync()
+    {
+        devinError = "";
+        if (!settings.Devin) { devinScan = new([], [], 0, 0, DateTimeOffset.Now); devinDatabase = ""; return; }
+        try
+        {
+            string database = settings.ResolveDevinDatabase();
+            devinDatabase = database;
+            devinScan = await Task.Run(() => devinScanner.Scan(database, cancellation.Token), cancellation.Token);
+        }
+        catch (LocalPathException ex) { devinError = F("DevinScanFailed", ex.Message); devinScan = new([], [], 0, 0, DateTimeOffset.Now); }
+        // A busy or changing database keeps the previous totals; the next refresh reads it again.
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException)
+        { devinError = devinScan.Events.Count > 0 ? T("DevinBusy") : F("DevinScanFailed", ex.GetType().Name); }
+    }
+    private string ActiveSource => source switch
+    {
+        ClaudeSource when settings.ClaudeCode => ClaudeSource,
+        DevinSource when settings.Devin => DevinSource,
+        CodexSource => CodexSource,
+        _ => MultipleSources ? AllSources : CodexSource
+    };
     private IEnumerable<UsageEvent> SourceEvents(string name) => name switch
     {
         CodexSource => scan.Events,
         ClaudeSource => claudeScan.Events,
-        _ => scan.Events.Concat(claudeScan.Events)
+        DevinSource => devinScan.Events,
+        _ => scan.Events.Concat(claudeScan.Events).Concat(devinScan.Events)
     };
     private Dictionary<string, DashboardData> BuildDashboards()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var names = settings.ClaudeCode ? new[] { AllSources, CodexSource, ClaudeSource } : new[] { CodexSource };
+        var names = new List<string> { CodexSource };
+        if (MultipleSources) names.Add(AllSources);
+        if (settings.ClaudeCode) names.Add(ClaudeSource);
+        if (settings.Devin) names.Add(DevinSource);
         return names.ToDictionary(n => n, n => DashboardData.Create(SourceEvents(n), prices, TimeZoneInfo.Local, today));
     }
     private void SetDashboards(Dictionary<string, DashboardData> next)
@@ -206,7 +238,7 @@ public sealed partial class MainWindow : Window
         actions.Children.Add(Button("×", Hide));
         DockPanel.SetDock(actions, Dock.Right); header.Children.Add(actions);
         var title = new StackPanel(); title.Children.Add(Text("AIUsage", 25, true));
-        title.Children.Add(Text(demo ? T("DemoBadge") : settings.ClaudeCode ? T("LocalOnlyBadgeClaude") : T("LocalOnlyBadge"), 10, false, "Accent"));
+        title.Children.Add(Text(demo ? T("DemoBadge") : "CODEX" + (settings.ClaudeCode ? " + CLAUDE CODE" : "") + (settings.Devin ? " + DEVIN" : "") + " · " + T("BadgeLocalOnly"), 10, false, "Accent"));
         header.Children.Add(title);
         header.MouseLeftButtonDown += (_, e) => { if (e.LeftButton == MouseButtonState.Pressed) DragMove(); };
         grid.Children.Add(header);
@@ -219,10 +251,13 @@ public sealed partial class MainWindow : Window
             nav.Children.Add(button);
         }
         var navigation = new StackPanel(); navigation.Children.Add(nav);
-        if (!settingsView && settings.ClaudeCode)
+        if (!settingsView && MultipleSources)
         {
             var sources = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(22, 0, 16, 14) };
-            foreach (var (label, value) in new[] { (T("SourceAll"), AllSources), ("Codex", CodexSource), ("Claude Code", ClaudeSource) })
+            var choices = new List<(string, string)> { (T("SourceAll"), AllSources), ("Codex", CodexSource) };
+            if (settings.ClaudeCode) choices.Add(("Claude Code", ClaudeSource));
+            if (settings.Devin) choices.Add(("Devin", DevinSource));
+            foreach (var (label, value) in choices)
             {
                 var button = Button(label, () => { source = value; SetDashboards(dashboards); Build(); });
                 if (ActiveSource == value) { button.Background = Theme.Brush("Tint"); button.Foreground = Theme.Brush("Accent"); }
@@ -240,7 +275,7 @@ public sealed partial class MainWindow : Window
         tools.Children.Add(Button(T("Refresh"), async () => await RefreshAsync()));
         tools.Children.Add(Button(T("ExportCsv"), Export));
         tools.Children.Add(Button(T("Exit"), exit)); footer.Children.Add(tools);
-        status = Text(demo ? T("DemoStatus") : F("LocalStatus", scan.At, scan.Files + claudeScan.Files), 10, false, "Muted");
+        status = Text(demo ? T("DemoStatus") : F("LocalStatus", scan.At, scan.Files + claudeScan.Files + devinScan.Files), 10, false, "Muted");
         status.Margin = new Thickness(0, 10, 0, 0); footer.Children.Add(status);
         if (!demo)
         {
@@ -251,6 +286,11 @@ public sealed partial class MainWindow : Window
             {
                 var claudeStatus = Text(F("ClaudeActiveFolder", Path.Combine(claudeHome, "projects")), 10, false, "Muted");
                 claudeStatus.ToolTip = claudeHome; footer.Children.Add(claudeStatus);
+            }
+            if (settings.Devin && devinDatabase.Length > 0)
+            {
+                var devinStatus = Text(F("DevinActiveFile", devinDatabase), 10, false, "Muted");
+                devinStatus.ToolTip = devinDatabase; footer.Children.Add(devinStatus);
             }
         }
         Grid.SetRow(footer, 3); grid.Children.Add(footer);
@@ -372,12 +412,20 @@ public sealed partial class MainWindow : Window
         System.Windows.Automation.AutomationProperties.SetAutomationId(snippet, "ClaudeStatusSnippet");
         body.Children.Add(snippet);
         body.Children.Add(Text(T("ClaudeStatusNote"), 11, false, "Muted"));
+        body.Children.Add(Label("Devin"));
+        var devin = new CheckBox { Content = T("DevinOption"), IsChecked = settings.Devin, Margin = new Thickness(0, 0, 0, 6) };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(devin, "DevinOption");
+        body.Children.Add(devin);
+        string devinFile;
+        try { devinFile = settings.ResolveDevinDatabase(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { devinFile = @"%APPDATA%\Devin\cli\sessions.db"; }
+        body.Children.Add(Text(F("DevinHelp", devinFile), 11, false, "Muted"));
         body.Children.Add(Label(T("AppData")));
         body.Children.Add(new TextBox { Text = dataDir, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
         body.Children.Add(Button(T("RebuildCache"), async () =>
         {
             if (demo || busy) return;
-            try { scanner.ClearCache(); claudeScanner.ClearCache(); settingsView = false; await RefreshAsync(); }
+            try { scanner.ClearCache(); claudeScanner.ClearCache(); devinScanner.ClearCache(); settingsView = false; await RefreshAsync(); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { MessageBox.Show(this, T("RebuildFailed"), "AIUsage"); }
         }));
         body.Children.Add(Text(T("RebuildHelp"), 10, false, "Muted"));
@@ -396,7 +444,8 @@ public sealed partial class MainWindow : Window
             {
                 if (busy) throw new InvalidOperationException(T("WaitForRefresh"));
                 if (!int.TryParse(interval.Text, out int seconds) || seconds is < 15 or > 3600) throw new InvalidOperationException(T("InvalidInterval"));
-                var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string), ClaudeCode = claude.IsChecked == true };
+                var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string), ClaudeCode = claude.IsChecked == true,
+                    Devin = devin.IsChecked == true, DevinDatabase = settings.DevinDatabase };
                 if (!demo)
                 {
                     if (!settingsConfirmed && next.CodexHome.Length == 0) throw new InvalidOperationException(T("ChooseExplicitFolder"));
@@ -409,10 +458,12 @@ public sealed partial class MainWindow : Window
                 folderNotice = ""; folderSuggestion = null;
                 ApplyLanguage();
                 scan = new([], [], 0, 0, DateTimeOffset.Now); claudeScan = new([], [], 0, 0, DateTimeOffset.Now); claudeError = ""; claudeHome = "";
+                devinScan = new([], [], 0, 0, DateTimeOffset.Now); devinError = ""; devinDatabase = "";
                 SetDashboards(new());
                 if (demo) { CreateDemo(); SetDashboards(BuildDashboards()); }
                 scanner = new LogScanner(Path.Combine(dataDir, "cache"));
                 claudeScanner = new ClaudeLogScanner(Path.Combine(dataDir, "cache-claude"));
+                devinScanner = new DevinLogScanner(Path.Combine(dataDir, "cache-devin"));
                 timer.Interval = TimeSpan.FromSeconds(seconds); settingsView = false;
                 ChangeTheme(settings.LightTheme); await RefreshAsync();
             }
@@ -464,7 +515,8 @@ public sealed partial class MainWindow : Window
     private async Task UseDetectedFolderAsync()
     {
         if (demo || busy) return;
-        var next = new AppSettings { CodexHome = "", RefreshSeconds = settings.RefreshSeconds, LightTheme = settings.LightTheme, Language = settings.Language, ClaudeCode = settings.ClaudeCode };
+        var next = new AppSettings { CodexHome = "", RefreshSeconds = settings.RefreshSeconds, LightTheme = settings.LightTheme, Language = settings.Language, ClaudeCode = settings.ClaudeCode,
+            Devin = settings.Devin, DevinDatabase = settings.DevinDatabase };
         try { AtomicJson.Write(SettingsPath, next); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         { MessageBox.Show(this, T("SettingsNotApplied"), "AIUsage", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
@@ -521,7 +573,7 @@ public sealed partial class MainWindow : Window
         if (Descendants((DependencyObject)Content).OfType<Button>().Any(b => Equals(b.Content, "GitHub"))) throw new InvalidOperationException("External navigation must not be available.");
         settingsView = true; Build();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 2) throw new InvalidOperationException("Unexpected option in local-only settings.");
+        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 3) throw new InvalidOperationException("Unexpected option in local-only settings.");
     }
     private static TextBlock Text(string text, double size = 13, bool bold = false, string color = "Ink") => new()
     { Text = text, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, Foreground = Theme.Brush(color), TextWrapping = TextWrapping.Wrap };

@@ -31,22 +31,24 @@ public sealed partial class MainWindow
         var hero = new StackPanel();
         hero.Children.Add(Text(label + T("EstimatedSuffix"), 10, false, "Muted"));
         hero.Children.Add(Text(records == 0 ? T("NoData") : (unpriced > 0 ? "≥ " : "") + UsageSummary.Dollars(cost, L10n.Culture), 40, true));
-        bool codex = ActiveSource != ClaudeSource, claude = ActiveSource != CodexSource;
-        hero.Children.Add(Text(records == 0 ? (codex ? T("NoDataHelp") : F("ClaudeNoDataHelp", claudeHome)) :
+        bool codex = ActiveSource is AllSources or CodexSource, claude = settings.ClaudeCode && ActiveSource is AllSources or ClaudeSource,
+            devin = settings.Devin && ActiveSource is AllSources or DevinSource;
+        hero.Children.Add(Text(records == 0 ? (codex ? T("NoDataHelp") : claude ? F("ClaudeNoDataHelp", claudeHome) : F("DevinNoDataHelp", devinDatabase)) :
             F("UsageRecords", UsageSummary.Compact(total, L10n.Culture), records), 13, false, "Muted"));
         if (input > 0)
         {
             var cache = Text(F("CacheReuse", 100d * cached / input), 12, false, "Accent");
             cache.Margin = new Thickness(0, 12, 0, 0); hero.Children.Add(cache);
         }
-        string notBill = codex && claude ? T("NotBill") + " " + T("ClaudeNotBill") : codex ? T("NotBill") : T("ClaudeNotBill");
+        string notBill = string.Join(" ", new[] { codex ? T("NotBill") : "", claude ? T("ClaudeNotBill") : "", devin ? T("DevinNotBill") : "" }.Where(x => x.Length > 0));
         var note = Text(notBill, 11, false, "Muted"); note.Margin = new Thickness(0, 12, 0, 0); hero.Children.Add(note);
         body.Children.Add(Card(hero));
         if (unpriced > 0) body.Children.Add(Notice(F("PartialCostNotice", unpriced)));
-        int warnings = (codex ? scan.Warnings : 0) + (claude ? claudeScan.Warnings : 0);
+        int warnings = (codex ? scan.Warnings : 0) + (claude ? claudeScan.Warnings : 0) + (devin ? devinScan.Warnings : 0);
         if (warnings > 0) body.Children.Add(Notice(F("ScanWarning", warnings)));
         if (rows.Any(r => r.Qualified > 0 && r.KnownCost > 0)) body.Children.Add(Notice(T("QualifiedNotice")));
         if (claude && claudeError.Length > 0) body.Children.Add(Notice(claudeError));
+        if (devin && devinError.Length > 0) body.Children.Add(Notice(devinError));
         if (codex && folderNotice.Length > 0) body.Children.Add(Notice(folderNotice));
         if (codex && folderSuggestion is { } suggestion)
         {
@@ -62,6 +64,7 @@ public sealed partial class MainWindow
         if (pricingError.Length > 0) body.Children.Add(Notice(pricingError));
         if (codex) body.Children.Add(QuotaCard());
         if (claude) body.Children.Add(ClaudeLimitsCard());
+        if (devin) body.Children.Add(DevinLimitsCard());
         var models = new StackPanel();
         bool byCost = unpriced == 0 && cost > 0;
         models.Children.Add(Heading(T("ByModel"), byCost ? T("ShareCost") : T("ShareTokens")));
@@ -116,6 +119,14 @@ public sealed partial class MainWindow
         }
         lines.Add(T("EffortNote"));
         return string.Join("\n", lines);
+    }
+    // Devin's plan quota is account data that the local session database does not contain.
+    private Border DevinLimitsCard()
+    {
+        var content = new StackPanel();
+        content.Children.Add(Heading(T("DevinLimitsTitle"), "Devin"));
+        content.Children.Add(Text(T("DevinLimits"), 12, false, "Muted"));
+        return Card(content);
     }
     private Border QuotaCard()
     {

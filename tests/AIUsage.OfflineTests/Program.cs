@@ -168,6 +168,17 @@ internal static partial class Program
             var callers = Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories).Where(p => !p.Split(Path.DirectorySeparatorChar).Any(x => x is "bin" or "obj")).Where(p => File.ReadAllText(p).Contains("XamlReader")).Select(Path.GetFullPath).ToArray();
             Require(callers.Length == 1 && callers[0] == Path.GetFullPath(theme), "Unreviewed XAML call site");
         });
+        Test("SQLite access is read-only: one wrapper, read-only open flag, SELECT statements only", () =>
+        {
+            string source = Path.Combine(repositoryRoot, "src");
+            var files = Directory.EnumerateFiles(source, "*.cs", SearchOption.AllDirectories).Where(p => !p.Split(Path.DirectorySeparatorChar).Any(x => x is "bin" or "obj")).ToArray();
+            var native = files.Where(p => File.ReadAllText(p).Contains("winsqlite3", StringComparison.OrdinalIgnoreCase)).Select(Path.GetFileName).ToArray();
+            Require(native.Length == 1 && native[0] == "WinSqlite.cs", "SQLite must be reached only through WinSqlite.cs");
+            string wrapper = File.ReadAllText(Path.Combine(source, "AIUsage.Core", "WinSqlite.cs"));
+            Require(wrapper.Contains("OpenReadOnly = 0x1") && wrapper.Contains("sqlite3_open_v2(Utf8(uri), out db, OpenReadOnly | OpenUri, IntPtr.Zero)") && !wrapper.Contains("sqlite3_exec"), "Database must be opened with the read-only flag only");
+            var statements = files.SelectMany(p => System.Text.RegularExpressions.Regex.Matches(File.ReadAllText(p), "\\.Prepare\\(\"([^\"]*)\"\\)").Select(m => m.Groups[1].Value)).ToArray();
+            Require(statements.Length >= 2 && statements.All(q => q.StartsWith("select ", StringComparison.Ordinal) && !q.Contains(';')), "Only single SELECT statements may be prepared: " + string.Join(" | ", statements));
+        });
         var assemblies = args.Select((value, index) => (value, index)).Where(x => x.value == "--app-assembly").Select(x => args[x.index + 1]).ToArray();
         if (assemblies.Length == 0) { Console.WriteLine("FAIL No --app-assembly supplied; Windows metadata guard was not executed"); failed++; }
         foreach (string assembly in assemblies) Test("Windows application compiled API boundary: " + Path.GetFileName(Path.GetDirectoryName(assembly)), () => CheckAssembly(assembly));

@@ -51,4 +51,14 @@ Claude Code runs the command through Git Bash or PowerShell, and this path conta
   <data name="EffortLine" xml:space="preserve"><value>{0}: {1} · {2} tokens · {3:N0} records</value></data>
   <data name="EffortUnknown" xml:space="preserve"><value>not recorded</value></data>
   <data name="EffortNote" xml:space="preserve"><value>Effort changes how many tokens are used, not the price per token. Older logs may not record it.</value></data>
+  <data name="BadgeLocalOnly" xml:space="preserve"><value>LOCAL ONLY</value></data>
+  <data name="DevinOption" xml:space="preserve"><value>Include Devin usage (Devin CLI and Devin Desktop agent)</value></data>
+  <data name="DevinHelp" xml:space="preserve"><value>Reads only the token counters in Devin's local session database on this PC ({0}), opened read-only. AIUsage never opens Devin credentials, never signs in and never contacts Cognition. Devin Cloud sessions are not stored on this PC and are not included. Off by default.</value></data>
+  <data name="DevinNoDataHelp" xml:space="preserve"><value>Use Devin on this PC, or check that {0} exists.</value></data>
+  <data name="DevinScanFailed" xml:space="preserve"><value>Devin usage could not be read: {0}</value></data>
+  <data name="DevinActiveFile" xml:space="preserve"><value>Devin database: {0}</value></data>
+  <data name="DevinNotBill" xml:space="preserve"><value>Devin figures use each model's list price per token. Devin bills by plan quota and credits, so this is not what you pay, and promotions such as free SWE-2 are not applied.</value></data>
+  <data name="DevinLimitsTitle" xml:space="preserve"><value>DEVIN PLAN QUOTA</value></data>
+  <data name="DevinLimits" xml:space="preserve"><value>Devin's daily and weekly plan quota is not shown: it is account data that is not in the local session database, and AIUsage never uses your Devin credentials. Check it in Devin's own usage page, or run /session-stats in the Devin CLI for a session's totals.</value></data>
+  <data name="DevinBusy" xml:space="preserve"><value>Devin's database was busy or changing. The figures shown are from the last successful read; it is read again on the next refresh.</value></data>
 </root>

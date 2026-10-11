@@ -4,6 +4,11 @@ using System.Reflection.PortableExecutable;
 
 internal static partial class Program
 {
+    private static readonly HashSet<string> ReadOnlySqlite = new(StringComparer.Ordinal)
+    {
+        "sqlite3_open_v2", "sqlite3_close_v2", "sqlite3_busy_timeout", "sqlite3_prepare_v2", "sqlite3_bind_int64", "sqlite3_step",
+        "sqlite3_column_type", "sqlite3_column_int64", "sqlite3_column_text", "sqlite3_column_bytes", "sqlite3_finalize"
+    };
     private static void CheckAssembly(string path)
     {
         using var stream = File.OpenRead(path); using var pe = new PEReader(stream); var m = pe.GetMetadataReader();
@@ -29,7 +34,10 @@ internal static partial class Program
         foreach (var handle in m.MethodDefinitions)
         {
             var method = m.GetMethodDefinition(handle); if ((method.Attributes & MethodAttributes.PinvokeImpl) == 0) continue;
-            var import = method.GetImport(); Equal("user32.dll", m.GetString(m.GetModuleReference(import.Module).Name).ToLowerInvariant()); Equal("DestroyIcon", m.GetString(import.Name));
+            var import = method.GetImport(); string module = m.GetString(m.GetModuleReference(import.Module).Name).ToLowerInvariant(), entry = m.GetString(import.Name);
+            // Native calls are an exact, reviewed list: the tray icon handle, and read-only SQLite from Windows' own winsqlite3.dll.
+            // No SQLite function that executes arbitrary SQL in one call (sqlite3_exec) or loads code is permitted.
+            Require(module == "user32.dll" && entry == "DestroyIcon" || module == "winsqlite3.dll" && ReadOnlySqlite.Contains(entry), "Unreviewed native call: " + module + "!" + entry);
         }
         foreach (var handle in m.MemberReferences)
         {

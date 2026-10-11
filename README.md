@@ -1,14 +1,19 @@
 # AIUsage for Windows
 
-**Your Codex and Claude Code usage, entirely local.** AIUsage 1.5.3 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code usage is optional (Settings → Claude Code) and comes only from the transcripts Claude Code already keeps on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
+**Your Codex, Claude Code and Devin usage, entirely local.** AIUsage 1.6.0 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code and Devin usage are optional (Settings) and come only from the data those tools already keep on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
 
 **No account access. No credential reader. No network client.** The optional online integration from 1.0.0 and earlier was removed, not merely disabled. There is no switch, token, app-server integration or undocumented endpoint that can re-enable it. The app does not launch Codex, another AI, a browser or an external editor.
 
-AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robinebers/openusage)** under MIT, not an OpenAI, Anthropic or official OpenUsage product. Our versions and roadmap are independent; selected upstream improvements may be ported after review. See [provenance](docs/UPSTREAM.md), [versioning](docs/VERSIONING.md), [local-only design](docs/LOCAL-ONLY.md) and [privacy](docs/PRIVACY.md). No affiliation, provider approval, legal certification or account-enforcement guarantee is implied.
+AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robinebers/openusage)** under MIT, not an OpenAI, Anthropic, Cognition or official OpenUsage product. Our versions and roadmap are independent; selected upstream improvements may be ported after review. See [provenance](docs/UPSTREAM.md), [versioning](docs/VERSIONING.md), [local-only design](docs/LOCAL-ONLY.md) and [privacy](docs/PRIVACY.md). No affiliation, provider approval, legal certification or account-enforcement guarantee is implied.
 
 [Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Security](SECURITY.md)
 
-## What's new in 1.5.3
+## What's new in 1.6.0
+
+- **Devin usage (optional, off by default).** Turn it on in **Settings → Devin → Include Devin usage**. AIUsage reads the token counters of the Devin CLI and Devin Desktop agent from Devin's local session database, opened read-only, and adds a **Devin** button to the source selector. Every model Devin used is included: SWE-2, GPT and Claude, with cost by effort. See [Devin](#devin-optional).
+- **SWE-2 list price** ($3 input, $0.30 cache read, $15 output per million tokens) from Devin's model documentation.
+
+## New in 1.5.3
 
 - **Claude Haiku 5.5 prices.** Anthropic prices Haiku 5.5 by prompt length: requests with more than 100,000 prompt tokens cost 5x in every category. AIUsage applies that per request.
 - **Claude Sonnet 5.5 cache reads** updated to the current $0.10 per million tokens. Claude prices re-checked on 2026-10-08.
@@ -47,17 +52,17 @@ Release notes: [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md). Previous: 1.2.0 a
 
 | Package | Platform |
 |---|---|
-| `AIUsage-1.5.3-win-x64.zip` | Windows on Intel / AMD |
-| `AIUsage-1.5.3-win-arm64.zip` | Windows on ARM |
+| `AIUsage-1.6.0-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.6.0-win-arm64.zip` | Windows on ARM |
 
-**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.5.3 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
+**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.6.0 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
 
-Closing a window only hides it. Starting 1.5.3 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
+Closing a window only hides it. Starting 1.6.0 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
 
 **Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus or SmartScreen. Check the repository and the ZIP's SHA-256 against `SHA256SUMS.txt`, or build from source. `PAYLOAD-SHA256.json` additionally lists files inside each extracted package. These hashes verify integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-1.5.3-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.6.0-win-x64.zip -Algorithm SHA256
 ```
 
 Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the published x64 Windows app. ARM64 is cross-compiled and its application metadata inspected, not executed on ARM hardware. No services or startup registration are installed.
@@ -100,13 +105,27 @@ AIUsage never reads your Claude credentials and never asks Anthropic for your li
    {
      "statusLine": {
        "type": "command",
-       "command": "C:/Users/you/Documents/AIUsage-1.5.3-win-x64/AIUsage.exe --claude-statusline"
+       "command": "C:/Users/you/Documents/AIUsage-1.6.0-win-x64/AIUsage.exe --claude-statusline"
      }
    }
    ```
 2. Add it to Claude Code's user settings file, `%USERPROFILE%\.claude\settings.json`, or `settings.json` inside `CLAUDE_CONFIG_DIR` if you set that variable (Settings shows the right file). Merge it with any settings already there and restart Claude Code.
 
 **Claude Code runs the status line only in a terminal** (the `claude` command); the Claude desktop app does not run it, so limits are updated only while you use Claude Code in a terminal. Claude Code then shows the model and your limits at the bottom (for example `Opus 5.5 · 5h 24% · 7d 41%`), and AIUsage shows the same values with reset times after its next refresh. `AIUsage.exe --claude-statusline` opens no window, keeps only the limit percentages and reset times in `%LOCALAPPDATA%\AIUsage\claude-limits.json` and discards everything else Claude Code sends. It replaces any status line you already have. AIUsage never edits Claude Code's settings itself. Limits appear only for Pro and Max plans (or a gateway spend limit), after Claude Code's first response in a session, and only while you use Claude Code; the card shows when they were last received. If you move AIUsage to a new folder, update the path. You can always check limits inside Claude Code with `/usage`.
+
+## Devin (optional)
+
+Devin support is **off by default**. Enable **Settings → Devin → Include Devin usage** and press **Save and refresh** (Spanish: **Ajustes → Devin → Incluir el uso de Devin → Guardar y actualizar**). The source selector then offers **Devin**, and the footer shows the database being read.
+
+**What is read.** Only Devin's local session database, `%APPDATA%\Devin\cli\sessions.db`, which the Devin CLI and the Devin Desktop agent write on this PC. It is opened with SQLite's read-only flag through `winsqlite3.dll`, the SQLite that ships with Windows, so AIUsage adds no SQLite binary or third-party package and cannot modify the database. From each model response AIUsage keeps the time, the model, the token counters and a SHA-256 digest of the message id. Prompts, responses, titles, folders and tool calls are never stored.
+
+**What is never done.** AIUsage does not open Devin credentials, sign-in state, logs or any other Devin file, does not sign in, does not call Cognition services and does not start or automate Devin. **Devin Cloud sessions are not included**: they run on Cognition's servers and are not stored on this PC.
+
+**Counting.** Devin stores a response again whenever a conversation is compacted or branched; summing every row would roughly double the usage. AIUsage counts each response once. Model names such as `swe-2-high` or `claude-opus-5-5-high` are split into the model and its effort, so Claude and GPT models used through Devin use the same prices as elsewhere and appear in the cost-by-effort tooltip.
+
+**Prices and quota.** Costs are list prices per token: SWE-2 at Cognition's published list price, other models at their providers' list prices. **This is not what you pay**: Devin bills by plan quota and credits, and promotions such as free SWE-2 are not applied. Devin's daily and weekly quota is account data that is not in the local database, so AIUsage does not show it; use Devin's usage page, or `/session-stats` in the Devin CLI for one session.
+
+**Limits of this source.** Cognition does not document this database, and its layout can change in a Devin update. If AIUsage cannot read it, it says so and shows no Devin figures instead of guessing.
 
 ## Dashboard and Codex limits
 
@@ -142,7 +161,7 @@ Startup hooks are disabled in the shipped runtime configuration. Folder deployme
 
 .NET's standard **local diagnostics IPC remains available** subject to OS permissions. It is documented, not misrepresented as disabled or as an Internet connection. Windows/security software may create independent caches. These controls are not protection against same-user binary/configuration replacement or a compromised OS.
 
-To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex (`.codex`) and Claude Code (`.claude`) data must not be deleted. See [privacy](docs/PRIVACY.md).
+To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex (`.codex`), Claude Code (`.claude`) and Devin (`%APPDATA%\Devin`) data must not be deleted. See [privacy](docs/PRIVACY.md).
 
 ## Build and evidence
 
@@ -152,4 +171,4 @@ CI validates accounting, local audit, localization, follow-up, security/stress a
 
 [First audit response](docs/AUDIT-REMEDIATION.md) · [Second audit](docs/AUDIT-FOLLOWUP.md) · [Local-security remediation](docs/AUDIT-SECURITY-REMEDIATION.md)
 
-Codex and Claude Code (local transcripts only) are the implemented sources. No installer, updater, publisher signature, comprehensive multimonitor/RDP/accessibility validation or legal certification is included. Only process logs you are authorized to use.
+Codex, Claude Code (local transcripts only) and Devin (local session database only) are the implemented sources. No installer, updater, publisher signature, comprehensive multimonitor/RDP/accessibility validation or legal certification is included. Only process logs you are authorized to use.
