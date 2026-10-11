@@ -4,6 +4,7 @@ A System.IO.FileSystem.DriveInfo
 A System.Linq
 A System.Memory
 A System.Runtime
+A System.Runtime.InteropServices
 A System.Security.Cryptography
 A System.Text.Encoding.Extensions
 A System.Text.Json
@@ -12,6 +13,7 @@ A System.Threading
 T System.Action`1
 T System.ArgumentException
 T System.Array
+T System.BadImageFormatException
 T System.Boolean
 T System.Byte
 T System.Char
@@ -48,7 +50,9 @@ T System.DateTimeOffset
 T System.Decimal
 T System.Diagnostics.DebuggableAttribute
 T System.Diagnostics.DebuggableAttribute/DebuggingModes
+T System.DllNotFoundException
 T System.Double
+T System.EntryPointNotFoundException
 T System.Environment
 T System.Environment/SpecialFolder
 T System.Exception
@@ -61,6 +65,7 @@ T System.Guid
 T System.IDisposable
 T System.IEquatable`1
 T System.IFormatProvider
+T System.IntPtr
 T System.IO.Directory
 T System.IO.DirectoryInfo
 T System.IO.DirectoryNotFoundException
@@ -132,6 +137,9 @@ T System.Runtime.CompilerServices.RuntimeCompatibilityAttribute
 T System.Runtime.CompilerServices.RuntimeHelpers
 T System.Runtime.CompilerServices.TupleElementNamesAttribute
 T System.Runtime.CompilerServices.Unsafe
+T System.Runtime.InteropServices.DefaultDllImportSearchPathsAttribute
+T System.Runtime.InteropServices.DllImportSearchPath
+T System.Runtime.InteropServices.Marshal
 T System.Runtime.InteropServices.MemoryMarshal
 T System.Runtime.Versioning.TargetFrameworkAttribute
 T System.RuntimeFieldHandle

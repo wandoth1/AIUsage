@@ -287,5 +287,15 @@
     "FastMultiplier": 1,
     "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-10-08",
     "TierRulesVerified": false
+  },
+  "swe-2": {
+    "Input": 3,
+    "Cached": 0.3,
+    "Output": 15,
+    "CacheWriteMultiplier": 1,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Cognition list price, verified 2026-10-11. Devin plan promotions (free or discounted SWE-2) are not applied.",
+    "TierRulesVerified": false
   }
 }

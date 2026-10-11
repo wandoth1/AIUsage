@@ -1,8 +1,38 @@
-# AIUsage 1.5.3 for Windows — Claude Haiku 5.5 prices
+# AIUsage 1.6.0 for Windows — optional Devin usage
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged: no account client, credential reader, provider requests, model calls, updater or subprocess integration.
+
+## New
+
+- **Devin usage (optional, off by default).** Enable it in Settings → Devin. AIUsage reads the token counters of the Devin CLI and the Devin Desktop agent from Devin's local session database (`%APPDATA%\Devin\cli\sessions.db`) and adds **Devin** to the source selector next to Codex and Claude Code. All models Devin used are included (SWE-2, GPT, Claude), with cost by reasoning effort taken from the model name.
+- **Exact counting.** Devin stores a response again when a conversation is compacted or branched; AIUsage counts each response once (in a real history the naive sum was about twice the actual usage).
+- **SWE-2 list price** from Devin's model documentation (checked 2026-10-11): $3 input, $0.30 cache read and $15 output per million tokens. Devin plan promotions (free or discounted SWE-2) are not applied; figures are list-price equivalents, not your Devin bill.
+
+## How the database is read
+
+- Through `winsqlite3.dll`, the SQLite build that ships with Windows, loaded from System32 only. No SQLite binary and no third-party package is added to the AIUsage folder.
+- Opened with SQLite's read-only flag; only `SELECT` statements are prepared and `sqlite3_exec` is not imported, so AIUsage cannot modify Devin's data. When Devin is not running the file is read as immutable and no side files are created; while Devin is running SQLite's normal shared read path is used.
+- Only `message_nodes.row_id`, `created_at` and `chat_message` are queried, and from each model response only its role, model, token counters and message id (kept as a SHA-256 digest). Prompts, responses, titles, folders, tool calls, credentials and all other Devin files are never read.
+
+## Limits
+
+- Only local Devin CLI / Desktop agent sessions. **Devin Cloud sessions are not on this PC and are not included.**
+- Devin's plan quota is not in the local database and is not shown.
+- Cognition does not document this database; if a Devin update changes it, AIUsage reports that Devin usage could not be read instead of guessing. Nothing in Cognition's terms or acceptable-use policy addresses reading this local file; AIUsage is not affiliated with or endorsed by Cognition.
+
+## Upgrade
+
+Use `AIUsage-1.6.0-win-x64.zip` or `AIUsage-1.6.0-win-arm64.zip`. Existing settings are preserved and Devin stays off until you enable it. If Claude Code's status line points to an older AIUsage folder, update its path.
+
+## Evidence
+
+New regression tests build synthetic SQLite databases with Windows' own SQLite and cover token mapping and list prices for SWE-2, GPT and Claude models, counting stored copies once, reading an idle database without changing it or creating side files, reading a database in use through its write-ahead log, incremental reads, a cache without content or raw ids, replaced databases, incoherent caches, and non-database or malformed input. The offline checks pin the exact native entry points and require read-only SQL. x64 execution uses synthetic data; ARM64 is compiled and inspected, not executed. Binaries remain unsigned.
+
+## Included from 1.5.3: Claude Haiku 5.5 prices
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
 
-## Prices
+### Prices
 
 - **Claude Haiku 5.5 added** (`claude-haiku-5-5`), from Anthropic's published API price list checked on 2026-10-08. It is priced by prompt length: up to 100,000 prompt tokens $0.10 input, $0.01 cache reads and $0.50 output per million tokens; above 100,000 prompt tokens every category costs 5x ($0.50, $0.05, $2.50). Cache writes keep the 1.25x (5 minutes) and 2x (1 hour) multipliers. AIUsage chooses the price per request from its total input (uncached input, cache reads and cache writes).
 - **Claude Sonnet 5.5 cache reads** corrected from $0.20 to the current $0.10 per million tokens (0.05x input). Earlier estimates for Sonnet 5.5 were slightly high; history is re-estimated with the current catalog.

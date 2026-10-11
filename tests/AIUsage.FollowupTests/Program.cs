@@ -42,6 +42,7 @@ internal static partial class Program
         ClaudeCases();
         ClaudeStatusCases();
         EffortCases();
+        DevinCases();
         Console.WriteLine($"RESULT: {passed} passed; {failed} failed."); return failed == 0 ? 0 : 1;
     }
     private static string Row(string type, object payload) => JsonSerializer.Serialize(new { timestamp = At.ToString("O"), type, payload }) + "\n";

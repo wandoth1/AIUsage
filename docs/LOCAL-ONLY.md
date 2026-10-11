@@ -1,4 +1,4 @@
-# Local-only architecture and boundaries — 1.5.3
+# Local-only architecture and boundaries — 1.6.0
 
 The optional authenticated integration was removed in 1.1.0. Version 1.1.1 preserved that boundary and addressed the subsequent local-security audit; 1.2.0 kept it unchanged while adding metadata-only detection of the Codex data folder; 1.3.0 kept it unchanged while adding an optional, read-only Claude Code source; 1.4.0 keeps it unchanged while accepting Claude plan limits from Claude Code's documented status line, which Claude Code runs locally as `AIUsage.exe --claude-statusline` when the user configures it (see PRIVACY.md). AIUsage itself still creates no subprocess and has no network client. This is technical risk reduction, not legal certification, OpenAI approval or an account-enforcement guarantee.
 
@@ -24,7 +24,7 @@ Schema 6 caches are streamed compact JSON. Large histories use immutable event p
 
 ## Evidence
 
-Source and actual-published own assembly policies reject network/credential/process APIs, unexpected references, dynamic activation and unapproved native imports. The theme loader is an explicitly pinned, fixed embedded stylesheet with a Parse-only exception, not external XAML. Broader framework capabilities are not automatically capabilities exercised by our code.
+Source and actual-published own assembly policies reject network/credential/process APIs, unexpected references, dynamic activation and unapproved native imports. Since 1.6.0 the approved native imports are the tray icon handle (`user32!DestroyIcon`) and eleven read-only SQLite entry points of `winsqlite3.dll`, the SQLite build that ships with Windows and is loaded from System32 only: AIUsage ships no SQLite binary and no third-party package. The database is opened with the read-only flag, only single `SELECT` statements are prepared, and `sqlite3_exec` is not imported; a source guard and the compiled-metadata check enforce this. The theme loader is an explicitly pinned, fixed embedded stylesheet with a Parse-only exception, not external XAML. Broader framework capabilities are not automatically capabilities exercised by our code.
 
 Synthetic tests cover migration, locked files, source hashes, paths, exports and prices. Independent Windows UI Automation starts the published x64 EXE through its ordinary entry point, checks conflicts/settings/timers and a harmless hook with positive/negative controls. Separate demo/smoke checks cover language/theme rendering.
 

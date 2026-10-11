@@ -15,6 +15,12 @@ public sealed class AppSettings
     public string Language { get; set; } = "auto";
     // Opt-in: Claude Code transcripts are a second local source and are never read unless enabled.
     public bool ClaudeCode { get; set; }
+    // Opt-in: the Devin CLI/Desktop session database is a third local source, never read unless enabled.
+    public bool Devin { get; set; }
+    // Empty = Devin's own location (%APPDATA%\Devin\cli\sessions.db).
+    public string DevinDatabase { get; set; } = "";
+    public string ResolveDevinDatabase() =>
+        string.IsNullOrWhiteSpace(DevinDatabase) ? LocalPaths.Require(DevinLogScanner.DefaultDatabase()) : ExpandFolder(DevinDatabase);
     public string ResolveHome()
     {
         string path = string.IsNullOrWhiteSpace(CodexHome) ? Environment.GetEnvironmentVariable("CODEX_HOME") ?? "" : CodexHome;
