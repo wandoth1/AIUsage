@@ -1,6 +1,6 @@
 # AIUsage for Windows
 
-**Your Codex, Claude Code and Devin usage, entirely local.** AIUsage 1.6.0 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code and Devin usage are optional (Settings) and come only from the data those tools already keep on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
+**Your Codex, Claude Code and Devin usage, entirely local.** AIUsage 1.6.1 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code and Devin usage are optional (Settings) and come only from the data those tools already keep on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
 
 **No account access. No credential reader. No network client.** The optional online integration from 1.0.0 and earlier was removed, not merely disabled. There is no switch, token, app-server integration or undocumented endpoint that can re-enable it. The app does not launch Codex, another AI, a browser or an external editor.
 
@@ -8,7 +8,12 @@ AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robin
 
 [Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Security](SECURITY.md)
 
-## What's new in 1.6.0
+## What's new in 1.6.1
+
+- **Every model Devin offers now has a price.** Devin writes model ids its own way (`gpt-6-1-sol-high`, `claude-opus-5-5-high-fast`, `glm-5-2-max-1m`). AIUsage now maps them to the catalog name (`gpt-6.1-sol`, so the same model used from Codex and from Devin is one row), the effort and the service tier: **priority** (OpenAI) and **fast** (Claude) variants cost twice the standard rate.
+- **25 more models** from Devin's published per-token table: SWE-1.6, SWE-1.7, SWE-1.7 Lightning, Gemini 3.x, GLM-5.2/5.3, Kimi K2/K3, DeepSeek V4, Grok 4.x and others, at their regular (non-promotional) rate.
+
+## New in 1.6.0
 
 - **Devin usage (optional, off by default).** Turn it on in **Settings → Devin → Include Devin usage**. AIUsage reads the token counters of the Devin CLI and Devin Desktop agent from Devin's local session database, opened read-only, and adds a **Devin** button to the source selector. Every model Devin used is included: SWE-2, GPT and Claude, with cost by effort. See [Devin](#devin-optional).
 - **SWE-2 list price** ($3 input, $0.30 cache read, $15 output per million tokens) from Devin's model documentation.
@@ -52,17 +57,17 @@ Release notes: [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md). Previous: 1.2.0 a
 
 | Package | Platform |
 |---|---|
-| `AIUsage-1.6.0-win-x64.zip` | Windows on Intel / AMD |
-| `AIUsage-1.6.0-win-arm64.zip` | Windows on ARM |
+| `AIUsage-1.6.1-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.6.1-win-arm64.zip` | Windows on ARM |
 
-**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.6.0 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
+**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.6.1 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
 
-Closing a window only hides it. Starting 1.6.0 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
+Closing a window only hides it. Starting 1.6.1 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
 
 **Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus or SmartScreen. Check the repository and the ZIP's SHA-256 against `SHA256SUMS.txt`, or build from source. `PAYLOAD-SHA256.json` additionally lists files inside each extracted package. These hashes verify integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-1.6.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.6.1-win-x64.zip -Algorithm SHA256
 ```
 
 Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the published x64 Windows app. ARM64 is cross-compiled and its application metadata inspected, not executed on ARM hardware. No services or startup registration are installed.
@@ -105,7 +110,7 @@ AIUsage never reads your Claude credentials and never asks Anthropic for your li
    {
      "statusLine": {
        "type": "command",
-       "command": "C:/Users/you/Documents/AIUsage-1.6.0-win-x64/AIUsage.exe --claude-statusline"
+       "command": "C:/Users/you/Documents/AIUsage-1.6.1-win-x64/AIUsage.exe --claude-statusline"
      }
    }
    ```
@@ -123,7 +128,7 @@ Devin support is **off by default**. Enable **Settings → Devin → Include Dev
 
 **Counting.** Devin stores a response again whenever a conversation is compacted or branched; summing every row would roughly double the usage. AIUsage counts each response once. Model names such as `swe-2-high` or `claude-opus-5-5-high` are split into the model and its effort, so Claude and GPT models used through Devin use the same prices as elsewhere and appear in the cost-by-effort tooltip.
 
-**Prices and quota.** Costs are list prices per token: SWE-2 at Cognition's published list price, other models at their providers' list prices. **This is not what you pay**: Devin bills by plan quota and credits, and promotions such as free SWE-2 are not applied. Devin's daily and weekly quota is account data that is not in the local database, so AIUsage does not show it; use Devin's usage page, or `/session-stats` in the Devin CLI for one session.
+**Prices and quota.** Costs are list prices per token: OpenAI and Anthropic models at their providers' list prices, and SWE and third-party models (Gemini, GLM, Kimi, DeepSeek, Grok and others) at the regular per-token rate Devin publishes in its model documentation. Devin's internal `compactor` model, which summarises long conversations, has no published rate and is shown as "No price". **This is not what you pay**: Devin bills by plan quota and credits, and promotions such as free SWE-2 are not applied. Devin's daily and weekly quota is account data that is not in the local database, so AIUsage does not show it; use Devin's usage page, or `/session-stats` in the Devin CLI for one session.
 
 **Limits of this source.** Cognition does not document this database, and its layout can change in a Devin update. If AIUsage cannot read it, it says so and shows no Devin figures instead of guessing.
 

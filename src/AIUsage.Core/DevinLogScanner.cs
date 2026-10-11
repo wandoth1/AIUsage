@@ -24,7 +24,7 @@ public sealed class DevinCache
 public sealed class DevinLogScanner(string cacheDirectory)
 {
     // Bump whenever parsing or deduplication semantics change.
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
     public const int MaxMessageBytes = 32 * 1024 * 1024;
     // Devin stores a message again when a conversation is compacted or branched; rows near the checkpoint are
     // reread so late copies and updates are seen. Identical copies are counted once.
@@ -133,22 +133,34 @@ public sealed class DevinLogScanner(string cacheDirectory)
         // Devin reports uncached input, cache reads and cache writes separately; AIUsage's Input is their sum.
         try { checked { long all = input + read + write; tokens = new(all, read, output, 0, all + output, write); } }
         catch (OverflowException) { return null; }
-        var (model, effort) = SplitModel(generation);
+        var (model, effort, tier) = SplitModel(generation);
         string identity = Text(root, "message_id") ?? Text(metadata, "request_id") ?? "row:" + rowId.ToString(CultureInfo.InvariantCulture);
         string id = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)), 0, 16);
-        return new(id, rowId, new UsageEvent(DateTimeOffset.FromUnixTimeSeconds(createdSeconds), model, tokens, Effort: effort));
+        return new(id, rowId, new UsageEvent(DateTimeOffset.FromUnixTimeSeconds(createdSeconds), model, tokens, tier, Effort: effort));
     }
-    /// Devin names a model with its reasoning effort ("swe-2-high", "claude-opus-5-5-high"): split them so the model
-    /// matches the price catalog and the effort feeds the cost-by-effort breakdown.
-    public static (string Model, string? Effort) SplitModel(string generation)
+    /// Devin's model ids carry options as suffixes: "swe-2-high", "claude-opus-5-5-high-fast",
+    /// "gpt-6-1-sol-medium-priority", "glm-5-2-max-1m". Split them into the model (as the price catalog names it),
+    /// the reasoning effort (for the cost-by-effort breakdown) and the service tier (priority/fast cost more).
+    public static (string Model, string? Effort, string Tier) SplitModel(string generation)
     {
         string model = generation.Trim().ToLowerInvariant();
-        if (!IsModelName(model)) return ("unknown", null);
-        int dash = model.LastIndexOf('-');
-        if (dash > 0 && model[(dash + 1)..] is "minimal" or "none" or "low" or "medium" or "high" or "xhigh" or "max" or "ultra")
-            return (model[..dash], model[(dash + 1)..]);
-        return (model, null);
+        if (!IsModelName(model)) return ("unknown", null, "standard");
+        var parts = model.Split('-').ToList();
+        string? effort = null; string tier = "standard";
+        while (parts.Count > 1)
+        {
+            string last = parts[^1];
+            if (last is "1m" or "thinking") { parts.RemoveAt(parts.Count - 1); continue; }   // Same price as the base model.
+            if (last is "priority" or "fast" && tier == "standard" && effort is null && parts.Count > 2 && IsEffort(parts[^2])) { tier = last; parts.RemoveAt(parts.Count - 1); continue; }
+            if (effort is null && IsEffort(last)) { effort = last; parts.RemoveAt(parts.Count - 1); continue; }
+            break;
+        }
+        // OpenAI writes versions with a dot ("gpt-6.1-sol"); Devin writes "gpt-6-1-sol".
+        if (parts.Count >= 3 && parts[0] == "gpt" && parts[1].All(char.IsAsciiDigit) && parts[2].All(char.IsAsciiDigit) && parts[1].Length > 0 && parts[2].Length > 0)
+        { parts[1] = parts[1] + "." + parts[2]; parts.RemoveAt(2); }
+        return (string.Join('-', parts), effort, tier);
     }
+    private static bool IsEffort(string value) => value is "minimal" or "none" or "low" or "medium" or "high" or "xhigh" or "max" or "ultra";
     private static bool IsModelName(string model) =>
         model.Length is > 0 and <= 80 && model.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-' or '.' or '_');
     private static bool Count(JsonElement e, string name, out long value)
@@ -179,7 +191,7 @@ public sealed class DevinLogScanner(string cacheDirectory)
     {
         if (e?.Event?.Tokens is not { } t || e.Id is not { Length: 32 } id || !id.All(char.IsAsciiHexDigit) || e.RowId < 0 ||
             e.Event.Model is null || !IsModelName(e.Event.Model) ||
-            e.Event.Tier != "standard" || e.Event.SessionId is not null || e.Event.Cumulative is not null || e.Event.Sequence != 0 ||
+            e.Event.Tier is not ("standard" or "priority" or "fast") || e.Event.SessionId is not null || e.Event.Cumulative is not null || e.Event.Sequence != 0 ||
             (e.Event.Effort is { } effort && EffortSummary.Normalize(effort) != effort) ||
             e.Event.At.Year < 2000 || e.Event.At > DateTimeOffset.Now.AddDays(1)) return false;
         if (t.Input < 0 || t.Cached < 0 || t.Output < 0 || t.Reasoning != 0 || t.CacheWrite < 0 || t.CacheWrite1h != 0 ||
