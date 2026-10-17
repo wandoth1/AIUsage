@@ -338,6 +338,56 @@
     "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
     "TierRulesVerified": false
   },
+  "gemini-3-1-pro": {
+    "Input": 2,
+    "Cached": 0.2,
+    "Output": 12,
+    "CacheWriteMultiplier": 2.25,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-5-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 9,
+    "CacheWriteMultiplier": 0.6667,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-6-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 7.5,
+    "CacheWriteMultiplier": 1.0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-7-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 7.5,
+    "CacheWriteMultiplier": 1.0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
+  "gemini-3-8-flash": {
+    "Input": 1.5,
+    "Cached": 0.15,
+    "Output": 7.5,
+    "CacheWriteMultiplier": 1.0,
+    "LongThreshold": 0,
+    "FastMultiplier": 1,
+    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
+    "TierRulesVerified": false
+  },
   "glm-5-2": {
     "Input": 1.4,
     "Cached": 0.26,
@@ -493,145 +543,6 @@
     "Cached": 0,
     "Output": 0,
     "CacheWriteMultiplier": 0,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
-    "TierRulesVerified": false
-  },
-  "gemini-4-argon": {
-    "Input": 2,
-    "Cached": 0.1,
-    "Output": 10,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false,
-    "ReviewAfter": "2026-12-01"
-  },
-  "gemini-3.8-flash": {
-    "Input": 0.75,
-    "Cached": 0.075,
-    "Output": 3.75,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false,
-    "ReviewAfter": "2027-01-01"
-  },
-  "gemini-3.6-flash": {
-    "Input": 0.75,
-    "Cached": 0.075,
-    "Output": 3.75,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false,
-    "ReviewAfter": "2027-01-01"
-  },
-  "gemini-3.5-flash-lite": {
-    "Input": 0.3,
-    "Cached": 0.03,
-    "Output": 2.5,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false
-  },
-  "gemini-3.1-flash-lite": {
-    "Input": 0.25,
-    "Cached": 0.025,
-    "Output": 1.5,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false
-  },
-  "gemini-3.1-pro": {
-    "Input": 2,
-    "Cached": 0.2,
-    "Output": 12,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 200000,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false,
-    "LongInputMultiplier": 2,
-    "LongOutputMultiplier": 1.5
-  },
-  "gemini-3.1-pro-preview": {
-    "Input": 2,
-    "Cached": 0.2,
-    "Output": 12,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 200000,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false,
-    "LongInputMultiplier": 2,
-    "LongOutputMultiplier": 1.5
-  },
-  "gemini-3-flash-preview": {
-    "Input": 0.5,
-    "Cached": 0.05,
-    "Output": 3,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false
-  },
-  "gemini-2.5-pro": {
-    "Input": 1.25,
-    "Cached": 0.125,
-    "Output": 10,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 200000,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false,
-    "LongInputMultiplier": 2,
-    "LongOutputMultiplier": 1.5
-  },
-  "gemini-2.5-flash": {
-    "Input": 0.3,
-    "Cached": 0.03,
-    "Output": 2.5,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false
-  },
-  "gemini-2.5-flash-lite": {
-    "Input": 0.1,
-    "Cached": 0.01,
-    "Output": 0.4,
-    "CacheWriteMultiplier": 1,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://ai.google.dev/gemini-api/docs/pricing ; Google Gemini API standard (paid tier) price, verified 2026-10-17",
-    "TierRulesVerified": false
-  },
-  "gemini-3.5-flash": {
-    "Input": 1.5,
-    "Cached": 0.15,
-    "Output": 9,
-    "CacheWriteMultiplier": 0.6667,
-    "LongThreshold": 0,
-    "FastMultiplier": 1,
-    "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",
-    "TierRulesVerified": false
-  },
-  "gemini-3.7-flash": {
-    "Input": 1.5,
-    "Cached": 0.15,
-    "Output": 7.5,
-    "CacheWriteMultiplier": 1,
     "LongThreshold": 0,
     "FastMultiplier": 1,
     "Source": "https://docs.devin.ai/desktop/models ; Devin per-token rate (regular price; plan promotions not applied), verified 2026-10-11",

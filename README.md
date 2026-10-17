@@ -1,19 +1,14 @@
 # AIUsage for Windows
 
-**Your Codex, Claude Code and Devin usage, entirely local.** AIUsage 1.7.0 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code and Devin usage are optional (Settings) and come only from the data those tools already keep on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
+**Your Codex, Claude Code and Devin usage, entirely local.** AIUsage 1.6.1 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code and Devin usage are optional (Settings) and come only from the data those tools already keep on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
 
 **No account access. No credential reader. No network client.** The optional online integration from 1.0.0 and earlier was removed, not merely disabled. There is no switch, token, app-server integration or undocumented endpoint that can re-enable it. The app does not launch Codex, another AI, a browser or an external editor.
 
-AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robinebers/openusage)** under MIT, not an OpenAI, Anthropic, Cognition, Google or official OpenUsage product. Our versions and roadmap are independent; selected upstream improvements may be ported after review. See [provenance](docs/UPSTREAM.md), [versioning](docs/VERSIONING.md), [local-only design](docs/LOCAL-ONLY.md) and [privacy](docs/PRIVACY.md). No affiliation, provider approval, legal certification or account-enforcement guarantee is implied.
+AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robinebers/openusage)** under MIT, not an OpenAI, Anthropic, Cognition or official OpenUsage product. Our versions and roadmap are independent; selected upstream improvements may be ported after review. See [provenance](docs/UPSTREAM.md), [versioning](docs/VERSIONING.md), [local-only design](docs/LOCAL-ONLY.md) and [privacy](docs/PRIVACY.md). No affiliation, provider approval, legal certification or account-enforcement guarantee is implied.
 
 [Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Security](SECURITY.md)
 
-## What's new in 1.7.0
-
-- **Antigravity plan limits (optional).** The Antigravity CLI has a documented status line that passes your plan quota per model to a command you choose. Make AIUsage that command and an **Antigravity plan limits** card shows each model's used share and reset time. See [Antigravity](#antigravity-plan-limits-optional).
-- **Google Gemini prices** from Google's official price list: Gemini 4 Argon, 3.8/3.6 Flash, 3.5/3.1 Flash-Lite, 3.1 Pro (higher price above 200,000 prompt tokens), 3 Flash Preview and 2.5 Pro/Flash/Flash-Lite. Gemini models used through Devin now use Google's price and Google's model names (`gemini-3.8-flash`).
-
-## New in 1.6.1
+## What's new in 1.6.1
 
 - **Every model Devin offers now has a price.** Devin writes model ids its own way (`gpt-6-1-sol-high`, `claude-opus-5-5-high-fast`, `glm-5-2-max-1m`). AIUsage now maps them to the catalog name (`gpt-6.1-sol`, so the same model used from Codex and from Devin is one row), the effort and the service tier: **priority** (OpenAI) and **fast** (Claude) variants cost twice the standard rate.
 - **25 more models** from Devin's published per-token table: SWE-1.6, SWE-1.7, SWE-1.7 Lightning, Gemini 3.x, GLM-5.2/5.3, Kimi K2/K3, DeepSeek V4, Grok 4.x and others, at their regular (non-promotional) rate.
@@ -62,17 +57,17 @@ Release notes: [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md). Previous: 1.2.0 a
 
 | Package | Platform |
 |---|---|
-| `AIUsage-1.7.0-win-x64.zip` | Windows on Intel / AMD |
-| `AIUsage-1.7.0-win-arm64.zip` | Windows on ARM |
+| `AIUsage-1.6.1-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.6.1-win-arm64.zip` | Windows on ARM |
 
-**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.7.0 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
+**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.6.1 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
 
-Closing a window only hides it. Starting 1.7.0 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
+Closing a window only hides it. Starting 1.6.1 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
 
 **Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus or SmartScreen. Check the repository and the ZIP's SHA-256 against `SHA256SUMS.txt`, or build from source. `PAYLOAD-SHA256.json` additionally lists files inside each extracted package. These hashes verify integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-1.7.0-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.6.1-win-x64.zip -Algorithm SHA256
 ```
 
 Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the published x64 Windows app. ARM64 is cross-compiled and its application metadata inspected, not executed on ARM hardware. No services or startup registration are installed.
@@ -115,7 +110,7 @@ AIUsage never reads your Claude credentials and never asks Anthropic for your li
    {
      "statusLine": {
        "type": "command",
-       "command": "C:/Users/you/Documents/AIUsage-1.7.0-win-x64/AIUsage.exe --claude-statusline"
+       "command": "C:/Users/you/Documents/AIUsage-1.6.1-win-x64/AIUsage.exe --claude-statusline"
      }
    }
    ```
@@ -136,18 +131,6 @@ Devin support is **off by default**. Enable **Settings → Devin → Include Dev
 **Prices and quota.** Costs are list prices per token: OpenAI and Anthropic models at their providers' list prices, and SWE and third-party models (Gemini, GLM, Kimi, DeepSeek, Grok and others) at the regular per-token rate Devin publishes in its model documentation. Devin's internal `compactor` model, which summarises long conversations, has no published rate and is shown as "No price". **This is not what you pay**: Devin bills by plan quota and credits, and promotions such as free SWE-2 are not applied. Devin's daily and weekly quota is account data that is not in the local database, so AIUsage does not show it; use Devin's usage page, or `/session-stats` in the Devin CLI for one session.
 
 **Limits of this source.** Cognition does not document this database, and its layout can change in a Devin update. If AIUsage cannot read it, it says so and shows no Devin figures instead of guessing.
-
-## Antigravity plan limits (optional)
-
-AIUsage does not read Antigravity's files and does not show Antigravity token usage or costs: its readable local transcripts record tokens for only a small share of responses and no model, and the rest is stored in an undocumented binary format that AIUsage does not decode. What it can show, through a documented Antigravity feature, is your **plan quota**.
-
-The Antigravity CLI (`agy`) has a [status line](https://antigravity.google/docs/cli/statusline/) that runs a command you choose and passes it session data, including a `quota` object with the remaining share and reset time for each model. To use it:
-
-1. Enable **Settings → Antigravity → Show Antigravity plan limits** and copy the entry shown there. It contains the path of the AIUsage you are running and keeps Antigravity's own status line (`stack_with_default`).
-2. Add it to `%USERPROFILE%\.gemini\antigravity-cli\settings.json` (merge it with any settings already there).
-3. Use the Antigravity CLI in a terminal. The card updates after AIUsage's next refresh.
-
-`AIUsage.exe --antigravity-statusline` opens no window and keeps only the quota in `%LOCALAPPDATA%\AIUsage\antigravity-limits.json`. It discards everything else the CLI sends, including your e-mail address. AIUsage never opens Google credentials (`oauth_creds.json`), never signs in and never contacts Google. Limits update only while you use the CLI, not from the Antigravity IDE. If you move AIUsage to a new folder, update the path.
 
 ## Dashboard and Codex limits
 
@@ -183,7 +166,7 @@ Startup hooks are disabled in the shipped runtime configuration. Folder deployme
 
 .NET's standard **local diagnostics IPC remains available** subject to OS permissions. It is documented, not misrepresented as disabled or as an Internet connection. Windows/security software may create independent caches. These controls are not protection against same-user binary/configuration replacement or a compromised OS.
 
-To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex (`.codex`), Claude Code (`.claude`), Devin (`%APPDATA%\Devin`) and Antigravity (`.gemini`) data must not be deleted. See [privacy](docs/PRIVACY.md).
+To uninstall, exit, delete the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage`. Original Codex (`.codex`), Claude Code (`.claude`) and Devin (`%APPDATA%\Devin`) data must not be deleted. See [privacy](docs/PRIVACY.md).
 
 ## Build and evidence
 
