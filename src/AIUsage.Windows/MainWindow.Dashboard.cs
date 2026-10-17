@@ -65,8 +65,6 @@ public sealed partial class MainWindow
         if (codex) body.Children.Add(QuotaCard());
         if (claude) body.Children.Add(ClaudeLimitsCard());
         if (devin) body.Children.Add(DevinLimitsCard());
-        // Antigravity contributes plan limits only (no local usage source), so its card belongs to the main view.
-        if (settings.Antigravity && (ActiveSource == AllSources || !MultipleSources)) body.Children.Add(AntigravityLimitsCard());
         var models = new StackPanel();
         bool byCost = unpriced == 0 && cost > 0;
         models.Children.Add(Heading(T("ByModel"), byCost ? T("ShareCost") : T("ShareTokens")));
@@ -121,20 +119,6 @@ public sealed partial class MainWindow
         }
         lines.Add(T("EffortNote"));
         return string.Join("\n", lines);
-    }
-    // Never from Google credentials: only what the Antigravity CLI passes to the user's configured status line.
-    private Border AntigravityLimitsCard()
-    {
-        var content = new StackPanel();
-        content.Children.Add(Heading(T("AntigravityLimitsTitle"), "Antigravity"));
-        if (antigravityLimits is not { Windows.Count: > 0 } limits)
-        {
-            content.Children.Add(Text(T("AntigravityLimits"), 12, false, "Muted"));
-            return Card(content);
-        }
-        content.Children.Add(Text(T("AntigravityLimitsSource"), 10, false, "Muted"));
-        foreach (var w in limits.Windows) content.Children.Add(LimitRow(limits, w, false));
-        return Card(content);
     }
     // Devin's plan quota is account data that the local session database does not contain.
     private Border DevinLimitsCard()

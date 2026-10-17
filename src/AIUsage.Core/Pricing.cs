@@ -17,7 +17,7 @@ public sealed class PriceCatalog
 {
     private readonly Dictionary<string, ModelRate> rates;
     private readonly HashSet<string> customKeys = new(StringComparer.OrdinalIgnoreCase);
-    public const string SnapshotDate = "2026-10-17";
+    public const string SnapshotDate = "2026-10-11";
     public bool HasOverrides => customKeys.Count > 0;
     public PriceCatalog(Dictionary<string, ModelRate> rates) => this.rates = Normalize(rates);
     public static PriceCatalog Load(string? overridesPath = null)
