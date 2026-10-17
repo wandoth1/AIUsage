@@ -80,7 +80,7 @@ internal static partial class Program
         if (quota) row["quota"] = new Dictionary<string, object>
         {
             ["gemini-3.8-flash"] = new { remaining_fraction = 0.9378, reset_time = "2026-10-18T02:00:00Z", reset_in_seconds = 61200 },
-            ["gemini-pro"] = new { remaining_fraction = 0.25, reset_in_seconds = 3600 }
+            ["gemini-pro"] = new { remaining_fraction = 0.25, reset_time = "soon", reset_in_seconds = 3600 }
         };
         return new MemoryStream(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(row)));
     }

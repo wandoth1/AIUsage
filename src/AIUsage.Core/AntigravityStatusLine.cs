@@ -41,6 +41,7 @@ public static class AntigravityStatusLine
     {
         if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("quota", out var quota) || quota.ValueKind != JsonValueKind.Object) return null;
         var windows = new List<LimitWindow>();
+        // At most the first MaxWindows buckets, in the order the CLI sends them.
         foreach (var bucket in quota.EnumerateObject())
         {
             if (windows.Count == MaxWindows) break;
@@ -50,7 +51,8 @@ public static class AntigravityStatusLine
             DateTimeOffset? reset = null;
             if (value.TryGetProperty("reset_time", out var time) && time.ValueKind == JsonValueKind.String &&
                 DateTimeOffset.TryParse(time.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)) reset = parsed;
-            else if (value.TryGetProperty("reset_in_seconds", out var seconds) && seconds.ValueKind == JsonValueKind.Number &&
+            // An unreadable reset_time falls back to reset_in_seconds.
+            if (reset is null && value.TryGetProperty("reset_in_seconds", out var seconds) && seconds.ValueKind == JsonValueKind.Number &&
                 seconds.TryGetDouble(out double s) && s is >= 0 and < 315360000) reset = now.AddSeconds(s);
             if (Window(bucket.Name, (1 - fraction) * 100, reset) is { } w && windows.All(x => x.Id != w.Id)) windows.Add(w);
         }
