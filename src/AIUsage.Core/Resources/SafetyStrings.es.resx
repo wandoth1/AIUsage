@@ -61,4 +61,17 @@ Claude Code ejecuta el comando con Git Bash o PowerShell, y esta ruta contiene e
   <data name="DevinLimitsTitle" xml:space="preserve"><value>CUOTA DEL PLAN DE DEVIN</value></data>
   <data name="DevinLimits" xml:space="preserve"><value>La cuota diaria y semanal de tu plan de Devin no se muestra: es un dato de la cuenta que no está en la base de datos local de sesiones, y AIUsage nunca usa tus credenciales de Devin. Consúltala en la página de uso de Devin, o ejecuta /session-stats en Devin CLI para ver los totales de una sesión.</value></data>
   <data name="DevinBusy" xml:space="preserve"><value>La base de datos de Devin estaba ocupada o cambiando. Las cifras mostradas son de la última lectura correcta; se volverá a leer en la próxima actualización.</value></data>
+  <data name="AntigravityOption" xml:space="preserve"><value>Mostrar los límites del plan de Antigravity (barra de estado de Antigravity CLI)</value></data>
+  <data name="AntigravityHelp" xml:space="preserve"><value>Antigravity CLI (agy) pasa la cuota de tu plan por modelo (parte restante y hora de reinicio) al comando de barra de estado que configures. Para que ese comando sea AIUsage, añade esta entrada a {0} (fusiónala con los ajustes que ya tenga). Antigravity mantiene su barra de estado y muestra la de AIUsage debajo.</value></data>
+  <data name="AntigravityNote" xml:space="preserve"><value>AIUsage solo guarda los porcentajes de cuota y las horas de reinicio. Tu correo, carpetas, conversación y tokens, que la CLI también envía, se descartan. AIUsage nunca lee credenciales de Google, no inicia sesión y no contacta con Google. Los límites solo se actualizan mientras usas Antigravity CLI en una terminal, no desde el IDE de Antigravity. El uso de tokens y el coste de Antigravity no se muestran: no están disponibles en local de forma documentada y legible. Actualiza la ruta si mueves AIUsage a otra carpeta.</value></data>
+  <data name="AntigravityLimitsTitle" xml:space="preserve"><value>LÍMITES DEL PLAN DE ANTIGRAVITY</value></data>
+  <data name="AntigravityLimits" xml:space="preserve"><value>Aún no hay límites de Antigravity. Para verlos aquí:
+1. En Ajustes → Antigravity, copia la entrada que aparece.
+2. Pégala en el archivo de ajustes de Antigravity CLI que se indica ahí.
+3. Usa Antigravity CLI en una terminal (agy). Los límites llegan con su barra de estado.
+AIUsage nunca usa tus credenciales de Google; también puedes ver la cuota con /usage en la CLI.</value></data>
+  <data name="AntigravityLimitsSource" xml:space="preserve"><value>Desde la barra de estado de Antigravity CLI en este PC; se actualiza mientras usas agy. Cuota por modelo según la informa Antigravity.</value></data>
+  <data name="AntigravityStatusSource" xml:space="preserve"><value>Barra de estado de Antigravity CLI</value></data>
+  <data name="StatusUnsafePath" xml:space="preserve"><value>No se ofrece entrada para esta ubicación: {0}
+El comando lo ejecuta un intérprete de comandos, y esta ruta contiene espacios o símbolos que podría interpretar. Mueve la carpeta de AIUsage a una ruta solo con letras, números, '.', '_' y '-' (por ejemplo C:\AIUsage) y vuelve a abrir Ajustes.</value></data>
 </root>

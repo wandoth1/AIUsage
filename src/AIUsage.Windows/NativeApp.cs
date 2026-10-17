@@ -26,7 +26,8 @@ public sealed class NativeApp : Application
     [STAThread]
     public static int Main(string[] args)
     {
-        if (args.Length == 1 && args[0] == ClaudeStatusLine.Argument) return ClaudeStatusLineMode();
+        if (args.Length == 1 && args[0] == ClaudeStatusLine.Argument) return StatusLineMode(ClaudeStatusLine.Run);
+        if (args.Length == 1 && args[0] == AntigravityStatusLine.Argument) return StatusLineMode(AntigravityStatusLine.Run);
         var app = new NativeApp { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         app.Startup += async (_, _) => await app.Start(args);
         app.DispatcherUnhandledException += (_, e) =>
@@ -45,15 +46,15 @@ public sealed class NativeApp : Application
         };
         return app.Run();
     }
-    /// Run by Claude Code as the user's configured status line. No window, tray, mutex or network:
-    /// read the session JSON from stdin, keep only rate limits, print one line and exit.
-    private static int ClaudeStatusLineMode()
+    /// Run by Claude Code or the Antigravity CLI as the user's configured status line. No window, tray, mutex or
+    /// network: read the session JSON from stdin, keep only plan limits, print one line and exit.
+    private static int StatusLineMode(Func<Stream, string, DateTimeOffset, string> run)
     {
         try
         {
             string data = LocalPaths.Require(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AIUsage"));
             using var input = Console.OpenStandardInput();
-            byte[] line = System.Text.Encoding.UTF8.GetBytes(ClaudeStatusLine.Run(input, data, DateTimeOffset.Now) + "\n");
+            byte[] line = System.Text.Encoding.UTF8.GetBytes(run(input, data, DateTimeOffset.Now) + "\n");
             using var output = Console.OpenStandardOutput();
             output.Write(line);
         }

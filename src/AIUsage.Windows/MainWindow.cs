@@ -42,6 +42,8 @@ public sealed partial class MainWindow : Window
     private Dictionary<string, DashboardData> dashboards = new();
     // Written by "AIUsage.exe --claude-statusline" when the user makes it Claude Code's status line.
     private QuotaSnapshot? claudeLimits;
+    // Written by "AIUsage.exe --antigravity-statusline" when the user makes it the Antigravity CLI's status line.
+    private QuotaSnapshot? antigravityLimits;
     private DashboardData dashboard = new(new(), new());
     private ScrollViewer? currentScroll;
     private int lastBuiltPeriod;
@@ -128,6 +130,7 @@ public sealed partial class MainWindow : Window
             // Each source records its own failure; the dashboards are always rebuilt from what was read.
             await ScanClaudeAsync();
             await ScanDevinAsync();
+            antigravityLimits = settings.Antigravity && !demo ? await Task.Run(() => AntigravityStatusLine.Load(dataDir), cancellation.Token) : null;
             await ScanCodexAsync();
             SetDashboards(await Task.Run(BuildDashboards, cancellation.Token));
             var rows = dashboards.GetValueOrDefault(MultipleSources ? AllSources : CodexSource)?.ForPeriod(1) ?? [];
@@ -407,7 +410,7 @@ public sealed partial class MainWindow : Window
         body.Children.Add(Text(F("ClaudeStatusHelp", Path.Combine(claudeFolder, "settings.json")), 11, false, "Muted"));
         string executable = Environment.ProcessPath ?? "AIUsage.exe";
         // Never offer a command line whose path either shell could interpret (spaces, quotes, $, ;, & ...).
-        var snippet = new TextBox { Text = ClaudeStatusLine.SettingsSnippet(executable) ?? F("ClaudeStatusUnsafePath", executable), IsReadOnly = true,
+        var snippet = new TextBox { Text = ClaudeStatusLine.SettingsSnippet(executable) ?? F("StatusUnsafePath", executable), IsReadOnly = true,
             TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 8, 0, 6) };
         System.Windows.Automation.AutomationProperties.SetAutomationId(snippet, "ClaudeStatusSnippet");
         body.Children.Add(snippet);
@@ -420,6 +423,19 @@ public sealed partial class MainWindow : Window
         try { devinFile = settings.ResolveDevinDatabase(); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { devinFile = @"%APPDATA%\Devin\cli\sessions.db"; }
         body.Children.Add(Text(F("DevinHelp", devinFile), 11, false, "Muted"));
+        body.Children.Add(Label("Antigravity"));
+        var antigravity = new CheckBox { Content = T("AntigravityOption"), IsChecked = settings.Antigravity, Margin = new Thickness(0, 0, 0, 6) };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(antigravity, "AntigravityOption");
+        body.Children.Add(antigravity);
+        string antigravitySettings;
+        try { antigravitySettings = AntigravityStatusLine.SettingsFile(); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or ArgumentException) { antigravitySettings = @"%USERPROFILE%\.gemini\antigravity-cli\settings.json"; }
+        body.Children.Add(Text(F("AntigravityHelp", antigravitySettings), 11, false, "Muted"));
+        var antigravitySnippet = new TextBox { Text = AntigravityStatusLine.SettingsSnippet(executable) ?? F("StatusUnsafePath", executable), IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Consolas"), Margin = new Thickness(0, 8, 0, 6) };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(antigravitySnippet, "AntigravityStatusSnippet");
+        body.Children.Add(antigravitySnippet);
+        body.Children.Add(Text(T("AntigravityNote"), 11, false, "Muted"));
         body.Children.Add(Label(T("AppData")));
         body.Children.Add(new TextBox { Text = dataDir, IsReadOnly = true, TextWrapping = TextWrapping.Wrap });
         body.Children.Add(Button(T("RebuildCache"), async () =>
@@ -445,7 +461,7 @@ public sealed partial class MainWindow : Window
                 if (busy) throw new InvalidOperationException(T("WaitForRefresh"));
                 if (!int.TryParse(interval.Text, out int seconds) || seconds is < 15 or > 3600) throw new InvalidOperationException(T("InvalidInterval"));
                 var next = new AppSettings { CodexHome = home.Text.Trim(), RefreshSeconds = seconds, LightTheme = light.IsChecked == true, Language = L10n.NormalizeSetting(chosenLanguage?.Tag as string), ClaudeCode = claude.IsChecked == true,
-                    Devin = devin.IsChecked == true, DevinDatabase = settings.DevinDatabase };
+                    Devin = devin.IsChecked == true, DevinDatabase = settings.DevinDatabase, Antigravity = antigravity.IsChecked == true };
                 if (!demo)
                 {
                     if (!settingsConfirmed && next.CodexHome.Length == 0) throw new InvalidOperationException(T("ChooseExplicitFolder"));
@@ -516,7 +532,7 @@ public sealed partial class MainWindow : Window
     {
         if (demo || busy) return;
         var next = new AppSettings { CodexHome = "", RefreshSeconds = settings.RefreshSeconds, LightTheme = settings.LightTheme, Language = settings.Language, ClaudeCode = settings.ClaudeCode,
-            Devin = settings.Devin, DevinDatabase = settings.DevinDatabase };
+            Devin = settings.Devin, DevinDatabase = settings.DevinDatabase, Antigravity = settings.Antigravity };
         try { AtomicJson.Write(SettingsPath, next); }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         { MessageBox.Show(this, T("SettingsNotApplied"), "AIUsage", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
@@ -573,7 +589,7 @@ public sealed partial class MainWindow : Window
         if (Descendants((DependencyObject)Content).OfType<Button>().Any(b => Equals(b.Content, "GitHub"))) throw new InvalidOperationException("External navigation must not be available.");
         settingsView = true; Build();
         await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 3) throw new InvalidOperationException("Unexpected option in local-only settings.");
+        if (Descendants((DependencyObject)Content).OfType<CheckBox>().Count() != 4) throw new InvalidOperationException("Unexpected option in local-only settings.");
     }
     private static TextBlock Text(string text, double size = 13, bool bold = false, string color = "Ink") => new()
     { Text = text, FontSize = size, FontWeight = bold ? FontWeights.SemiBold : FontWeights.Normal, Foreground = Theme.Brush(color), TextWrapping = TextWrapping.Wrap };

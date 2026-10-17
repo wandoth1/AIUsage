@@ -60,6 +60,7 @@ public static class L10n
     {
         "Local log" or "Registro local" => T("LocalLog"),
         ClaudeStatusLine.Source => T("ClaudeStatusSource"),
+        AntigravityStatusLine.Source => T("AntigravityStatusSource"),
         _ => source // External provider names and user content are never translated.
     };
     public static string CreditValue(string value) => value is "Unlimited" or "Sin límite" ? T("Unlimited") : value;

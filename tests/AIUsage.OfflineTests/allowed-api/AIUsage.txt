@@ -19,6 +19,7 @@ A System.Threading.ThreadPool
 A System.Windows.Forms
 A WindowsBase
 T AIUsage.Core.AccountIdentity
+T AIUsage.Core.AntigravityStatusLine
 T AIUsage.Core.AppSettings
 T AIUsage.Core.AppVersion
 T AIUsage.Core.AtomicJson
@@ -91,6 +92,7 @@ T System.EventHandler
 T System.Exception
 T System.Func`1
 T System.Func`2
+T System.Func`4
 T System.Globalization.CultureInfo
 T System.IDisposable
 T System.IFormatProvider

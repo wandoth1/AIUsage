@@ -61,4 +61,17 @@ Claude Code runs the command through Git Bash or PowerShell, and this path conta
   <data name="DevinLimitsTitle" xml:space="preserve"><value>DEVIN PLAN QUOTA</value></data>
   <data name="DevinLimits" xml:space="preserve"><value>Devin's daily and weekly plan quota is not shown: it is account data that is not in the local session database, and AIUsage never uses your Devin credentials. Check it in Devin's own usage page, or run /session-stats in the Devin CLI for a session's totals.</value></data>
   <data name="DevinBusy" xml:space="preserve"><value>Devin's database was busy or changing. The figures shown are from the last successful read; it is read again on the next refresh.</value></data>
+  <data name="AntigravityOption" xml:space="preserve"><value>Show Antigravity plan limits (Antigravity CLI status line)</value></data>
+  <data name="AntigravityHelp" xml:space="preserve"><value>The Antigravity CLI (agy) passes your plan quota per model (remaining share and reset time) to the status line command you configure. To make AIUsage that command, add this entry to {0} (merge it with the settings already there). Antigravity keeps its own status line and shows AIUsage's line below it.</value></data>
+  <data name="AntigravityNote" xml:space="preserve"><value>AIUsage keeps only the quota percentages and reset times. Your e-mail address, folders, conversation and tokens that the CLI also sends are discarded. AIUsage never reads Google credentials, never signs in and never contacts Google. Limits update only while you use the Antigravity CLI in a terminal, not from the Antigravity IDE. Antigravity token usage and costs are not shown: they are not available locally in a documented, readable form. Update the path if you move AIUsage to another folder.</value></data>
+  <data name="AntigravityLimitsTitle" xml:space="preserve"><value>ANTIGRAVITY PLAN LIMITS</value></data>
+  <data name="AntigravityLimits" xml:space="preserve"><value>No Antigravity limits yet. To see them here:
+1. In Settings → Antigravity, copy the entry shown there.
+2. Paste it into the Antigravity CLI settings file named there.
+3. Use the Antigravity CLI in a terminal (agy). Limits arrive with its status line.
+AIUsage never uses your Google credentials; you can also check quota with /usage in the CLI.</value></data>
+  <data name="AntigravityLimitsSource" xml:space="preserve"><value>From the Antigravity CLI status line on this PC, updated while you use agy. Quota per model as reported by Antigravity.</value></data>
+  <data name="AntigravityStatusSource" xml:space="preserve"><value>Antigravity CLI status line</value></data>
+  <data name="StatusUnsafePath" xml:space="preserve"><value>No entry is offered for this location: {0}
+The command is run by a shell, and this path contains spaces or symbols that a shell could interpret. Move the AIUsage folder to a path with only letters, digits, '.', '_' and '-' (for example C:\AIUsage) and open Settings again.</value></data>
 </root>

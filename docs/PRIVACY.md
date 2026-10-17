@@ -1,4 +1,4 @@
-# Privacy and local data — 1.6.1
+# Privacy and local data — 1.7.0
 
 AIUsage is local-only. The authenticated client was deleted in 1.1.0; there is no OAuth, API-key, app-server, cookie or credential-store integration. No analytics, upload, automatic update check or model call is implemented. It does not read auth.json, launch Codex or modify original Codex logs/configuration.
 
@@ -26,6 +26,10 @@ The database is opened with SQLite's read-only flag through Windows' own `winsql
 
 AIUsage never uses Devin credentials, never signs in and never calls Cognition services. Only the local CLI/Desktop agent sessions are covered: Devin Cloud sessions run on Cognition's servers and are not on this PC. Devin's plan quota is account data that is not in the local database, so it is not shown. Costs are each model's list price per token (SWE-2 at Cognition's published list price; GPT and Claude models at their providers' list prices); Devin bills by plan quota and credits, and promotions such as free or discounted SWE-2 are not applied. Cognition does not document this database, so its layout can change without notice; AIUsage then reports that Devin usage could not be read instead of guessing.
 
+## Antigravity plan limits (optional, off by default)
+
+AIUsage reads no Antigravity file. When **Settings → Antigravity → Show Antigravity plan limits** is enabled and the user makes AIUsage the Antigravity CLI's status line (`statusLine` in `%USERPROFILE%\.gemini\antigravity-cli\settings.json`, a documented Antigravity feature), the CLI runs `AIUsage.exe --antigravity-statusline` locally and passes session JSON on stdin. AIUsage keeps only the `quota` windows (model or bucket id, used share and reset time) in `%LOCALAPPDATA%\AIUsage\antigravity-limits.json` and prints the model name and the highest quota use. Everything else in that input, including the signed-in e-mail address, working directory, conversation id and token counts, is discarded. AIUsage never opens Google credentials (`oauth_creds.json`, `google_accounts.json`), never signs in and never contacts Google. Antigravity token usage and costs are not shown: the readable local transcripts record tokens for only a small share of responses and no model, and the rest is in an undocumented binary format that AIUsage does not decode.
+
 ## Settings and upgrade
 
 Supported settings are read before attempting to remove the legacy OnlineQuota field. That migration can write AIUsage's settings automatically. A write failure preserves the selected folder and supported in-memory preferences with a warning. Unreadable/corrupt settings pause scanning until explicit folder confirmation; no default source is silently substituted. A missing file on first use still permits the documented default source. Automatic Codex-folder detection resolves the same documented default and lists only rollout file names and modification dates to report how many recent sessions it holds; it opens no log contents, and while scanning is paused after a settings error it runs only when you choose **Use detected folder**. A setting that points to the Codex application install folder (which never holds logs) is cleared at startup with a visible notice.
@@ -44,6 +48,6 @@ Network/UNC/WSL paths, mapped drives, device paths, links/junctions and nonresid
 
 Tests inspect our actual published assemblies and source, exercise synthetic locked credentials, original-file hashes, settings recovery, export and pricing, and operate the x64 executable through its ordinary entry point and timers. The offline runner observes .NET network-start events in its own process; it is not external tracing of WPF or proof that no failed file open was attempted. The fixed, source-pinned theme stylesheet is parsed from an embedded constant, never external XAML. Build/restore/license/publication tools use the internet, separately from the installed app.
 
-Choose Exit, remove the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage` to uninstall and remove its activity metadata. Settings → Rebuild reading cache removes only AIUsage cache JSON. Original Codex, Claude Code and Devin data must not be deleted. OS/security caches and previous runtime extraction remnants require separate consideration.
+Choose Exit, remove the extracted app folder and optionally `%LOCALAPPDATA%\AIUsage` to uninstall and remove its activity metadata. Settings → Rebuild reading cache removes only AIUsage cache JSON. Original Codex, Claude Code, Devin and Antigravity data must not be deleted. OS/security caches and previous runtime extraction remnants require separate consideration.
 
 Local processing does not remove every legal or contractual obligation, particularly for workplace/shared logs or commercialization. No provider approval, anonymity guarantee, legal certification or account-enforcement guarantee is made.

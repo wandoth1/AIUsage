@@ -17,6 +17,8 @@ public sealed class AppSettings
     public bool ClaudeCode { get; set; }
     // Opt-in: the Devin CLI/Desktop session database is a third local source, never read unless enabled.
     public bool Devin { get; set; }
+    // Opt-in: show Antigravity plan quota written by "AIUsage.exe --antigravity-statusline".
+    public bool Antigravity { get; set; }
     // Empty = Devin's own location (%APPDATA%\Devin\cli\sessions.db).
     public string DevinDatabase { get; set; } = "";
     public string ResolveDevinDatabase() =>
