@@ -108,7 +108,7 @@ internal static partial class Program
             Equal(("glm-5-2", "max", "standard"), DevinLogScanner.SplitModel("glm-5-2-max-1m"));
             Equal(("swe-1-7-lightning", "medium", "standard"), DevinLogScanner.SplitModel("swe-1-7-lightning-medium"));
             Equal(("swe-1-6-fast", (string?)null, "standard"), DevinLogScanner.SplitModel("swe-1-6-fast"));   // a model variant, not a tier
-            Equal(("gemini-3-8-flash", "medium", "standard"), DevinLogScanner.SplitModel("gemini-3-8-flash-medium"));
+            Equal(("gemini-3.8-flash", "medium", "standard"), DevinLogScanner.SplitModel("gemini-3-8-flash-medium"));
             Equal(("compactor", (string?)null, "standard"), DevinLogScanner.SplitModel("compactor"));
             Equal(("unknown", (string?)null, "standard"), DevinLogScanner.SplitModel("bad model <script>")); Equal(("unknown", (string?)null, "standard"), DevinLogScanner.SplitModel(new string('a', 81)));
         });
@@ -131,10 +131,10 @@ internal static partial class Program
             Equal(0.04m, Cost("claude-opus-5-5", "fast"));     // 1K×$20 ×2
             Equal(0.018m, Cost("kimi-k3"));                    // 1K×$3 + 1K×$15
             Equal(0.00606m, Cost("glm-5-3"));                  // 1K×$1.40 + 1K×$0.26 + 1K×$4.40
-            Equal(0.0105m, Cost("gemini-3-8-flash"));          // 1K×$1.50 + 1K×$1.50 (cache write) + 1K×$7.50
+            Equal(0.00525m, Cost("gemini-3.8-flash"));         // Google: 1K×$0.75 + 1K×$0.75 (cache write) + 1K×$3.75
             Equal(0.016m, Cost("swe-1-7-lightning"));          // 1K×$2.50 + 1K×$1 + 1K×$12.50
             Equal(0.003m, Cost("swe-1-6-fast"));               // 1K×$0.50 + 1K×$2.50: same price as SWE-1.6
-            foreach (string model in new[] { "swe-1-7", "glm-5-2", "glm-5-3-flash", "gemini-3-7-flash", "kimi-k2-7", "deepseek-v4-pro", "grok-4-7", "adaptive", "swe-check" })
+            foreach (string model in new[] { "swe-1-7", "glm-5-2", "glm-5-3-flash", "gemini-3.7-flash", "gemini-4-argon", "gemini-3.1-pro", "kimi-k2-7", "deepseek-v4-pro", "grok-4-7", "adaptive", "swe-check" })
                 Require(ClaudePrices.Cost(new UsageEvent(At, model, new Tokens(10, 0, 10, 0, 20))) is not null, "No price for " + model);
         });
         Test("Devin: settings keep the source opt-in and accept a database override", () =>

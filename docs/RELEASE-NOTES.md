@@ -1,13 +1,33 @@
-# AIUsage 1.6.1 for Windows — prices for every model Devin offers
+# AIUsage 1.7.0 for Windows — Antigravity plan limits and Google Gemini prices
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged: no account client, credential reader, provider requests, model calls, updater or subprocess integration.
+
+## New
+
+- **Antigravity plan limits (optional, off by default).** The Antigravity CLI's documented status line passes the plan quota per model (remaining share and reset time) to a command the user configures. With `AIUsage.exe --antigravity-statusline` as that command, an **Antigravity plan limits** card shows each model's used share and reset countdown. Settings → Antigravity shows the exact entry for `%USERPROFILE%\.gemini\antigravity-cli\settings.json`; it keeps Antigravity's own status line (`stack_with_default`).
+- **Google Gemini prices** from https://ai.google.dev/gemini-api/docs/pricing (checked 2026-10-17): Gemini 4 Argon ($2 / $0.10 / $10, rising on 2026-12-01), Gemini 3.8 and 3.6 Flash ($0.75 / $0.075 / $3.75, rising on 2027-01-01), Gemini 3.5 and 3.1 Flash-Lite, Gemini 3.1 Pro ($2 / $0.20 / $12, 2x input and 1.5x output above 200,000 prompt tokens), Gemini 3 Flash Preview and Gemini 2.5 Pro / Flash / Flash-Lite. Announced increases trigger a review notice on their date.
+- **Gemini models used through Devin** now use Google's names (`gemini-3.8-flash`) and Google's current price instead of Devin's table (the Devin cache is rebuilt once). Gemini 3.5 and 3.7 Flash, which Google does not list, keep Devin's published rate.
+
+## Privacy and Google rules
+
+- AIUsage reads no Antigravity file and never opens Google credentials (`oauth_creds.json`, `google_accounts.json`), never signs in and never contacts Google. Only the quota windows are kept; the signed-in e-mail address and everything else the CLI sends on stdin are discarded.
+- Antigravity **token usage and costs are not shown**. Its readable local transcripts record tokens for only a small share of responses and no model, and the rest is in an undocumented binary format; decoding it would mean reverse engineering a Google format, which AIUsage does not do.
+- Limits update only while the Antigravity CLI is used in a terminal, not from the Antigravity IDE. AIUsage is not affiliated with or endorsed by Google.
+
+## Evidence
+
+New regression tests cover the documented status line input (quota saved, e-mail and everything else discarded), absent quota, malformed, hostile and oversized input, tampered snapshots, the settings entry, and Google's prices including the 3.1 Pro long-context tier. The published executable was run in status line mode through Git Bash and PowerShell with input without quota, so nothing was written. A synthetic UI scenario checks the Antigravity card and settings. x64 execution uses synthetic data; ARM64 is compiled and inspected, not executed. Binaries remain unsigned.
+
+## Included from 1.6.1: prices for every model Devin offers
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
 
-## Fixed
+### Fixed
 
 - **`gpt-6-1-sol` showed "No price".** Devin writes OpenAI versions with a dash; AIUsage now maps Devin's ids to the catalog name (`gpt-6.1-sol`, `gpt-5.6-luna`…), so a model used from Codex and from Devin is one row with one price.
 - **Priority and fast variants.** `…-priority` (OpenAI) and `…-fast` (Claude) ids are recognised as service tiers and cost twice the standard rate, as in Devin's table. `-thinking` and `-1m` variants use the base model's price.
 
-## Prices
+### Prices
 
 - **25 models added** from the per-token table in Devin's model documentation (checked 2026-10-11): SWE-1.6, SWE-1.7, SWE-1.7 Lightning, SWE-check, Adaptive, Gemini 3.1 Pro and 3.5–3.8 Flash, GLM-5.2, GLM-5.3 and GLM-5.3 Flash, Kimi K2.6, K2.7 and K3, DeepSeek V4 Flash/Pro and V4.1 Flash, Grok 4.5–4.7, Inkling, Nemotron 3 Ultra and Penguin. Each uses its regular rate; plan promotions (free SWE-1.7 or GLM-5.2, introductory Gemini Flash prices) are not applied.
 - Devin's internal `compactor` model has no published rate and stays "No price".

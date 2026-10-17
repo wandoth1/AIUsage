@@ -24,7 +24,7 @@ public sealed class DevinCache
 public sealed class DevinLogScanner(string cacheDirectory)
 {
     // Bump whenever parsing or deduplication semantics change.
-    public const int SchemaVersion = 2;
+    public const int SchemaVersion = 3;
     public const int MaxMessageBytes = 32 * 1024 * 1024;
     // Devin stores a message again when a conversation is compacted or branched; rows near the checkpoint are
     // reread so late copies and updates are seen. Identical copies are counted once.
@@ -155,8 +155,8 @@ public sealed class DevinLogScanner(string cacheDirectory)
             if (effort is null && IsEffort(last)) { effort = last; parts.RemoveAt(parts.Count - 1); continue; }
             break;
         }
-        // OpenAI writes versions with a dot ("gpt-6.1-sol"); Devin writes "gpt-6-1-sol".
-        if (parts.Count >= 3 && parts[0] == "gpt" && parts[1].All(char.IsAsciiDigit) && parts[2].All(char.IsAsciiDigit) && parts[1].Length > 0 && parts[2].Length > 0)
+        // OpenAI and Google write versions with a dot ("gpt-6.1-sol", "gemini-3.8-flash"); Devin writes "gpt-6-1-sol".
+        if (parts.Count >= 3 && parts[0] is "gpt" or "gemini" && parts[1].All(char.IsAsciiDigit) && parts[2].All(char.IsAsciiDigit) && parts[1].Length > 0 && parts[2].Length > 0)
         { parts[1] = parts[1] + "." + parts[2]; parts.RemoveAt(2); }
         return (string.Join('-', parts), effort, tier);
     }
