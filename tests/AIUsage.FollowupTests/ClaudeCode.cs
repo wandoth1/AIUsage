@@ -54,6 +54,14 @@ internal static partial class Program
             catch (InvalidOperationException) { rejected = true; }
             Require(rejected, "A zero long multiplier was accepted");
         });
+        Test("Codex: gpt-6.1-terra list price, 5% cached input and the 272K long-context tier", () =>
+        {
+            decimal? Cost(Tokens t) => ClaudePrices.Cost(new UsageEvent(At, "gpt-6.1-terra", t));
+            Equal(0.2m, Cost(new Tokens(200_000, 0, 0, 0, 200_000)));                   // 200K × $1 input
+            Equal(0.01m, Cost(new Tokens(200_000, 200_000, 0, 0, 200_000)));            // 200K cached × $0.05
+            Equal(5m, Cost(new Tokens(0, 0, 1_000_000, 0, 1_000_000)));                 // 1M × $5 output
+            Equal(0.6075m, Cost(new Tokens(300_000, 0, 1000, 0, 301_000)));             // >272K: 300K×$2 + 1K×$7.50
+        });
         Test("Claude: replayed requests are counted once", () =>
         {
             using var t = new ClaudeHome();

@@ -1,13 +1,23 @@
-# AIUsage 1.6.1 for Windows — prices for every model Devin offers
+# AIUsage 1.6.2 for Windows — gpt-6.1-terra price
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
 
-## Fixed
+## Prices
+
+- **gpt-6.1-terra added** from https://developers.openai.com/api/docs/models/gpt-6.1-terra (checked 2026-10-26): $1 input, $0.05 cached input (5% of input) and $5 output per million tokens. Prompts above 272,000 input tokens cost 2x input and cache and 1.5x output for the whole request, and fast mode costs 2x, as for the rest of the GPT-6.1 family. It previously showed "No price"; its tokens were always counted.
+
+History is re-estimated with the current catalog. Use `AIUsage-1.6.2-win-x64.zip` or `AIUsage-1.6.2-win-arm64.zip`; update the Claude Code status line path if it points to an older folder.
+
+## Included from 1.6.1: prices for every model Devin offers
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
+
+### Fixed
 
 - **`gpt-6-1-sol` showed "No price".** Devin writes OpenAI versions with a dash; AIUsage now maps Devin's ids to the catalog name (`gpt-6.1-sol`, `gpt-5.6-luna`…), so a model used from Codex and from Devin is one row with one price.
 - **Priority and fast variants.** `…-priority` (OpenAI) and `…-fast` (Claude) ids are recognised as service tiers and cost twice the standard rate, as in Devin's table. `-thinking` and `-1m` variants use the base model's price.
 
-## Prices
+### Prices
 
 - **25 models added** from the per-token table in Devin's model documentation (checked 2026-10-11): SWE-1.6, SWE-1.7, SWE-1.7 Lightning, SWE-check, Adaptive, Gemini 3.1 Pro and 3.5–3.8 Flash, GLM-5.2, GLM-5.3 and GLM-5.3 Flash, Kimi K2.6, K2.7 and K3, DeepSeek V4 Flash/Pro and V4.1 Flash, Grok 4.5–4.7, Inkling, Nemotron 3 Ultra and Penguin. Each uses its regular rate; plan promotions (free SWE-1.7 or GLM-5.2, introductory Gemini Flash prices) are not applied.
 - Devin's internal `compactor` model has no published rate and stays "No price".
