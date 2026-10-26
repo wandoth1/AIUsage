@@ -8,6 +8,15 @@
     "FastMultiplier": 2,
     "Source": "https://developers.openai.com/api/docs/models/gpt-6.1-sol ; verified 2026-10-01"
   },
+  "gpt-6.1-terra": {
+    "Input": 1,
+    "Cached": 0.05,
+    "Output": 5,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-6.1-terra ; verified 2026-10-26"
+  },
   "gpt-6-astra": {
     "Input": 10,
     "Cached": 1,
