@@ -1,0 +1,12 @@
+# Dependabot: AIUsage has no NuGet packages (SQLite comes with Windows), so the only external code it uses is
+# the GitHub Actions in .github/workflows. They are pinned by commit SHA; Dependabot proposes weekly updates
+# as pull requests, which run the full CI like any other change and never trigger a release on their own.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    open-pull-requests-limit: 5
