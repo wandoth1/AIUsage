@@ -1,8 +1,20 @@
-# AIUsage 1.6.2 for Windows — gpt-6.1-terra price
+# AIUsage 1.6.3 for Windows — Claude Fable 5.2 prices
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
 
 ## Prices
+
+- **Claude Fable 5.2 (`claude-fable-5-2`) and Claude Mythos 5.2 (`claude-mythos-5-2`)** added from https://platform.claude.com/docs/en/about-claude/pricing (checked 2026-11-09): $8 input, $10 for 5-minute and $16 for 1-hour cache writes, $0.20 cache reads (0.025x input) and $40 output per million tokens. Fast mode costs 2x ($16 / $80). The full 1M context window is at standard price.
+- The other Claude prices in the catalog were compared with the same page and are unchanged.
+- They apply to Claude Code and to Claude models used through Devin.
+
+History is re-estimated with the current catalog. Use `AIUsage-1.6.3-win-x64.zip` or `AIUsage-1.6.3-win-arm64.zip`; update the Claude Code status line path if it points to an older folder.
+
+## Included from 1.6.2: gpt-6.1-terra price
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
+
+### Prices
 
 - **gpt-6.1-terra added** from https://developers.openai.com/api/docs/models/gpt-6.1-terra (checked 2026-10-26): $1 input, $0.05 cached input (5% of input) and $5 output per million tokens. Prompts above 272,000 input tokens cost 2x input and cache and 1.5x output for the whole request, and fast mode costs 2x, as for the rest of the GPT-6.1 family. It previously showed "No price"; its tokens were always counted.
 

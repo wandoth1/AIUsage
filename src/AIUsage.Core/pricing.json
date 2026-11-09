@@ -79,6 +79,26 @@
     "TierRulesVerified": false,
     "LongCacheVerified": false
   },
+  "claude-fable-5-2": {
+    "Input": 8,
+    "Cached": 0.2,
+    "Output": 40,
+    "CacheWriteMultiplier": 1.25,
+    "CacheWrite1hMultiplier": 2,
+    "LongThreshold": 0,
+    "FastMultiplier": 2,
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-11-09"
+  },
+  "claude-mythos-5-2": {
+    "Input": 8,
+    "Cached": 0.2,
+    "Output": 40,
+    "CacheWriteMultiplier": 1.25,
+    "CacheWrite1hMultiplier": 2,
+    "LongThreshold": 0,
+    "FastMultiplier": 2,
+    "Source": "https://platform.claude.com/docs/en/about-claude/pricing ; verified 2026-11-09"
+  },
   "claude-fable-5-1": {
     "Input": 10,
     "Cached": 0.25,

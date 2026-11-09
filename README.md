@@ -1,6 +1,6 @@
 # AIUsage for Windows
 
-**Your Codex, Claude Code and Devin usage, entirely local.** AIUsage 1.6.2 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code and Devin usage are optional (Settings) and come only from the data those tools already keep on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
+**Your Codex, Claude Code and Devin usage, entirely local.** AIUsage 1.6.3 reads existing usage logs on your local disk and shows tokens, estimated API-equivalent costs by model, and historical limits recorded by Codex. Claude Code and Devin usage are optional (Settings) and come only from the data those tools already keep on this PC. Native C# / WPF / .NET 10, with **English and Spanish**, dark/light themes and a system tray icon.
 
 **No account access. No credential reader. No network client.** The optional online integration from 1.0.0 and earlier was removed, not merely disabled. There is no switch, token, app-server integration or undocumented endpoint that can re-enable it. The app does not launch Codex, another AI, a browser or an external editor.
 
@@ -8,7 +8,11 @@ AIUsage is an **independent Windows port of [OpenUsage](https://github.com/robin
 
 [Download for Windows](https://github.com/wandoth1/AIUsage/releases/latest) · [Builds and tests](https://github.com/wandoth1/AIUsage/actions/workflows/windows.yml) · [Security](SECURITY.md)
 
-## What's new in 1.6.2
+## What's new in 1.6.3
+
+- **Claude Fable 5.2 and Claude Mythos 5.2 prices** from Anthropic's price list (checked 2026-11-09): $8 input, $10 (5-minute) and $16 (1-hour) cache writes, $0.20 cache reads and $40 output per million tokens, and 2x in fast mode. The other Claude prices were re-checked and are unchanged.
+
+## New in 1.6.2
 
 - **gpt-6.1-terra price.** The new Codex model is priced from OpenAI's model page (checked 2026-10-26): $1 input, $0.05 cached input and $5 output per million tokens, 2x input/cache and 1.5x output above 272,000 prompt tokens, and 2x in fast mode.
 
@@ -61,17 +65,17 @@ Release notes: [docs/RELEASE-NOTES.md](docs/RELEASE-NOTES.md). Previous: 1.2.0 a
 
 | Package | Platform |
 |---|---|
-| `AIUsage-1.6.2-win-x64.zip` | Windows on Intel / AMD |
-| `AIUsage-1.6.2-win-arm64.zip` | Windows on ARM |
+| `AIUsage-1.6.3-win-x64.zip` | Windows on Intel / AMD |
+| `AIUsage-1.6.3-win-arm64.zip` | Windows on ARM |
 
-**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.6.2 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
+**Exit the older version from its tray menu first.** Extract **every file** into a new resident folder on a local disk, then run **AIUsage.exe**. Keep the DLLs, native dependencies and `es` subfolder beside the executable: 1.6.3 uses an inspectable self-contained folder, not a single-file bundle. .NET is included; no installer, administrator permissions, Python or Node installation is required.
 
-Closing a window only hides it. Starting 1.6.2 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
+Closing a window only hides it. Starting 1.6.3 while a legacy instance holds the former mutex shows a warning and exits with code 2; it does not bring the older app forward or terminate it. Supported settings are preserved. The obsolete OnlineQuota setting cannot restore deleted functionality. If the migration cannot be written, the selected folder remains in use with a warning. **Unreadable/corrupt settings pause scanning until you explicitly enter and save a local folder.** Never delete `.codex` to upgrade. Retire old executables and update shortcuts to avoid accidentally running an online-capable historical version.
 
 **Unsigned binaries:** Windows may warn about an unknown publisher. Do not disable antivirus or SmartScreen. Check the repository and the ZIP's SHA-256 against `SHA256SUMS.txt`, or build from source. `PAYLOAD-SHA256.json` additionally lists files inside each extracted package. These hashes verify integrity, not publisher identity.
 
 ```powershell
-Get-FileHash .\AIUsage-1.6.2-win-x64.zip -Algorithm SHA256
+Get-FileHash .\AIUsage-1.6.3-win-x64.zip -Algorithm SHA256
 ```
 
 Target: 64-bit Windows 10/11 on a version supported by .NET 10. CI executes the published x64 Windows app. ARM64 is cross-compiled and its application metadata inspected, not executed on ARM hardware. No services or startup registration are installed.
@@ -114,7 +118,7 @@ AIUsage never reads your Claude credentials and never asks Anthropic for your li
    {
      "statusLine": {
        "type": "command",
-       "command": "C:/Users/you/Documents/AIUsage-1.6.2-win-x64/AIUsage.exe --claude-statusline"
+       "command": "C:/Users/you/Documents/AIUsage-1.6.3-win-x64/AIUsage.exe --claude-statusline"
      }
    }
    ```
