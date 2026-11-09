@@ -62,6 +62,16 @@ internal static partial class Program
             Equal(5m, Cost(new Tokens(0, 0, 1_000_000, 0, 1_000_000)));                 // 1M × $5 output
             Equal(0.6075m, Cost(new Tokens(300_000, 0, 1000, 0, 301_000)));             // >272K: 300K×$2 + 1K×$7.50
         });
+        Test("Claude: Fable 5.2 and Mythos 5.2 list prices, 1h cache writes and fast mode", () =>
+        {
+            using var t = new ClaudeHome();
+            t.Write(@"projects\p\fable52.jsonl", Claude("msg_f52", "req_f52", "claude-fable-5-2", 1000, 500, read: 10000, w5: 2000, w1: 3000) +
+                Claude("msg_f52f", "req_f52f", "claude-fable-5-2", 1000, 500, read: 10000, w5: 2000, w1: 3000, speed: "fast"));
+            var events = t.Scan().Events;
+            // 1K×$8 + 10K×$0.20 + 2K×$10 (5m write) + 3K×$16 (1h write) + 500×$40
+            Equal(0.098m, ClaudePrices.Cost(events[0])); Equal(0.196m, ClaudePrices.Cost(events[1]));
+            Equal(0.04m, ClaudePrices.Cost(new UsageEvent(At, "claude-mythos-5-2", new Tokens(0, 0, 1000, 0, 1000))));
+        });
         Test("Claude: replayed requests are counted once", () =>
         {
             using var t = new ClaudeHome();
