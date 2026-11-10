@@ -1,4 +1,4 @@
-# Privacy and local data — 1.6.3
+# Privacy and local data — 1.6.4
 
 AIUsage is local-only. The authenticated client was deleted in 1.1.0; there is no OAuth, API-key, app-server, cookie or credential-store integration. No analytics, upload, automatic update check or model call is implemented. It does not read auth.json, launch Codex or modify original Codex logs/configuration.
 
@@ -8,7 +8,7 @@ Resident local JSONL rollouts are read to identify usage/session metadata. Conve
 
 Settings, optional price overrides and metadata cache live under `%LOCALAPPDATA%\AIUsage`. The cache includes timestamps, models, reasoning effort, tokens, tiers, counters, parser/session state, plain session IDs and recorded limits. Recognized account identifiers are hashed into correlatable pseudonyms, **not guaranteed anonymity**. Protect activity data with suitable OS controls. No collection server or AIUsage account exists.
 
-Schema 6 checkpoints use compact streamed JSON manifests and immutable event pages. Every file shares a 32 MiB read/write limit; a missing/corrupt page invalidates the entire checkpoint and triggers reconstruction from accessible originals. Events and total cache storage remain proportional to the history. Cache housekeeping does not promise a precise legal retention deadline.
+Schema 7 checkpoints use compact streamed JSON manifests and immutable event pages. Every file shares a 32 MiB read/write limit; a missing/corrupt page invalidates the entire checkpoint and triggers reconstruction from accessible originals. Events and total cache storage remain proportional to the history. Cache housekeeping does not promise a precise legal retention deadline.
 
 CSV exports occur only on command in the local exports subfolder. They contain day/model aggregates and pricing qualifications, not conversations or credentials. Text cells are formula-escaped. User notes are preserved and may contain personal data; inspect before sharing. No export is automatically opened or uploaded. Prices are edited and validated inside AIUsage; no external editor or shell dialog is launched.
 

@@ -42,7 +42,14 @@ public sealed class CodexParser(ParserState? state = null)
                 State.AccountKey = AccountIdentity.Key(p.Text("creator_account_id"));
                 State.ReplayGate = p.Get("forked_from_id").Present() || p.Get("parent_thread_id").Present() ||
                     p.Text("thread_source") == "subagent" || p.Get("source").Get("subagent").Present();
-                if (State.ReplayGate) State.ChildCreated = root.Get("timestamp").Date()?.ToUnixTimeSeconds();
+                // The record is written after the child is created and task_started.started_at is whole seconds:
+                // a child's own first task can start in the second before the record's timestamp. Use the earlier
+                // of the creation time inside session_meta and the record time so that task is not taken for replay.
+                if (State.ReplayGate)
+                {
+                    long? written = root.Get("timestamp").Date()?.ToUnixTimeSeconds(), created = p.Get("timestamp").Date()?.ToUnixTimeSeconds();
+                    State.ChildCreated = written is { } w && created is { } c ? Math.Min(w, c) : written ?? created;
+                }
                 return null;
             }
             if (type == "turn_context")
