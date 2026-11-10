@@ -1,8 +1,20 @@
-# AIUsage 1.6.3 for Windows — Claude Fable 5.2 prices
+# AIUsage 1.6.4 for Windows — Codex subagent usage fix
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
 
-## Prices
+## Fixed
+
+- **Some Codex subagent usage was not counted.** A subagent's rollout first replays history copied from its parent; AIUsage starts counting at the subagent's own first `task_started` whose `started_at` is not earlier than the subagent's creation. Creation was taken from the `session_meta` record's write time, which can fall in the second after the actual creation time stored inside `session_meta`. Because `started_at` is whole seconds, a subagent whose first task started in that second was treated as replay and none of its usage was counted. AIUsage now uses the earlier of the two times. Replayed parent tasks started before the subagent's creation are still excluded.
+- On a real 32-day Codex history: 5 of 252 subagent rollouts were affected, about 15 million tokens (mostly `gpt-6.1-sol`, some `gpt-6-astra`). The other 15 rollouts that never opened contain no usage at all.
+- Codex parser schema 7: the Codex cache is rebuilt once on first start, which can take a little longer with very large rollouts.
+
+Use `AIUsage-1.6.4-win-x64.zip` or `AIUsage-1.6.4-win-arm64.zip`; update the Claude Code status line path if it points to an older folder.
+
+## Included from 1.6.3: Claude Fable 5.2 prices
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
+
+### Prices
 
 - **Claude Fable 5.2 (`claude-fable-5-2`) and Claude Mythos 5.2 (`claude-mythos-5-2`)** added from https://platform.claude.com/docs/en/about-claude/pricing (checked 2026-11-09): $8 input, $10 for 5-minute and $16 for 1-hour cache writes, $0.20 cache reads (0.025x input) and $40 output per million tokens. Fast mode costs 2x ($16 / $80). The full 1M context window is at standard price.
 - The other Claude prices in the catalog were compared with the same page and are unchanged.

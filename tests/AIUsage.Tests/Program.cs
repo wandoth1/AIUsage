@@ -67,6 +67,29 @@ internal static class Program
             Parse(p, Row("event_msg", new { type = "task_started", started_at = Stamp.ToUnixTimeSeconds() }));
             Eq(50L, Parse(p, Count(Raw(200, 160, 20)))!.Tokens.Input);
         });
+        Test("Subagent whose first task starts in the second before its meta record is counted", () =>
+        {
+            // Real shape: created at x.894, record written at (x+1).375, task_started.started_at = x (whole seconds).
+            var created = DateTimeOffset.FromUnixTimeSeconds(Stamp.ToUnixTimeSeconds()).AddMilliseconds(894);
+            var p = new CodexParser();
+            Parse(p, Row("session_meta", new { id = "synthetic-child", parent_thread_id = "synthetic-parent", thread_source = "subagent", timestamp = created.ToString("O") }, created.AddMilliseconds(481)));
+            Parse(p, Row("event_msg", new { type = "task_started", started_at = created.ToUnixTimeSeconds() }, created.AddMilliseconds(481)));
+            Parse(p, Context("gpt-6.1-sol"));
+            var first = Parse(p, Count(Raw(25000, 0, 484), null, created.AddSeconds(10)));
+            Eq("gpt-6.1-sol", first!.Model); Eq(25484L, first.Tokens.Total);
+            Eq(30110L, Parse(p, Count(Raw(55000, 0, 594), null, created.AddSeconds(20)))!.Tokens.Total);
+        });
+        Test("Replayed parent task from before the child's creation still does not open the gate", () =>
+        {
+            var created = DateTimeOffset.FromUnixTimeSeconds(Stamp.ToUnixTimeSeconds()).AddMilliseconds(894);
+            var p = new CodexParser();
+            Parse(p, Row("session_meta", new { id = "synthetic-child", forked_from_id = "synthetic-parent", timestamp = created.ToString("O") }, created.AddMilliseconds(481)));
+            Parse(p, Context("gpt-6.1-sol"));
+            Parse(p, Row("event_msg", new { type = "task_started", started_at = created.ToUnixTimeSeconds() - 1 }));
+            IsNull(Parse(p, Count(Raw(100, 80, 10))));
+            Parse(p, Row("event_msg", new { type = "task_started", started_at = created.ToUnixTimeSeconds() + 2 }));
+            Eq(50L, Parse(p, Count(Raw(150, 120, 15)))!.Tokens.Input);
+        });
         Test("Null fork metadata is not a child session", () =>
         {
             var p = new CodexParser(); Parse(p, Row("session_meta", new { forked_from_id = (string?)null, parent_thread_id = " " }));
