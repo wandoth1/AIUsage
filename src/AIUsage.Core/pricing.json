@@ -1,4 +1,22 @@
 {
+  "gpt-6.2-sol": {
+    "Input": 2,
+    "Cached": 0.1,
+    "Output": 10,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-6.2-sol ; verified 2026-11-17"
+  },
+  "gpt-6.2-astra": {
+    "Input": 8,
+    "Cached": 0.4,
+    "Output": 40,
+    "CacheWriteMultiplier": 1.25,
+    "LongThreshold": 272000,
+    "FastMultiplier": 2,
+    "Source": "https://developers.openai.com/api/docs/models/gpt-6.2-astra ; verified 2026-11-17"
+  },
   "gpt-6.1-sol": {
     "Input": 2,
     "Cached": 0.1,
