@@ -1,8 +1,20 @@
-# AIUsage 1.6.4 for Windows — Codex subagent usage fix
+# AIUsage 1.6.5 for Windows — GPT-6.2 prices
 
 Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
 
-## Fixed
+## Prices
+
+- **gpt-6.2-sol** (https://developers.openai.com/api/docs/models/gpt-6.2-sol, checked 2026-11-17): $2 input, $0.10 cached input, $10 output per million tokens.
+- **gpt-6.2-astra** (https://developers.openai.com/api/docs/models/gpt-6.2-astra, checked 2026-11-17): $8 input, $0.40 cached input, $40 output per million tokens.
+- Both: cache writes 1.25x input; above 272,000 prompt tokens input and cache cost 2x and output 1.5x for the whole request; fast mode 2x. The "ultrafast" tier (3x) is not recorded in local Codex logs today; if it appears, those requests show "No price" rather than a guessed rate.
+
+Use `AIUsage-1.6.5-win-x64.zip` or `AIUsage-1.6.5-win-arm64.zip`; update the Claude Code status line path if it points to an older folder.
+
+## Included from 1.6.4: Codex subagent usage fix
+
+Independent AIUsage versioning; MIT attribution to OpenUsage is preserved. The exclusively local design is unchanged.
+
+### Fixed
 
 - **Some Codex subagent usage was not counted.** A subagent's rollout first replays history copied from its parent; AIUsage starts counting at the subagent's own first `task_started` whose `started_at` is not earlier than the subagent's creation. Creation was taken from the `session_meta` record's write time, which can fall in the second after the actual creation time stored inside `session_meta`. Because `started_at` is whole seconds, a subagent whose first task started in that second was treated as replay and none of its usage was counted. AIUsage now uses the earlier of the two times. Replayed parent tasks started before the subagent's creation are still excluded.
 - On a real 32-day Codex history: 5 of 252 subagent rollouts were affected, about 15 million tokens (mostly `gpt-6.1-sol`, some `gpt-6-astra`). The other 15 rollouts that never opened contain no usage at all.

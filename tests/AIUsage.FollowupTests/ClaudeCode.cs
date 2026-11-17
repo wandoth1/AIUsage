@@ -72,6 +72,15 @@ internal static partial class Program
             Equal(0.098m, ClaudePrices.Cost(events[0])); Equal(0.196m, ClaudePrices.Cost(events[1]));
             Equal(0.04m, ClaudePrices.Cost(new UsageEvent(At, "claude-mythos-5-2", new Tokens(0, 0, 1000, 0, 1000))));
         });
+        Test("Codex: gpt-6.2-sol and gpt-6.2-astra list prices and the 272K tier", () =>
+        {
+            decimal? Cost(string model, Tokens t, string tier = "default") => ClaudePrices.Cost(new UsageEvent(At, model, t, tier));
+            Equal(0.02m, Cost("gpt-6.2-sol", new Tokens(10_000, 0, 0, 0, 10_000)));               // 10K × $2
+            Equal(0.0005m, Cost("gpt-6.2-sol", new Tokens(5_000, 5_000, 0, 0, 5_000)));          // 5K cached × $0.10
+            Equal(0.048m, Cost("gpt-6.2-astra", new Tokens(1_000, 0, 1_000, 0, 2_000)));          // 1K×$8 + 1K×$40
+            Equal(0.096m, Cost("gpt-6.2-astra", new Tokens(1_000, 0, 1_000, 0, 2_000), "fast"));  // fast mode 2x
+            Equal(1.215m, Cost("gpt-6.2-sol", new Tokens(300_000, 0, 1_000, 0, 301_000)));        // >272K: 300K×$4 + 1K×$15
+        });
         Test("Claude: replayed requests are counted once", () =>
         {
             using var t = new ClaudeHome();
